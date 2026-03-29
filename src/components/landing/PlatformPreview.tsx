@@ -15,7 +15,7 @@ const tabs = [
 function DashboardPreview() {
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: 'Total Patients', value: '12,847', change: 8.2, icon: Users, color: 'text-primary' },
           { label: 'Claims Today', value: '156', change: 12.5, icon: FileCheck, color: 'text-accent' },
@@ -72,8 +72,8 @@ function DashboardPreview() {
 
 function VCarePreview() {
   return (
-    <div className="flex gap-3 h-64">
-      <div className="flex-1 bg-white dark:bg-slate-700 rounded-lg border border-gray-100 dark:border-slate-600 flex flex-col">
+    <div className="flex flex-col sm:flex-row gap-3 sm:h-64">
+      <div className="flex-1 bg-white dark:bg-slate-700 rounded-lg border border-gray-100 dark:border-slate-600 flex flex-col min-h-[200px]">
         <div className="p-3 border-b border-gray-100 dark:border-slate-600">
           <p className="text-xs font-semibold text-text dark:text-text-dark flex items-center gap-1.5">
             <MessageSquareHeart className="w-3.5 h-3.5 text-primary" /> V-Care Assistant
@@ -104,7 +104,7 @@ function VCarePreview() {
           </div>
         </div>
       </div>
-      <div className="w-40 bg-white dark:bg-slate-700 rounded-lg border border-gray-100 dark:border-slate-600 p-3 space-y-3">
+      <div className="w-full sm:w-40 bg-white dark:bg-slate-700 rounded-lg border border-gray-100 dark:border-slate-600 p-3 space-y-3">
         <p className="text-xs font-semibold text-text dark:text-text-dark">Patient Vitals</p>
         {[
           { label: 'BP', value: '128/82', unit: 'mmHg', ok: true },
@@ -173,7 +173,7 @@ function AnalyticsPreview() {
   const bars = [65, 78, 52, 90, 70, 85, 60, 95, 45, 80, 72, 88]
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[
           { label: 'Churn Rate', value: '10.2%', sub: 'Down from 35%', color: 'text-success' },
           { label: 'Avg Wait Time', value: '12 min', sub: 'Target: 15 min', color: 'text-primary' },
@@ -228,13 +228,13 @@ export default function PlatformPreview() {
         </div>
 
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-border dark:border-border-dark overflow-hidden">
-          <div className="flex border-b border-border dark:border-border-dark">
+          <div className="flex overflow-x-auto border-b border-border dark:border-border-dark">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  'flex items-center gap-2 px-6 py-3.5 text-sm font-medium transition-colors border-b-2 -mb-px',
+                  'flex items-center gap-2 px-4 sm:px-6 py-3.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
                   activeTab === tab.id
                     ? 'border-primary text-primary bg-primary/5'
                     : 'border-transparent text-muted hover:text-text dark:hover:text-text-dark hover:bg-gray-50 dark:hover:bg-slate-700'

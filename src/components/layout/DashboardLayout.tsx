@@ -1,15 +1,17 @@
-import { useEffect } from 'react'
-import { Outlet, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import { useAuthStore } from '../../store/authStore'
 import { useAppStore } from '../../store/appStore'
 import { cn } from '../../lib/utils'
-import { Bell, Search, Sun, Moon } from 'lucide-react'
+import { Bell, Search, Sun, Moon, Menu, X } from 'lucide-react'
 
 export default function DashboardLayout() {
   const { isAuthenticated } = useAuthStore()
   const { sidebarCollapsed, theme, toggleTheme, notifications } = useAppStore()
   const navigate = useNavigate()
+  const location = useLocation()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -17,20 +19,46 @@ export default function DashboardLayout() {
     }
   }, [isAuthenticated, navigate])
 
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false)
+  }, [location.pathname])
+
   const unreadCount = notifications.filter(n => !n.read).length
 
   if (!isAuthenticated) return null
 
   return (
     <div className="min-h-screen bg-background dark:bg-background-dark">
-      <Sidebar />
+      {/* Mobile overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar: hidden on mobile unless toggled */}
+      <div className={cn(
+        'md:block',
+        mobileMenuOpen ? 'block' : 'hidden'
+      )}>
+        <Sidebar />
+      </div>
+
       <div className={cn(
         'transition-all duration-300',
-        sidebarCollapsed ? 'ml-16' : 'ml-64'
+        sidebarCollapsed ? 'md:ml-16' : 'md:ml-64'
       )}>
-        <header className="sticky top-0 z-30 h-14 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-border dark:border-border-dark flex items-center justify-between px-6">
+        <header className="sticky top-0 z-30 h-14 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-border dark:border-border-dark flex items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-3 flex-1">
-            <div className="relative max-w-md w-full">
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 -ml-2 rounded-lg text-muted hover:text-text dark:hover:text-text-dark hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+            <div className="relative max-w-md w-full hidden sm:block">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
               <input
                 type="text"
@@ -56,7 +84,7 @@ export default function DashboardLayout() {
             </button>
           </div>
         </header>
-        <main className="p-6">
+        <main className="p-4 sm:p-6">
           <Outlet />
         </main>
       </div>
