@@ -2,180 +2,291 @@ import { useState, useMemo } from 'react'
 import {
   Building2,
   FileCheck,
-  Shield,
+  ShieldAlert,
   BarChart3,
-  AlertTriangle,
-  TrendingUp,
   Users,
-  CircleDollarSign,
-  ClipboardList,
-  Search as SearchIcon,
-  Star,
+  Search,
+  AlertTriangle,
   CheckCircle2,
-  XCircle,
-  Brain,
+  Clock,
+  TrendingUp,
+  IndianRupee,
+  Eye,
+  Filter,
 } from 'lucide-react'
-import { cn, formatCurrency, formatDate, getRiskColor } from '../lib/utils'
-import { demoPolicies, demoFraudAlerts, demoClaims, chartData } from '../lib/mock-data'
+import { cn, formatCurrency, formatDate } from '../lib/utils'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { Stat } from '../components/ui/Stat'
 import { Tabs } from '../components/ui/Tabs'
 import { Table } from '../components/ui/Table'
+import { Input } from '../components/ui/Input'
 import { Chart } from '../components/ui/Chart'
-import type { Policy, FraudAlert } from '../types'
 
-const TABS = [
+// ── Inline types ───────────────────────────────────────────────────────────────
+
+interface PolicyData {
+  id: string
+  policyNumber: string
+  scheme: string
+  beneficiary: string
+  status: 'Active' | 'Expired' | 'Lapsed' | 'Pending'
+  sumInsured: number
+  premium: number
+  startDate: string
+  endDate: string
+  claimsCount: number
+}
+
+interface ClaimCard {
+  id: string
+  claimNumber: string
+  patient: string
+  amount: number
+  provider: string
+  diagnosis: string
+  date: string
+}
+
+interface TPAData {
+  id: string
+  name: string
+  performanceScore: number
+  empanelmentCount: number
+  activeClaims: number
+  region: string
+  settlementRatio: number
+  avgTAT: string
+}
+
+interface FraudAlertData {
+  id: string
+  claimId: string
+  riskScore: number
+  anomalyType: string
+  provider: string
+  amount: number
+  status: 'Under Investigation' | 'Confirmed' | 'Cleared'
+  detectedDate: string
+}
+
+interface HighCostClaimant {
+  id: string
+  name: string
+  totalClaimed: number
+  claimsCount: number
+  avgClaim: number
+  scheme: string
+}
+
+// ── Inline mock data ───────────────────────────────────────────────────────────
+
+const POLICIES: PolicyData[] = [
+  { id: 'POL-001', policyNumber: 'AB-PMJAY-2026-4501', scheme: 'Ayushman Bharat - PMJAY', beneficiary: 'Ramesh Kumar', status: 'Active', sumInsured: 500000, premium: 0, startDate: '2025-04-01', endDate: '2026-03-31', claimsCount: 2 },
+  { id: 'POL-002', policyNumber: 'CGHS-2026-1123', scheme: 'CGHS', beneficiary: 'Sunita Devi', status: 'Active', sumInsured: 1000000, premium: 12000, startDate: '2025-07-01', endDate: '2026-06-30', claimsCount: 1 },
+  { id: 'POL-003', policyNumber: 'ECHS-2026-0087', scheme: 'ECHS', beneficiary: 'Col. Vikram Singh (Retd)', status: 'Active', sumInsured: 750000, premium: 0, startDate: '2025-01-01', endDate: '2025-12-31', claimsCount: 3 },
+  { id: 'POL-004', policyNumber: 'SH-IND-2026-9910', scheme: 'Star Health', beneficiary: 'Anil Mehta', status: 'Active', sumInsured: 1500000, premium: 18500, startDate: '2025-09-15', endDate: '2026-09-14', claimsCount: 0 },
+  { id: 'POL-005', policyNumber: 'AB-PMJAY-2026-4502', scheme: 'Ayushman Bharat - PMJAY', beneficiary: 'Lakshmi Bai', status: 'Expired', sumInsured: 500000, premium: 0, startDate: '2024-04-01', endDate: '2025-03-31', claimsCount: 1 },
+  { id: 'POL-006', policyNumber: 'HDFC-ERG-2026-3321', scheme: 'HDFC ERGO', beneficiary: 'Priya Sharma', status: 'Active', sumInsured: 2000000, premium: 24000, startDate: '2025-11-01', endDate: '2026-10-31', claimsCount: 1 },
+  { id: 'POL-007', policyNumber: 'CGHS-2026-1124', scheme: 'CGHS', beneficiary: 'Mohan Lal', status: 'Lapsed', sumInsured: 1000000, premium: 12000, startDate: '2024-07-01', endDate: '2025-06-30', claimsCount: 0 },
+  { id: 'POL-008', policyNumber: 'AB-PMJAY-2026-4503', scheme: 'Ayushman Bharat - PMJAY', beneficiary: 'Geeta Rani', status: 'Active', sumInsured: 500000, premium: 0, startDate: '2025-04-01', endDate: '2026-03-31', claimsCount: 4 },
+  { id: 'POL-009', policyNumber: 'ICICI-LMB-2026-7788', scheme: 'ICICI Lombard', beneficiary: 'Rajesh Gupta', status: 'Pending', sumInsured: 1000000, premium: 15000, startDate: '2026-04-01', endDate: '2027-03-31', claimsCount: 0 },
+  { id: 'POL-010', policyNumber: 'NIA-2026-5501', scheme: 'New India Assurance', beneficiary: 'Deepa Nair', status: 'Active', sumInsured: 800000, premium: 9800, startDate: '2025-06-01', endDate: '2026-05-31', claimsCount: 2 },
+  { id: 'POL-011', policyNumber: 'AB-PMJAY-2026-4504', scheme: 'Ayushman Bharat - PMJAY', beneficiary: 'Shankar Das', status: 'Active', sumInsured: 500000, premium: 0, startDate: '2025-04-01', endDate: '2026-03-31', claimsCount: 1 },
+  { id: 'POL-012', policyNumber: 'ECHS-2026-0088', scheme: 'ECHS', beneficiary: 'Brig. Ashok Rao (Retd)', status: 'Active', sumInsured: 750000, premium: 0, startDate: '2025-01-01', endDate: '2025-12-31', claimsCount: 2 },
+]
+
+const KANBAN_CLAIMS: Record<string, ClaimCard[]> = {
+  Received: [
+    { id: 'CLM-401', claimNumber: 'CLM-2026-0401', patient: 'Ramesh Kumar', amount: 125000, provider: 'City Hospital', diagnosis: 'Knee Replacement', date: '2026-03-27' },
+    { id: 'CLM-402', claimNumber: 'CLM-2026-0402', patient: 'Geeta Rani', amount: 45000, provider: 'Apollo Clinic', diagnosis: 'Appendectomy', date: '2026-03-26' },
+    { id: 'CLM-403', claimNumber: 'CLM-2026-0403', patient: 'Mohan Lal', amount: 210000, provider: 'Max Healthcare', diagnosis: 'Cardiac Stent', date: '2026-03-26' },
+    { id: 'CLM-404', claimNumber: 'CLM-2026-0404', patient: 'Sunita Devi', amount: 32000, provider: 'Fortis Hospital', diagnosis: 'Cataract Surgery', date: '2026-03-25' },
+    { id: 'CLM-405', claimNumber: 'CLM-2026-0405', patient: 'Shankar Das', amount: 78000, provider: 'AIIMS', diagnosis: 'Hernia Repair', date: '2026-03-25' },
+  ],
+  Adjudicated: [
+    { id: 'CLM-301', claimNumber: 'CLM-2026-0301', patient: 'Priya Sharma', amount: 180000, provider: 'Medanta Hospital', diagnosis: 'Spinal Fusion', date: '2026-03-24' },
+    { id: 'CLM-302', claimNumber: 'CLM-2026-0302', patient: 'Anil Mehta', amount: 65000, provider: 'Narayana Health', diagnosis: 'Gallbladder Removal', date: '2026-03-23' },
+    { id: 'CLM-303', claimNumber: 'CLM-2026-0303', patient: 'Deepa Nair', amount: 92000, provider: 'Manipal Hospital', diagnosis: 'Hip Replacement', date: '2026-03-22' },
+  ],
+  Approved: [
+    { id: 'CLM-201', claimNumber: 'CLM-2026-0201', patient: 'Lakshmi Bai', amount: 150000, provider: 'KGMU', diagnosis: 'CABG Surgery', date: '2026-03-20' },
+    { id: 'CLM-202', claimNumber: 'CLM-2026-0202', patient: 'Rajesh Gupta', amount: 38000, provider: 'Safdarjung Hospital', diagnosis: 'Tonsillectomy', date: '2026-03-19' },
+    { id: 'CLM-203', claimNumber: 'CLM-2026-0203', patient: 'Col. Vikram Singh', amount: 225000, provider: 'Army R&R Hospital', diagnosis: 'Knee Replacement', date: '2026-03-18' },
+    { id: 'CLM-204', claimNumber: 'CLM-2026-0204', patient: 'Geeta Rani', amount: 55000, provider: 'Apollo Clinic', diagnosis: 'Hysterectomy', date: '2026-03-17' },
+  ],
+  Settled: [
+    { id: 'CLM-101', claimNumber: 'CLM-2026-0101', patient: 'Ramesh Kumar', amount: 95000, provider: 'City Hospital', diagnosis: 'Dialysis Package', date: '2026-03-15' },
+    { id: 'CLM-102', claimNumber: 'CLM-2026-0102', patient: 'Sunita Devi', amount: 42000, provider: 'Fortis Hospital', diagnosis: 'Endoscopy', date: '2026-03-14' },
+    { id: 'CLM-103', claimNumber: 'CLM-2026-0103', patient: 'Brig. Ashok Rao', amount: 310000, provider: 'Army R&R Hospital', diagnosis: 'Hip Replacement', date: '2026-03-12' },
+    { id: 'CLM-104', claimNumber: 'CLM-2026-0104', patient: 'Deepa Nair', amount: 28000, provider: 'Manipal Hospital', diagnosis: 'Colonoscopy', date: '2026-03-10' },
+    { id: 'CLM-105', claimNumber: 'CLM-2026-0105', patient: 'Priya Sharma', amount: 175000, provider: 'Medanta Hospital', diagnosis: 'Disc Surgery', date: '2026-03-08' },
+    { id: 'CLM-106', claimNumber: 'CLM-2026-0106', patient: 'Anil Mehta', amount: 67000, provider: 'Narayana Health', diagnosis: 'Angioplasty', date: '2026-03-05' },
+  ],
+  Denied: [
+    { id: 'CLM-501', claimNumber: 'CLM-2026-0501', patient: 'Mohan Lal', amount: 145000, provider: 'Unknown Clinic', diagnosis: 'Cosmetic Surgery', date: '2026-03-22' },
+    { id: 'CLM-502', claimNumber: 'CLM-2026-0502', patient: 'Shankar Das', amount: 88000, provider: 'City Hospital', diagnosis: 'Pre-existing Condition', date: '2026-03-20' },
+  ],
+}
+
+const KANBAN_COLUMNS = ['Received', 'Adjudicated', 'Approved', 'Settled', 'Denied'] as const
+
+const TPA_DIRECTORY: TPAData[] = [
+  { id: 'TPA-01', name: 'MedAssist', performanceScore: 92, empanelmentCount: 340, activeClaims: 87, region: 'Pan India', settlementRatio: 94.5, avgTAT: '3.2 days' },
+  { id: 'TPA-02', name: 'HealthBridge', performanceScore: 88, empanelmentCount: 280, activeClaims: 64, region: 'North & West', settlementRatio: 91.2, avgTAT: '4.1 days' },
+  { id: 'TPA-03', name: 'VitalCare', performanceScore: 85, empanelmentCount: 195, activeClaims: 52, region: 'South India', settlementRatio: 89.8, avgTAT: '3.8 days' },
+  { id: 'TPA-04', name: 'PrimeCare', performanceScore: 90, empanelmentCount: 310, activeClaims: 73, region: 'Pan India', settlementRatio: 93.1, avgTAT: '3.5 days' },
+  { id: 'TPA-05', name: 'SafeGuard', performanceScore: 78, empanelmentCount: 150, activeClaims: 38, region: 'East India', settlementRatio: 86.4, avgTAT: '5.0 days' },
+  { id: 'TPA-06', name: 'MediConnect', performanceScore: 82, empanelmentCount: 220, activeClaims: 45, region: 'North India', settlementRatio: 88.7, avgTAT: '4.5 days' },
+]
+
+const FRAUD_ALERTS: FraudAlertData[] = [
+  { id: 'FRD-001', claimId: 'CLM-2026-0501', riskScore: 95, anomalyType: 'Phantom Billing', provider: 'Unknown Clinic, Delhi', amount: 245000, status: 'Under Investigation', detectedDate: '2026-03-27' },
+  { id: 'FRD-002', claimId: 'CLM-2026-0388', riskScore: 87, anomalyType: 'Upcoding', provider: 'Metro Hospital, Mumbai', amount: 180000, status: 'Under Investigation', detectedDate: '2026-03-26' },
+  { id: 'FRD-003', claimId: 'CLM-2026-0412', riskScore: 78, anomalyType: 'Duplicate Claim', provider: 'City Care Center, Pune', amount: 92000, status: 'Confirmed', detectedDate: '2026-03-25' },
+  { id: 'FRD-004', claimId: 'CLM-2026-0355', riskScore: 72, anomalyType: 'Unbundling', provider: 'Sunrise Hospital, Chennai', amount: 156000, status: 'Under Investigation', detectedDate: '2026-03-24' },
+  { id: 'FRD-005', claimId: 'CLM-2026-0290', riskScore: 65, anomalyType: 'Inflated Charges', provider: 'Green Valley Hospital, Bangalore', amount: 320000, status: 'Cleared', detectedDate: '2026-03-22' },
+  { id: 'FRD-006', claimId: 'CLM-2026-0478', riskScore: 91, anomalyType: 'Identity Fraud', provider: 'District Hospital, Lucknow', amount: 410000, status: 'Confirmed', detectedDate: '2026-03-28' },
+]
+
+const HIGH_COST_CLAIMANTS: HighCostClaimant[] = [
+  { id: 'HC-01', name: 'Brig. Ashok Rao (Retd)', totalClaimed: 1250000, claimsCount: 5, avgClaim: 250000, scheme: 'ECHS' },
+  { id: 'HC-02', name: 'Ramesh Kumar', totalClaimed: 980000, claimsCount: 4, avgClaim: 245000, scheme: 'Ayushman Bharat - PMJAY' },
+  { id: 'HC-03', name: 'Col. Vikram Singh (Retd)', totalClaimed: 875000, claimsCount: 3, avgClaim: 291667, scheme: 'ECHS' },
+  { id: 'HC-04', name: 'Priya Sharma', totalClaimed: 720000, claimsCount: 3, avgClaim: 240000, scheme: 'HDFC ERGO' },
+  { id: 'HC-05', name: 'Geeta Rani', totalClaimed: 650000, claimsCount: 4, avgClaim: 162500, scheme: 'Ayushman Bharat - PMJAY' },
+]
+
+const PORTFOLIO_DATA = [
+  { name: 'Ayushman Bharat', value: 40 },
+  { name: 'CGHS', value: 15 },
+  { name: 'ECHS', value: 10 },
+  { name: 'Private', value: 25 },
+  { name: 'Other', value: 10 },
+]
+
+const LOSS_RATIO_DATA = [
+  { name: 'Apr', ratio: 68 },
+  { name: 'May', ratio: 72 },
+  { name: 'Jun', ratio: 65 },
+  { name: 'Jul', ratio: 70 },
+  { name: 'Aug', ratio: 74 },
+  { name: 'Sep', ratio: 69 },
+  { name: 'Oct', ratio: 71 },
+  { name: 'Nov', ratio: 67 },
+  { name: 'Dec', ratio: 73 },
+  { name: 'Jan', ratio: 66 },
+  { name: 'Feb', ratio: 70 },
+  { name: 'Mar', ratio: 68 },
+]
+
+// ── Static configuration ───────────────────────────────────────────────────────
+
+const TABS_CONFIG = [
   { id: 'overview', label: 'Overview', icon: <Building2 className="h-4 w-4" /> },
-  { id: 'policies', label: 'Policy Manager', icon: <ClipboardList className="h-4 w-4" /> },
-  { id: 'adjudication', label: 'Claims Adjudication', icon: <FileCheck className="h-4 w-4" /> },
+  { id: 'policies', label: 'Policy Manager', icon: <FileCheck className="h-4 w-4" /> },
+  { id: 'adjudication', label: 'Claims Adjudication', icon: <CheckCircle2 className="h-4 w-4" /> },
   { id: 'tpa', label: 'TPA Management', icon: <Users className="h-4 w-4" /> },
-  { id: 'fraud', label: 'Fraud Detection', icon: <Shield className="h-4 w-4" /> },
+  { id: 'fraud', label: 'Fraud Detection', icon: <ShieldAlert className="h-4 w-4" /> },
   { id: 'analytics', label: 'Analytics', icon: <BarChart3 className="h-4 w-4" /> },
 ]
 
-const PAYER_SCHEMES_FILTER = ['All', 'Ayushman Bharat - PMJAY', 'CGHS', 'ECHS', 'ESI', 'Star Health Insurance', 'HDFC ERGO', 'ICICI Lombard', 'Max Bupa', 'New India Assurance'] as const
+const SCHEME_FILTERS = ['All', 'Ayushman Bharat - PMJAY', 'CGHS', 'ECHS', 'Star Health', 'HDFC ERGO', 'ICICI Lombard', 'New India Assurance'] as const
+type SchemeFilter = (typeof SCHEME_FILTERS)[number]
 
-function getStatusVariant(status: string): 'success' | 'warning' | 'error' | 'info' | 'neutral' {
+// ── Helpers ─────────────────────────────────────────────────────────────────────
+
+function getPolicyStatusVariant(status: string): 'success' | 'warning' | 'error' | 'info' | 'neutral' {
   switch (status) {
     case 'Active': return 'success'
+    case 'Pending': return 'warning'
     case 'Expired': return 'error'
-    case 'Lapsed': return 'warning'
-    case 'Pending': return 'info'
+    case 'Lapsed': return 'neutral'
+    default: return 'info'
+  }
+}
+
+function getKanbanColumnColor(column: string): string {
+  switch (column) {
+    case 'Received': return 'border-t-accent'
+    case 'Adjudicated': return 'border-t-warning'
+    case 'Approved': return 'border-t-success'
+    case 'Settled': return 'border-t-primary'
+    case 'Denied': return 'border-t-error'
+    default: return 'border-t-gray-400'
+  }
+}
+
+function getKanbanBadgeVariant(column: string): 'success' | 'warning' | 'error' | 'info' | 'neutral' {
+  switch (column) {
+    case 'Received': return 'info'
+    case 'Adjudicated': return 'warning'
+    case 'Approved': return 'success'
+    case 'Settled': return 'success'
+    case 'Denied': return 'error'
     default: return 'neutral'
   }
 }
 
-function getFraudStatusVariant(status: string): 'warning' | 'error' | 'success' {
+function getRiskScoreColor(score: number): string {
+  if (score >= 85) return 'text-white bg-error'
+  if (score >= 70) return 'text-white bg-warning'
+  return 'text-gray-700 bg-gray-200 dark:text-gray-200 dark:bg-gray-600'
+}
+
+function getFraudStatusVariant(status: string): 'warning' | 'error' | 'success' | 'neutral' {
   switch (status) {
     case 'Under Investigation': return 'warning'
     case 'Confirmed': return 'error'
     case 'Cleared': return 'success'
-    default: return 'warning'
+    default: return 'neutral'
   }
 }
 
-function getConfidenceColor(score: number): string {
+function getPerformanceColor(score: number): string {
   if (score >= 90) return 'text-success'
-  if (score >= 70) return 'text-warning'
+  if (score >= 80) return 'text-warning'
   return 'text-error'
 }
 
-function getScoreColor(score: number): string {
-  if (score >= 4) return 'text-success'
-  if (score >= 3) return 'text-warning'
-  return 'text-error'
-}
-
-// Kanban data derived from demoClaims
-const KANBAN_COLUMNS = ['Received', 'Adjudicated', 'Approved', 'Settled', 'Denied'] as const
-
-function mapClaimToKanban() {
-  const columns: Record<string, typeof demoClaims> = {
-    Received: [],
-    Adjudicated: [],
-    Approved: [],
-    Settled: [],
-    Denied: [],
-  }
-
-  demoClaims.forEach((claim) => {
-    switch (claim.status) {
-      case 'Submitted':
-        columns.Received.push(claim)
-        break
-      case 'Under Review':
-        columns.Adjudicated.push(claim)
-        break
-      case 'Approved':
-        columns.Approved.push(claim)
-        break
-      case 'Paid':
-        columns.Settled.push(claim)
-        break
-      case 'Rejected':
-        columns.Denied.push(claim)
-        break
-      default:
-        columns.Received.push(claim)
-    }
-  })
-
-  return columns
-}
-
-// TPA data
-const TPA_DATA = [
-  { name: 'MedAssist TPA', hospitals: 142, score: 4.5, activeClaims: 68, status: 'Active' },
-  { name: 'HealthBridge Services', hospitals: 98, score: 3.8, activeClaims: 45, status: 'Active' },
-  { name: 'VitalCare TPA', hospitals: 210, score: 4.2, activeClaims: 87, status: 'Active' },
-  { name: 'PrimeCare Network', hospitals: 76, score: 3.2, activeClaims: 32, status: 'Active' },
-  { name: 'SafeGuard Health', hospitals: 165, score: 4.7, activeClaims: 56, status: 'Active' },
-  { name: 'MediConnect TPA', hospitals: 54, score: 2.9, activeClaims: 19, status: 'Under Review' },
-]
-
-// High-cost claimants
-const HIGH_COST_CLAIMANTS = [
-  { name: 'Rajesh Khanna', totalClaims: 3, totalAmount: 820000, scheme: 'Ayushman Bharat - PMJAY' },
-  { name: 'Suresh Yadav', totalClaims: 2, totalAmount: 645000, scheme: 'Max Bupa' },
-  { name: 'Mohammed Ali', totalClaims: 1, totalAmount: 450000, scheme: 'Star Health Insurance' },
-  { name: 'Arjun Malhotra', totalClaims: 1, totalAmount: 125000, scheme: 'ICICI Lombard' },
-  { name: 'Anita Kumari', totalClaims: 1, totalAmount: 85000, scheme: 'Ayushman Bharat - PMJAY' },
-]
-
-const KANBAN_COLUMN_COLORS: Record<string, string> = {
-  Received: 'bg-blue-50 dark:bg-blue-900/10',
-  Adjudicated: 'bg-amber-50 dark:bg-amber-900/10',
-  Approved: 'bg-emerald-50 dark:bg-emerald-900/10',
-  Settled: 'bg-teal-50 dark:bg-teal-900/10',
-  Denied: 'bg-red-50 dark:bg-red-900/10',
-}
-
-const KANBAN_HEADER_COLORS: Record<string, string> = {
-  Received: 'text-blue-700 dark:text-blue-400',
-  Adjudicated: 'text-amber-700 dark:text-amber-400',
-  Approved: 'text-emerald-700 dark:text-emerald-400',
-  Settled: 'text-teal-700 dark:text-teal-400',
-  Denied: 'text-red-700 dark:text-red-400',
-}
+// ── Component ──────────────────────────────────────────────────────────────────
 
 export default function Payer() {
   const [activeTab, setActiveTab] = useState('overview')
-  const [schemeFilter, setSchemeFilter] = useState('All')
+  const [schemeFilter, setSchemeFilter] = useState<SchemeFilter>('All')
+  const [fraudSearch, setFraudSearch] = useState('')
 
-  const filteredPolicies = useMemo(
-    () =>
-      schemeFilter === 'All'
-        ? demoPolicies
-        : demoPolicies.filter((p) => p.scheme === schemeFilter),
-    [schemeFilter]
-  )
+  const filteredPolicies = useMemo(() => {
+    if (schemeFilter === 'All') return POLICIES
+    return POLICIES.filter((p) => p.scheme === schemeFilter)
+  }, [schemeFilter])
 
-  const statusCounts = useMemo(() => {
-    const counts = { Active: 0, Expired: 0, Lapsed: 0, Pending: 0 }
-    demoPolicies.forEach((p) => {
-      if (p.status in counts) counts[p.status as keyof typeof counts]++
-    })
-    return counts
-  }, [])
-
-  const kanbanColumns = useMemo(() => mapClaimToKanban(), [])
-
-  const recentClaims = demoClaims.slice(0, 5)
-
-  const totalFraudSavings = 4500000
+  const filteredFraudAlerts = useMemo(() => {
+    if (!fraudSearch) return FRAUD_ALERTS
+    const q = fraudSearch.toLowerCase()
+    return FRAUD_ALERTS.filter(
+      (a) =>
+        a.claimId.toLowerCase().includes(q) ||
+        a.anomalyType.toLowerCase().includes(q) ||
+        a.provider.toLowerCase().includes(q),
+    )
+  }, [fraudSearch])
 
   const policyColumns = [
-    { key: 'policyNumber', label: 'Policy Number', render: (item: Record<string, unknown>) => (
-      <span className="font-mono text-xs">{item.policyNumber as string}</span>
-    ) },
+    {
+      key: 'policyNumber',
+      label: 'Policy Number',
+      render: (item: Record<string, unknown>) => (
+        <span className="font-mono text-xs text-primary">{item.policyNumber as string}</span>
+      ),
+    },
+    { key: 'beneficiary', label: 'Beneficiary' },
     { key: 'scheme', label: 'Scheme' },
-    { key: 'beneficiaryName', label: 'Beneficiary' },
     {
       key: 'status',
       label: 'Status',
       render: (item: Record<string, unknown>) => (
-        <Badge variant={getStatusVariant(item.status as string)} dot>
+        <Badge variant={getPolicyStatusVariant(item.status as string)} dot>
           {item.status as string}
         </Badge>
       ),
@@ -183,85 +294,84 @@ export default function Payer() {
     {
       key: 'sumInsured',
       label: 'Sum Insured',
-      sortable: true,
-      render: (item: Record<string, unknown>) => formatCurrency(item.sumInsured as number),
+      render: (item: Record<string, unknown>) => (
+        <span className="font-medium text-gray-900 dark:text-gray-100">
+          {formatCurrency(item.sumInsured as number)}
+        </span>
+      ),
     },
     {
       key: 'premium',
       label: 'Premium',
-      render: (item: Record<string, unknown>) =>
-        (item.premium as number) === 0 ? (
-          <span className="text-gray-400 dark:text-gray-500">Govt. Funded</span>
-        ) : (
-          formatCurrency(item.premium as number)
-        ),
+      render: (item: Record<string, unknown>) => {
+        const premium = item.premium as number
+        return (
+          <span className="text-gray-700 dark:text-gray-300">
+            {premium === 0 ? 'Govt. Funded' : formatCurrency(premium)}
+          </span>
+        )
+      },
+    },
+    {
+      key: 'endDate',
+      label: 'Valid Till',
+      render: (item: Record<string, unknown>) => (
+        <span className="text-gray-500 dark:text-gray-400">
+          {formatDate(item.endDate as string)}
+        </span>
+      ),
     },
     { key: 'claimsCount', label: 'Claims' },
   ]
 
-  const tpaColumns = [
-    { key: 'name', label: 'TPA Name', render: (item: Record<string, unknown>) => (
-      <span className="font-semibold text-gray-900 dark:text-gray-100">{item.name as string}</span>
-    ) },
-    { key: 'hospitals', label: 'Empanelled Hospitals' },
-    {
-      key: 'score',
-      label: 'Performance Score',
-      sortable: true,
-      render: (item: Record<string, unknown>) => {
-        const score = item.score as number
-        return (
-          <div className="flex items-center gap-1.5">
-            <Star className={cn('h-4 w-4', getScoreColor(score))} fill="currentColor" />
-            <span className={cn('font-semibold', getScoreColor(score))}>{score.toFixed(1)}</span>
-            <span className="text-gray-400 dark:text-gray-500">/ 5</span>
-          </div>
-        )
-      },
-    },
-    { key: 'activeClaims', label: 'Active Claims' },
-    {
-      key: 'status',
-      label: 'Status',
-      render: (item: Record<string, unknown>) => (
-        <Badge
-          variant={(item.status as string) === 'Active' ? 'success' : 'warning'}
-          dot
-        >
-          {item.status as string}
-        </Badge>
-      ),
-    },
-  ]
-
   const highCostColumns = [
-    { key: 'name', label: 'Patient Name', render: (item: Record<string, unknown>) => (
-      <span className="font-semibold text-gray-900 dark:text-gray-100">{item.name as string}</span>
-    ) },
-    { key: 'totalClaims', label: 'Total Claims' },
     {
-      key: 'totalAmount',
-      label: 'Total Amount',
-      sortable: true,
+      key: 'name',
+      label: 'Beneficiary',
       render: (item: Record<string, unknown>) => (
-        <span className="font-semibold">{formatCurrency(item.totalAmount as number)}</span>
+        <span className="font-semibold text-gray-900 dark:text-gray-100">{item.name as string}</span>
       ),
     },
     { key: 'scheme', label: 'Scheme' },
+    {
+      key: 'totalClaimed',
+      label: 'Total Claimed',
+      render: (item: Record<string, unknown>) => (
+        <span className="font-semibold text-gray-900 dark:text-gray-100">
+          {formatCurrency(item.totalClaimed as number)}
+        </span>
+      ),
+    },
+    { key: 'claimsCount', label: 'Claims' },
+    {
+      key: 'avgClaim',
+      label: 'Avg Claim',
+      render: (item: Record<string, unknown>) => (
+        <span className="text-gray-700 dark:text-gray-300">
+          {formatCurrency(item.avgClaim as number)}
+        </span>
+      ),
+    },
   ]
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          Payer & Insurance Platform
-        </h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          Policy management, claims adjudication, TPA oversight, and fraud analytics
-        </p>
+      {/* Page Header */}
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <Building2 className="h-5 w-5" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+            Payer &amp; Insurance Platform
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Policy management, claims adjudication, TPA operations, and fraud analytics
+          </p>
+        </div>
       </div>
 
-      <Tabs tabs={TABS} activeTab={activeTab} onChange={setActiveTab} />
+      <Tabs tabs={TABS_CONFIG} activeTab={activeTab} onChange={setActiveTab} />
 
       {/* ── Overview ──────────────────────────────────────────────── */}
       {activeTab === 'overview' && (
@@ -271,74 +381,76 @@ export default function Payer() {
               label="Total Policies"
               value="2,450"
               change={5.2}
-              changeLabel="vs last month"
-              icon={<ClipboardList className="h-5 w-5" />}
+              changeLabel="vs last quarter"
+              icon={<FileCheck className="h-5 w-5" />}
             />
             <Stat
               label="Active Claims"
-              value={342}
-              change={12}
+              value="342"
+              change={12.3}
               changeLabel="vs last month"
-              icon={<FileCheck className="h-5 w-5" />}
+              icon={<Clock className="h-5 w-5" />}
             />
             <Stat
               label="Settlement Ratio"
               value="91.3%"
               change={2.1}
-              changeLabel="vs last month"
-              icon={<TrendingUp className="h-5 w-5" />}
+              changeLabel="vs last quarter"
+              icon={<CheckCircle2 className="h-5 w-5" />}
             />
             <Stat
               label="Fraud Flags"
               value={8}
-              icon={<AlertTriangle className="h-5 w-5" />}
+              icon={<ShieldAlert className="h-5 w-5" />}
             />
           </div>
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* Portfolio by Scheme - Pie Chart */}
             <Card
               header={
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                  Portfolio by Scheme
-                </h3>
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                    Portfolio by Scheme
+                  </h3>
+                </div>
               }
             >
               <Chart
                 type="pie"
-                data={chartData.portfolioByScheme}
+                data={PORTFOLIO_DATA as Record<string, unknown>[]}
                 dataKeys={['value']}
                 xAxisKey="name"
-                height={280}
+                height={300}
               />
             </Card>
 
+            {/* Scheme Distribution Bars */}
             <Card
               header={
                 <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                  Recent Claims Activity
+                  Scheme Distribution
                 </h3>
               }
             >
-              <div className="space-y-3">
-                {recentClaims.map((claim) => (
-                  <div
-                    key={claim.id}
-                    className="flex items-center justify-between rounded-lg border border-border px-3 py-2 dark:border-border-dark"
-                  >
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs text-gray-500 dark:text-gray-400">{claim.id}</span>
-                        <Badge variant={getStatusVariant(claim.status)} size="sm">
-                          {claim.status}
-                        </Badge>
-                      </div>
-                      <p className="mt-0.5 truncate text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {claim.patientName} -- {claim.diagnosis}
-                      </p>
+              <div className="space-y-4">
+                {PORTFOLIO_DATA.map((item) => (
+                  <div key={item.name} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">
+                        {item.name}
+                      </span>
+                      <span className="font-semibold text-gray-900 dark:text-gray-100">
+                        {item.value}%
+                      </span>
                     </div>
-                    <span className="ml-4 shrink-0 font-semibold text-gray-900 dark:text-gray-100">
-                      {formatCurrency(claim.amount)}
-                    </span>
+                    <div className="h-2.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
+                      <div
+                        className="h-full rounded-full bg-primary transition-all"
+                        style={{ width: `${item.value}%`, opacity: 0.6 + (item.value / 100) * 0.4 }}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -350,29 +462,31 @@ export default function Payer() {
       {/* ── Policy Manager ────────────────────────────────────────── */}
       {activeTab === 'policies' && (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Stat label="Active" value={statusCounts.Active} icon={<CheckCircle2 className="h-5 w-5" />} />
-            <Stat label="Expired" value={statusCounts.Expired} icon={<XCircle className="h-5 w-5" />} />
-            <Stat label="Lapsed" value={statusCounts.Lapsed} icon={<AlertTriangle className="h-5 w-5" />} />
-            <Stat label="Pending" value={statusCounts.Pending} icon={<ClipboardList className="h-5 w-5" />} />
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {PAYER_SCHEMES_FILTER.map((scheme) => (
+          <div className="flex flex-wrap items-center gap-2">
+            <Filter className="h-4 w-4 text-gray-400" />
+            {SCHEME_FILTERS.map((f) => (
               <button
-                key={scheme}
-                onClick={() => setSchemeFilter(scheme)}
+                key={f}
+                onClick={() => setSchemeFilter(f)}
                 className={cn(
                   'rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
-                  schemeFilter === scheme
+                  schemeFilter === f
                     ? 'bg-primary text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10',
                 )}
               >
-                {scheme}
+                {f}
               </button>
             ))}
           </div>
+
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Showing{' '}
+            <span className="font-semibold text-gray-900 dark:text-gray-100">
+              {filteredPolicies.length}
+            </span>{' '}
+            {filteredPolicies.length === 1 ? 'policy' : 'policies'}
+          </p>
 
           <Table
             columns={policyColumns}
@@ -381,158 +495,227 @@ export default function Payer() {
         </div>
       )}
 
-      {/* ── Claims Adjudication ───────────────────────────────────── */}
+      {/* ── Claims Adjudication (Kanban) ──────────────────────────── */}
       {activeTab === 'adjudication' && (
-        <div className="space-y-6">
-          <div className="flex items-center gap-6">
-            <Stat
-              label="Auto-Adjudication Rate"
-              value="72%"
-              change={4.5}
-              changeLabel="vs last month"
-              icon={<Brain className="h-5 w-5" />}
-              className="max-w-xs"
-            />
-          </div>
-
-          <div className="grid grid-cols-5 gap-3">
-            {KANBAN_COLUMNS.map((col) => (
-              <div key={col}>
-                <div
-                  className={cn(
-                    'mb-2 rounded-lg px-3 py-2 text-center',
-                    KANBAN_COLUMN_COLORS[col]
-                  )}
-                >
-                  <p className={cn('text-sm font-semibold', KANBAN_HEADER_COLORS[col])}>
-                    {col}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {kanbanColumns[col].length} claim{kanbanColumns[col].length !== 1 ? 's' : ''}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  {kanbanColumns[col].map((claim) => (
-                    <Card key={claim.id} padding="sm" className="text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono font-semibold text-gray-900 dark:text-gray-100">
-                          {claim.id}
-                        </span>
-                      </div>
-                      <p className="mt-1 font-semibold text-gray-900 dark:text-gray-100">
-                        {formatCurrency(claim.amount)}
-                      </p>
-                      <p className="mt-0.5 truncate text-gray-500 dark:text-gray-400">
-                        {claim.payer}
-                      </p>
-                      <div className="mt-2 flex items-center gap-1">
-                        <Brain className="h-3 w-3" />
-                        <span className="text-[10px] text-gray-400 dark:text-gray-500">AI Confidence</span>
-                        <span
-                          className={cn(
-                            'ml-auto font-bold',
-                            getConfidenceColor(claim.preAuthProbability)
-                          )}
-                        >
-                          {claim.preAuthProbability}%
-                        </span>
-                      </div>
-                    </Card>
-                  ))}
-                  {kanbanColumns[col].length === 0 && (
-                    <div className="rounded-lg border border-dashed border-border py-6 text-center text-xs text-gray-400 dark:border-border-dark dark:text-gray-500">
-                      No claims
+        <div className="space-y-4">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Track claims through every stage of the adjudication pipeline.
+          </p>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            {KANBAN_COLUMNS.map((column) => {
+              const claims = KANBAN_CLAIMS[column]
+              return (
+                <div key={column} className="flex flex-col">
+                  {/* Column Header */}
+                  <div
+                    className={cn(
+                      'mb-3 rounded-lg border border-border bg-gray-50 px-3 py-2.5 border-t-4 dark:border-border-dark dark:bg-white/5',
+                      getKanbanColumnColor(column),
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <Badge variant={getKanbanBadgeVariant(column)} size="md" dot>
+                        {column}
+                      </Badge>
+                      <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                        {claims.length}
+                      </span>
                     </div>
-                  )}
+                  </div>
+
+                  {/* Column Cards */}
+                  <div className="flex flex-col gap-3">
+                    {claims.map((claim) => (
+                      <Card
+                        key={claim.id}
+                        padding="sm"
+                        className="cursor-pointer transition-shadow hover:shadow-md"
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-semibold text-primary">
+                              {claim.claimNumber}
+                            </p>
+                            <span className="text-xs text-gray-400 dark:text-gray-500">
+                              {formatDate(claim.date)}
+                            </span>
+                          </div>
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            {claim.patient}
+                          </p>
+                          <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                            {claim.diagnosis}
+                          </p>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                              {formatCurrency(claim.amount)}
+                            </span>
+                            <span className="truncate text-xs text-gray-400 dark:text-gray-500 max-w-[80px]">
+                              {claim.provider}
+                            </span>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                    {claims.length === 0 && (
+                      <div className="rounded-lg border border-dashed border-border py-6 text-center text-xs text-gray-400 dark:border-border-dark dark:text-gray-500">
+                        No claims
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
 
       {/* ── TPA Management ────────────────────────────────────────── */}
       {activeTab === 'tpa' && (
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            TPA Directory
-          </h2>
-          <Table
-            columns={tpaColumns}
-            data={TPA_DATA as unknown as Record<string, unknown>[]}
-          />
+        <div className="space-y-6">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Third Party Administrator directory and performance monitoring.
+          </p>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {TPA_DIRECTORY.map((tpa) => (
+              <Card key={tpa.id} className="transition-shadow hover:shadow-md">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                      {tpa.name}
+                    </h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {tpa.region}
+                    </p>
+                  </div>
+                  <div
+                    className={cn(
+                      'flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold',
+                      tpa.performanceScore >= 90
+                        ? 'bg-success/10 text-success'
+                        : tpa.performanceScore >= 80
+                          ? 'bg-warning/10 text-warning'
+                          : 'bg-error/10 text-error',
+                    )}
+                  >
+                    {tpa.performanceScore}
+                  </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div className="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/5">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Empanelments</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                      {tpa.empanelmentCount}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/5">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Active Claims</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                      {tpa.activeClaims}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/5">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Settlement</p>
+                    <p className={cn('text-lg font-bold', getPerformanceColor(tpa.settlementRatio))}>
+                      {tpa.settlementRatio}%
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/5">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Avg TAT</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                      {tpa.avgTAT}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
         </div>
       )}
 
       {/* ── Fraud Detection ───────────────────────────────────────── */}
       {activeTab === 'fraud' && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <Stat label="Total Alerts" value={8} icon={<AlertTriangle className="h-5 w-5" />} />
-            <Stat label="Under Investigation" value={4} icon={<SearchIcon className="h-5 w-5" />} />
-            <Stat label="Confirmed" value={2} icon={<XCircle className="h-5 w-5" />} />
-            <Stat label="Cleared" value={2} icon={<CheckCircle2 className="h-5 w-5" />} />
-            <Stat
-              label="Total Savings"
-              value={formatCurrency(totalFraudSavings)}
-              icon={<CircleDollarSign className="h-5 w-5" />}
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              AI-powered fraud detection engine monitoring claims in real-time.
+            </p>
+            <Input
+              icon={<Search className="h-4 w-4" />}
+              placeholder="Search alerts..."
+              value={fraudSearch}
+              onChange={(e) => setFraudSearch(e.target.value)}
+              className="max-w-xs"
             />
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {demoFraudAlerts.map((alert) => (
-              <Card key={alert.id} className="transition-shadow hover:shadow-md">
+            {filteredFraudAlerts.map((alert) => (
+              <Card
+                key={alert.id}
+                className={cn(
+                  'transition-shadow hover:shadow-md',
+                  alert.riskScore >= 85 && 'border-error/30',
+                  alert.riskScore >= 70 && alert.riskScore < 85 && 'border-warning/30',
+                )}
+              >
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="font-mono text-xs text-gray-500 dark:text-gray-400">
-                      {alert.id} / {alert.claimId}
+                    <p className="text-xs font-mono text-gray-500 dark:text-gray-400">
+                      {alert.id}
                     </p>
-                    <p className="mt-1 font-semibold text-gray-900 dark:text-gray-100">
+                    <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">
                       {alert.anomalyType}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <span
-                      className={cn(
-                        'text-lg font-bold',
-                        getRiskColor(alert.riskScore)
-                      )}
-                    >
-                      {alert.riskScore}
+                  <span
+                    className={cn(
+                      'inline-flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold',
+                      getRiskScoreColor(alert.riskScore),
+                    )}
+                  >
+                    {alert.riskScore}
+                  </span>
+                </div>
+
+                <div className="mt-3 space-y-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500 dark:text-gray-400">Claim</span>
+                    <span className="font-medium text-primary">{alert.claimId}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500 dark:text-gray-400">Provider</span>
+                    <span className="text-right max-w-[160px] truncate text-gray-700 dark:text-gray-300">
+                      {alert.provider}
                     </span>
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500">Risk Score</p>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500 dark:text-gray-400">Amount</span>
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">
+                      {formatCurrency(alert.amount)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500 dark:text-gray-400">Detected</span>
+                    <span className="text-gray-700 dark:text-gray-300">
+                      {formatDate(alert.detectedDate)}
+                    </span>
                   </div>
                 </div>
-                <div className="mt-3 space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                  <p>Provider: <span className="font-medium text-gray-900 dark:text-gray-100">{alert.provider}</span></p>
-                  <p>Amount: <span className="font-semibold">{formatCurrency(alert.amount)}</span></p>
-                  <p>Detected: {formatDate(alert.detectedDate)}</p>
-                </div>
-                <div className="mt-3">
+
+                <div className="mt-3 flex items-center justify-between border-t border-border pt-3 dark:border-border-dark">
                   <Badge variant={getFraudStatusVariant(alert.status)} dot>
                     {alert.status}
                   </Badge>
+                  <button className="text-xs font-medium text-primary hover:text-primary/80 transition-colors">
+                    <Eye className="inline h-3.5 w-3.5 mr-1" />
+                    Investigate
+                  </button>
                 </div>
               </Card>
             ))}
           </div>
-
-          <Card
-            header={
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                Fraud Savings Trend (in Lakhs)
-              </h3>
-            }
-          >
-            <Chart
-              type="bar"
-              data={chartData.fraudSavings}
-              dataKeys={['savings']}
-              xAxisKey="name"
-              height={280}
-              colors={['#10B981']}
-            />
-          </Card>
         </div>
       )}
 
@@ -540,51 +723,66 @@ export default function Payer() {
       {activeTab === 'analytics' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* Loss Ratio Trend */}
             <Card
               header={
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                  Loss Ratio Trend (%)
-                </h3>
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                    Loss Ratio Trend (FY 2025-26)
+                  </h3>
+                </div>
               }
             >
               <Chart
-                type="line"
-                data={chartData.lossRatio}
+                type="area"
+                data={LOSS_RATIO_DATA as Record<string, unknown>[]}
                 dataKeys={['ratio']}
                 xAxisKey="name"
-                height={280}
+                height={300}
                 colors={['#EF4444']}
               />
             </Card>
 
+            {/* Claims by Scheme */}
             <Card
               header={
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                  Claims by Scheme
-                </h3>
+                <div className="flex items-center gap-2">
+                  <IndianRupee className="h-4 w-4 text-primary" />
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                    Portfolio Distribution
+                  </h3>
+                </div>
               }
             >
               <Chart
                 type="bar"
-                data={chartData.claimsByScheme}
-                dataKeys={['claims']}
+                data={PORTFOLIO_DATA as Record<string, unknown>[]}
+                dataKeys={['value']}
                 xAxisKey="name"
-                height={280}
+                height={300}
               />
             </Card>
           </div>
 
+          {/* High-Cost Claimants */}
           <Card
             header={
-              <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                High-Cost Claimants (Top 5)
-              </h3>
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-warning" />
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                  High-Cost Claimants
+                </h3>
+              </div>
             }
+            padding="none"
           >
-            <Table
-              columns={highCostColumns}
-              data={HIGH_COST_CLAIMANTS as unknown as Record<string, unknown>[]}
-            />
+            <div className="p-0">
+              <Table
+                columns={highCostColumns}
+                data={HIGH_COST_CLAIMANTS as unknown as Record<string, unknown>[]}
+              />
+            </div>
           </Card>
         </div>
       )}

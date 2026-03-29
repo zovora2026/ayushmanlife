@@ -1,73 +1,79 @@
-# React + TypeScript + Vite
+# AyushmanLife — AI-Native Healthcare Platform for India
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+AyushmanLife is a comprehensive healthcare management platform built for Indian hospitals, clinics, and payer organizations. It combines AI-powered patient engagement, smart claims processing, predictive analytics, and workforce management into a single unified platform.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **V-Care AI Assistant** — Multilingual patient support chatbot with symptom triage, appointment booking, and insurance guidance
+- **SmartClaims** — End-to-end claims lifecycle management with auto-coding, fraud detection, and real-time payer integration
+- **Predictive Analytics** — Patient risk scoring, churn prediction, operational dashboards, and revenue intelligence
+- **Workforce Suite** — Talent management, skill matrix, credential tracking, and smart scheduling
+- **Managed Services** — IT service desk with SLA monitoring, knowledge base, and ticket management
+- **Payer Platform** — Policy management, claims adjudication, TPA management, and fraud detection
+- **Academy** — Learning paths, certifications, and healthcare apprenticeship programs
+- **Data Governance** — Data quality scorecards, classification, and regulatory compliance (HIPAA, ABDM, DPDPA)
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Frontend**: React 19 + TypeScript (strict mode) + Vite 8
+- **Styling**: Tailwind CSS 4
+- **State**: Zustand
+- **Charts**: Recharts
+- **Icons**: Lucide React
+- **Animations**: Framer Motion
+- **Routing**: React Router v6 with lazy-loaded routes
+- **Deployment**: Cloudflare Pages with Pages Functions
 
-## Expanding the ESLint configuration
+## Getting Started
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+```bash
+# Install dependencies
+npm install
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+# Start development server
+npm run dev
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+# Build for production
+npm run build
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Preview production build
+npm run preview
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Demo Credentials
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- **Email**: demo@ayushmanlife.in
+- **Password**: demo123
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Project Structure
+
 ```
+src/
+├── components/
+│   ├── landing/    # Landing page sections
+│   ├── layout/     # Navbar, Footer, Sidebar, DashboardLayout
+│   └── ui/         # Reusable UI components (Button, Card, Modal, etc.)
+├── lib/
+│   ├── constants.ts    # App-wide constants and navigation config
+│   ├── mock-ai.ts      # Smart mock AI response engine
+│   ├── mock-data.ts    # Demo data for all modules
+│   └── utils.ts        # Utility functions
+├── pages/              # All page components (lazy-loaded)
+├── store/              # Zustand stores (auth, app, chat)
+├── types/              # TypeScript type definitions
+├── App.tsx             # Root with routing
+└── main.tsx            # Entry point
+functions/
+└── api/
+    └── chat.ts         # Cloudflare Pages Function for V-Care AI (optional Anthropic API)
+```
+
+## Deployment
+
+The platform is deployed to [Cloudflare Pages](https://pages.cloudflare.com/). Push to `main` triggers automatic deployment.
+
+To enable live AI chat (instead of mock responses), set the `ANTHROPIC_API_KEY` environment variable in your Cloudflare Pages project settings.
+
+## License
+
+Proprietary. All rights reserved.

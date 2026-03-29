@@ -11,3 +11,5 @@ __pycache__/
 .streamlit/
 npm-debug.log*
 .claude/
+CLAUDE_CODE_PROMPT.md
+PLATFORM_SPECIFICATION.md
