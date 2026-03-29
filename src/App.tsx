@@ -1,5 +1,5 @@
-import { lazy, Suspense, useEffect } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import React, { lazy, Suspense, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { useAppStore } from './store/appStore'
 import DashboardLayout from './components/layout/DashboardLayout'
 
@@ -48,6 +48,51 @@ function NotFound() {
   )
 }
 
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props)
+    this.state = { hasError: false }
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-background dark:bg-background-dark">
+          <div className="text-center max-w-md mx-auto px-4">
+            <h1 className="font-display font-bold text-4xl text-error mb-4">Something went wrong</h1>
+            <p className="text-muted mb-6">An unexpected error occurred. Please try refreshing the page.</p>
+            <button
+              onClick={() => {
+                this.setState({ hasError: false })
+                window.location.href = '/'
+              }}
+              className="px-6 py-2.5 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-colors"
+            >
+              Go Home
+            </button>
+          </div>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+  return null
+}
+
 export default function App() {
   const { theme } = useAppStore()
 
@@ -60,35 +105,38 @@ export default function App() {
   }, [theme])
 
   return (
-    <BrowserRouter>
-      <Suspense fallback={<LoadingSpinner />}>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/solutions" element={<Solutions />} />
-          <Route path="/platform" element={<Platform />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/insights" element={<Insights />} />
-          <Route path="/insights/:slug" element={<Insights />} />
+    <ErrorBoundary>
+      <BrowserRouter>
+        <ScrollToTop />
+        <Suspense fallback={<LoadingSpinner />}>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/solutions" element={<Solutions />} />
+            <Route path="/platform" element={<Platform />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/insights" element={<Insights />} />
+            <Route path="/insights/:slug" element={<Insights />} />
 
-          <Route element={<DashboardLayout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/vcare" element={<VCare />} />
-            <Route path="/claims" element={<Claims />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/workforce" element={<Workforce />} />
-            <Route path="/services" element={<Services />} />
-            <Route path="/payer" element={<Payer />} />
-            <Route path="/academy" element={<Academy />} />
-            <Route path="/data-governance" element={<DataGovernance />} />
-            <Route path="/admin" element={<Admin />} />
-          </Route>
+            <Route element={<DashboardLayout />}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/vcare" element={<VCare />} />
+              <Route path="/claims" element={<Claims />} />
+              <Route path="/analytics" element={<Analytics />} />
+              <Route path="/workforce" element={<Workforce />} />
+              <Route path="/services" element={<Services />} />
+              <Route path="/payer" element={<Payer />} />
+              <Route path="/academy" element={<Academy />} />
+              <Route path="/data-governance" element={<DataGovernance />} />
+              <Route path="/admin" element={<Admin />} />
+            </Route>
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Suspense>
-    </BrowserRouter>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+    </ErrorBoundary>
   )
 }
