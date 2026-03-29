@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #0D7377;
+  --color-primary-light: #10918A;
+  --color-primary-dark: #0A5C5F;
+  --color-secondary: #FF6B35;
+  --color-secondary-light: #FF8F66;
+  --color-secondary-dark: #E55520;
+  --color-accent: #2563EB;
+  --color-accent-light: #3B82F6;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+  --color-surface: #FFFFFF;
+  --color-surface-dark: #1E293B;
+  --color-background: #F8FAFC;
+  --color-background-dark: #0F172A;
+  --color-text: #0F172A;
+  --color-text-dark: #F1F5F9;
+  --color-muted: #64748B;
+  --color-border: #E2E8F0;
+  --color-border-dark: #334155;
+  --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--color-background);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.dark body,
+.dark {
+  background: var(--color-background-dark);
+  color: var(--color-text-dark);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+}
+
+.gradient-primary {
+  background: linear-gradient(135deg, #0D7377, #2563EB);
+}
+
+.gradient-hero {
+  background: linear-gradient(135deg, #0D7377 0%, #0F172A 50%, #1E293B 100%);
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #0D7377, #2563EB);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 8s ease infinite;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #94A3B8;
+  border-radius: 3px;
+}

@@ -1,0 +1,146 @@
+import { Database, Shield, FileText, CheckCircle, AlertTriangle, BarChart3, Lock, Eye } from 'lucide-react'
+import { cn } from '../lib/utils'
+
+const qualityScores = [
+  { system: 'Hospital Information System', score: 94, records: '2.4M', issues: 12 },
+  { system: 'EMR/EHR', score: 89, records: '1.8M', issues: 28 },
+  { system: 'Laboratory System', score: 96, records: '850K', issues: 5 },
+  { system: 'Billing & Revenue Cycle', score: 91, records: '1.2M', issues: 18 },
+  { system: 'Insurance Claims', score: 87, records: '340K', issues: 34 },
+  { system: 'Pharmacy Management', score: 93, records: '560K', issues: 9 },
+]
+
+const dataClasses = [
+  { category: 'Protected Health Info (PHI)', count: '4.2M records', sensitivity: 'Critical', color: 'bg-error' },
+  { category: 'Personally Identifiable (PII)', count: '1.8M records', sensitivity: 'High', color: 'bg-warning' },
+  { category: 'Financial Data', count: '2.1M records', sensitivity: 'High', color: 'bg-warning' },
+  { category: 'Operational Data', count: '8.5M records', sensitivity: 'Medium', color: 'bg-accent' },
+  { category: 'Analytics/Aggregated', count: '12M records', sensitivity: 'Low', color: 'bg-success' },
+]
+
+const compliance = [
+  { framework: 'IRDAI', status: 'Compliant', score: 98, lastAudit: '2026-02-15', icon: Shield },
+  { framework: 'NHA / ABDM', status: 'Compliant', score: 95, lastAudit: '2026-03-01', icon: FileText },
+  { framework: 'NABH', status: 'In Progress', score: 82, lastAudit: '2026-01-20', icon: CheckCircle },
+  { framework: 'HIPAA Alignment', status: 'Compliant', score: 91, lastAudit: '2026-02-28', icon: Lock },
+  { framework: 'DPDP Act 2023', status: 'Compliant', score: 88, lastAudit: '2026-03-10', icon: Eye },
+]
+
+export default function DataGovernance() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="font-display font-bold text-2xl text-text dark:text-text-dark">Data & Analytics Governance</h1>
+        <p className="text-muted text-sm mt-1">Enterprise data quality, classification, and regulatory compliance</p>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: 'Overall Data Quality', value: '91.7%', icon: BarChart3, color: 'text-success' },
+          { label: 'Systems Monitored', value: '6', icon: Database, color: 'text-primary' },
+          { label: 'Active Issues', value: '106', icon: AlertTriangle, color: 'text-warning' },
+          { label: 'Compliance Score', value: '94%', icon: Shield, color: 'text-accent' },
+        ].map(s => (
+          <div key={s.label} className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-4">
+            <s.icon className={cn('w-5 h-5 mb-2', s.color)} />
+            <p className="font-display font-bold text-2xl text-text dark:text-text-dark">{s.value}</p>
+            <p className="text-xs text-muted mt-1">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark">
+        <div className="p-5 border-b border-border dark:border-border-dark">
+          <h2 className="font-display font-semibold text-text dark:text-text-dark flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-primary" /> Data Quality Scorecard
+          </h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 dark:bg-slate-800">
+                {['System', 'Quality Score', 'Records', 'Open Issues', 'Status'].map(h => (
+                  <th key={h} className="text-left px-5 py-3 font-semibold text-muted text-xs uppercase tracking-wider">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {qualityScores.map(s => (
+                <tr key={s.system} className="border-b border-border dark:border-border-dark last:border-0 hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                  <td className="px-5 py-3 font-medium text-text dark:text-text-dark">{s.system}</td>
+                  <td className="px-5 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-24 h-2 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <div className={cn('h-full rounded-full', s.score >= 90 ? 'bg-success' : s.score >= 80 ? 'bg-warning' : 'bg-error')} style={{ width: `${s.score}%` }} />
+                      </div>
+                      <span className={cn('text-sm font-semibold', s.score >= 90 ? 'text-success' : s.score >= 80 ? 'text-warning' : 'text-error')}>{s.score}%</span>
+                    </div>
+                  </td>
+                  <td className="px-5 py-3 text-muted">{s.records}</td>
+                  <td className="px-5 py-3 text-muted">{s.issues}</td>
+                  <td className="px-5 py-3">
+                    <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', s.score >= 90 ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning')}>
+                      {s.score >= 90 ? 'Healthy' : 'Needs Attention'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-5">
+          <h2 className="font-display font-semibold text-text dark:text-text-dark mb-4 flex items-center gap-2">
+            <Lock className="w-5 h-5 text-primary" /> Data Classification
+          </h2>
+          <div className="space-y-3">
+            {dataClasses.map(d => (
+              <div key={d.category} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800">
+                <div className={cn('w-3 h-3 rounded-full', d.color)} />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-text dark:text-text-dark">{d.category}</p>
+                  <p className="text-xs text-muted">{d.count}</p>
+                </div>
+                <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium',
+                  d.sensitivity === 'Critical' ? 'bg-error/10 text-error' :
+                  d.sensitivity === 'High' ? 'bg-warning/10 text-warning' :
+                  d.sensitivity === 'Medium' ? 'bg-accent/10 text-accent' : 'bg-success/10 text-success'
+                )}>{d.sensitivity}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-5">
+          <h2 className="font-display font-semibold text-text dark:text-text-dark mb-4 flex items-center gap-2">
+            <Shield className="w-5 h-5 text-primary" /> Regulatory Compliance
+          </h2>
+          <div className="space-y-3">
+            {compliance.map(c => (
+              <div key={c.framework} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800">
+                <c.icon className="w-5 h-5 text-primary shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-text dark:text-text-dark">{c.framework}</p>
+                    <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium',
+                      c.status === 'Compliant' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'
+                    )}>{c.status}</span>
+                  </div>
+                  <div className="flex items-center gap-3 mt-1">
+                    <div className="flex-1 h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                      <div className="h-full bg-primary rounded-full" style={{ width: `${c.score}%` }} />
+                    </div>
+                    <span className="text-xs text-muted">{c.score}%</span>
+                  </div>
+                  <p className="text-xs text-muted mt-1">Last audit: {new Date(c.lastAudit).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
