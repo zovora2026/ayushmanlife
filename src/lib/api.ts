@@ -137,7 +137,24 @@ export const payer = {
     fetchAPI<{ policy: Policy }>('/payer/policies', { method: 'POST', body: JSON.stringify(data) }),
   claims: (params?: Record<string, string>) =>
     fetchAPI<{ claims: PayerClaim[]; summary: PayerClaimsSummary; currency: string }>(`/payer/claims?${new URLSearchParams(params || {})}`),
-  fraudAlerts: () => fetchAPI<{ alerts: FraudAlert[] }>('/payer/fraud-alerts'),
+  fraudAlerts: (params?: Record<string, string>) =>
+    fetchAPI<{ alerts: FraudAlertDetail[]; summary: FraudAlertsSummary; by_type: Array<{ alert_type: string; count: number; avg_risk: number }> }>(`/payer/fraud-alerts?${new URLSearchParams(params || {})}`),
+  updateFraudAlert: (data: { alert_id: string; status?: string; investigated_by?: string }) =>
+    fetchAPI<{ alert: FraudAlert }>('/payer/fraud-alerts', { method: 'PUT', body: JSON.stringify(data) }),
+};
+
+// Fraud Investigation
+export const fraud = {
+  investigations: (params?: Record<string, string>) =>
+    fetchAPI<{ investigations: FraudInvestigation[]; summary: FraudInvestigationSummary }>(`/fraud/investigations?${new URLSearchParams(params || {})}`),
+  createInvestigation: (data: { type: 'investigation'; alert_id: string; priority?: string }) =>
+    fetchAPI<{ investigation: FraudInvestigation }>('/fraud/investigations', { method: 'POST', body: JSON.stringify(data) }),
+  addNote: (data: { type: 'note'; investigation_id: string; content: string; note_type?: string }) =>
+    fetchAPI<{ note: { id: string } }>('/fraud/investigations', { method: 'POST', body: JSON.stringify(data) }),
+  updateInvestigation: (data: { type: 'investigation'; alert_id: string; status?: string; findings?: string; action_taken?: string; recovery_amount?: number }) =>
+    fetchAPI<{ investigation: FraudInvestigation }>('/fraud/investigations', { method: 'POST', body: JSON.stringify(data) }),
+  analytics: () =>
+    fetchAPI<FraudAnalytics>('/fraud/analytics'),
 };
 
 // Adjudication
@@ -483,6 +500,91 @@ export interface FraudAlert {
   description: string;
   status: string;
   created_at: string;
+}
+
+export interface FraudAlertDetail extends FraudAlert {
+  evidence?: string;
+  investigated_by?: string;
+  resolved_at?: string;
+  claim_number?: string;
+  claimed_amount?: number;
+  payer_scheme?: string;
+  payer_name?: string;
+  diagnosis?: string;
+  patient_name?: string;
+  investigator_name?: string;
+  investigation_id?: string;
+  case_number?: string;
+  investigation_status?: string;
+  investigation_priority?: string;
+}
+
+export interface FraudAlertsSummary {
+  total_alerts: number;
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+  open: number;
+  investigating: number;
+  confirmed: number;
+  resolved: number;
+  total_flagged_amount: number;
+}
+
+export interface FraudInvestigation {
+  id: string;
+  alert_id: string;
+  investigator_id?: string;
+  investigator_name?: string;
+  case_number: string;
+  status: string;
+  priority: string;
+  findings?: string;
+  evidence_summary?: string;
+  recovery_amount: number;
+  action_taken?: string;
+  opened_at: string;
+  closed_at?: string;
+  alert_type?: string;
+  risk_score?: number;
+  claim_number?: string;
+  claimed_amount?: number;
+  patient_name?: string;
+  notes_count?: number;
+}
+
+export interface FraudInvestigationSummary {
+  total: number;
+  open: number;
+  in_progress: number;
+  closed: number;
+  total_recovery: number;
+}
+
+export interface FraudAnalytics {
+  alerts: {
+    total_alerts: number;
+    avg_risk_score: number;
+    open_alerts: number;
+    investigating: number;
+    confirmed_fraud: number;
+    resolved: number;
+  };
+  investigations: {
+    total_investigations: number;
+    open_cases: number;
+    in_progress: number;
+    closed_cases: number;
+    total_recovery: number;
+    critical_priority: number;
+    high_priority: number;
+  };
+  by_type: Array<{ alert_type: string; count: number; avg_risk: number; total_amount: number }>;
+  by_payer_scheme: Array<{ payer_scheme: string; count: number; flagged_amount: number }>;
+  monthly_trend: Array<{ month: string; alerts: number; confirmed: number }>;
+  risk_distribution: Array<{ risk_band: string; count: number }>;
+  currency: string;
 }
 
 export interface StaffMember extends User {

@@ -17,8 +17,8 @@ import {
   Globe,
 } from 'lucide-react'
 import { cn, formatCurrency, formatDate } from '../lib/utils'
-import { payer as payerAPI, claims as claimsAPI, adjudication as adjAPI } from '../lib/api'
-import type { AdjudicationQueueClaim, AdjudicationRule, AdjudicationAnalytics } from '../lib/api'
+import { payer as payerAPI, claims as claimsAPI, adjudication as adjAPI, fraud as fraudAPI } from '../lib/api'
+import type { AdjudicationQueueClaim, AdjudicationRule, AdjudicationAnalytics, FraudAlertDetail, FraudAlertsSummary, FraudInvestigation, FraudAnalytics } from '../lib/api'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { Stat } from '../components/ui/Stat'
@@ -371,6 +371,13 @@ export default function Payer() {
   const [adjRemarks, setAdjRemarks] = useState('')
   const [adjAmount, setAdjAmount] = useState('')
 
+  // Fraud D1 state
+  const [d1FraudAlerts, setD1FraudAlerts] = useState<FraudAlertDetail[]>([])
+  const [d1FraudSummary, setD1FraudSummary] = useState<FraudAlertsSummary | null>(null)
+  const [d1Investigations, setD1Investigations] = useState<FraudInvestigation[]>([])
+  const [d1FraudAnalytics, setD1FraudAnalytics] = useState<FraudAnalytics | null>(null)
+  const [investigatingAlert, setInvestigatingAlert] = useState<string | null>(null)
+
   useEffect(() => {
     let mounted = true
     async function load() {
@@ -575,6 +582,23 @@ export default function Payer() {
           setAdjAnalytics(adjAnalyticsRes as AdjudicationAnalytics)
         }
 
+        // ── 5. Fraud D1 data ─────────────────────────────────────
+        const [fraudAlertsRes, fraudInvRes, fraudAnalRes] = await Promise.all([
+          payerAPI.fraudAlerts().catch(() => null),
+          fraudAPI.investigations().catch(() => null),
+          fraudAPI.analytics().catch(() => null),
+        ])
+        if (mounted && fraudAlertsRes) {
+          setD1FraudAlerts((fraudAlertsRes as any).alerts || [])
+          setD1FraudSummary((fraudAlertsRes as any).summary || null)
+        }
+        if (mounted && fraudInvRes) {
+          setD1Investigations((fraudInvRes as any).investigations || [])
+        }
+        if (mounted && fraudAnalRes) {
+          setD1FraudAnalytics(fraudAnalRes as FraudAnalytics)
+        }
+
       } catch {
         // keep defaults on full failure
       }
@@ -615,6 +639,38 @@ export default function Payer() {
       setAdjudicating(null)
     }
   }
+
+  // Open investigation for a fraud alert
+  const handleOpenInvestigation = async (alertId: string) => {
+    try {
+      setInvestigatingAlert(alertId)
+      await fraudAPI.createInvestigation({ type: 'investigation', alert_id: alertId, priority: 'high' })
+      // Refresh
+      const [aRes, iRes] = await Promise.all([
+        payerAPI.fraudAlerts().catch(() => null),
+        fraudAPI.investigations().catch(() => null),
+      ])
+      if (aRes) { setD1FraudAlerts((aRes as any).alerts || []); setD1FraudSummary((aRes as any).summary || null) }
+      if (iRes) setD1Investigations((iRes as any).investigations || [])
+    } catch (err) {
+      console.error('Investigation error:', err)
+    } finally {
+      setInvestigatingAlert(null)
+    }
+  }
+
+  // Filtered D1 fraud alerts
+  const filteredD1Alerts = useMemo(() => {
+    if (!fraudSearch) return d1FraudAlerts
+    const q = fraudSearch.toLowerCase()
+    return d1FraudAlerts.filter(
+      (a) =>
+        (a.alert_type || '').toLowerCase().includes(q) ||
+        (a.claim_number || '').toLowerCase().includes(q) ||
+        (a.patient_name || '').toLowerCase().includes(q) ||
+        (a.description || '').toLowerCase().includes(q),
+    )
+  }, [fraudSearch, d1FraudAlerts])
 
   const filteredFraudAlerts = useMemo(() => {
     if (!fraudSearch) return fraudAlerts
@@ -1521,7 +1577,7 @@ export default function Payer() {
         </div>
       )}
 
-      {/* ── Fraud Detection ───────────────────────────────────────── */}
+      {/* ── Fraud Detection — D1 powered ──────────────────────────── */}
       {activeTab === 'fraud' && (
         <div className="space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -1537,101 +1593,153 @@ export default function Payer() {
             />
           </div>
 
-          {/* Fraud Detection KPIs - wired from real D1 fraud alerts */}
+          {/* KPIs from D1 */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-            <Stat
-              label="Total Alerts (D1)"
-              value={fraudStats.totalAlerts}
-              icon={<AlertTriangle className="h-5 w-5" />}
-            />
-            <Stat
-              label="Critical / High"
-              value={`${fraudStats.criticalSeverity} / ${fraudStats.highSeverity}`}
-              icon={<ShieldAlert className="h-5 w-5" />}
-            />
-            <Stat
-              label="Investigating"
-              value={fraudStats.investigating}
-              icon={<Eye className="h-5 w-5" />}
-            />
-            <Stat
-              label="Resolved"
-              value={fraudStats.resolved}
-              icon={<CheckCircle2 className="h-5 w-5" />}
-            />
-            <Stat
-              label="Flagged Amount"
-              value={fraudStats.totalFlaggedAmount > 0 ? formatCurrency(fraudStats.totalFlaggedAmount) : '\u20B96.4L'}
-              icon={<IndianRupee className="h-5 w-5" />}
-            />
+            <Stat label="Total Alerts" value={d1FraudSummary?.total_alerts || 0} icon={<AlertTriangle className="h-5 w-5" />} />
+            <Stat label="Critical / High" value={`${d1FraudSummary?.critical || 0} / ${d1FraudSummary?.high || 0}`} icon={<ShieldAlert className="h-5 w-5" />} />
+            <Stat label="Investigating" value={d1FraudSummary?.investigating || 0} icon={<Eye className="h-5 w-5" />} />
+            <Stat label="Confirmed Fraud" value={d1FraudSummary?.confirmed || 0} icon={<CheckCircle2 className="h-5 w-5" />} />
+            <Stat label="Flagged Amount" value={d1FraudSummary?.total_flagged_amount ? formatCurrency(d1FraudSummary.total_flagged_amount) : '₹0'} icon={<IndianRupee className="h-5 w-5" />} />
           </div>
 
+          {/* Alert Cards — from D1 */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredFraudAlerts.map((alert) => (
-              <Card
-                key={alert.id}
-                className={cn(
-                  'transition-shadow hover:shadow-md',
-                  alert.riskScore >= 85 && 'border-error/30',
-                  alert.riskScore >= 70 && alert.riskScore < 85 && 'border-warning/30',
-                )}
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-xs font-mono text-gray-500 dark:text-gray-400">
-                      {alert.id}
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-gray-100">
-                      {alert.anomalyType}
-                    </p>
+            {filteredD1Alerts.map((alert) => {
+              const riskPct = Math.round((alert.risk_score || 0) * 100)
+              return (
+                <Card
+                  key={alert.id}
+                  className={cn(
+                    'transition-shadow hover:shadow-md',
+                    riskPct >= 90 && 'border-error/30',
+                    riskPct >= 80 && riskPct < 90 && 'border-warning/30',
+                  )}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs font-mono text-muted">{alert.id}</p>
+                        {alert.case_number && <span className="text-xs font-mono text-primary">{alert.case_number}</span>}
+                      </div>
+                      <p className="mt-1 text-sm font-semibold text-text dark:text-text-dark">
+                        {(alert.alert_type || '').replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                      </p>
+                    </div>
+                    <span className={cn('inline-flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold shrink-0', getRiskScoreColor(riskPct))}>
+                      {riskPct}
+                    </span>
                   </div>
-                  <span
-                    className={cn(
-                      'inline-flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold',
-                      getRiskScoreColor(alert.riskScore),
+
+                  <p className="mt-2 text-xs text-muted line-clamp-2">{alert.description}</p>
+
+                  <div className="mt-3 space-y-1.5 text-sm">
+                    {alert.claim_number && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted">Claim</span>
+                        <span className="font-medium text-primary">{alert.claim_number}</span>
+                      </div>
                     )}
-                  >
-                    {alert.riskScore}
-                  </span>
-                </div>
+                    {alert.patient_name && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted">Patient</span>
+                        <span className="text-text dark:text-text-dark">{alert.patient_name}</span>
+                      </div>
+                    )}
+                    {alert.claimed_amount && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted">Amount</span>
+                        <span className="font-semibold text-text dark:text-text-dark">{formatCurrency(alert.claimed_amount)}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted">Scheme</span>
+                      <span className="text-text dark:text-text-dark">{(alert.payer_scheme || '').replace(/_/g, ' ')}</span>
+                    </div>
+                  </div>
 
-                <div className="mt-3 space-y-2 text-sm">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-500 dark:text-gray-400">Claim</span>
-                    <span className="font-medium text-primary">{alert.claimId}</span>
+                  <div className="mt-3 flex items-center justify-between border-t border-border pt-3 dark:border-border-dark">
+                    <Badge variant={alert.status === 'open' ? 'info' : alert.status === 'under_investigation' ? 'warning' : alert.status === 'confirmed' ? 'error' : 'success'} dot>
+                      {(alert.status || '').replace(/_/g, ' ')}
+                    </Badge>
+                    {alert.status === 'open' ? (
+                      <button
+                        onClick={() => handleOpenInvestigation(alert.id)}
+                        disabled={investigatingAlert === alert.id}
+                        className="text-xs font-medium text-primary hover:text-primary/80 transition-colors disabled:opacity-50"
+                      >
+                        {investigatingAlert === alert.id ? <Loader2 className="inline h-3.5 w-3.5 mr-1 animate-spin" /> : <Eye className="inline h-3.5 w-3.5 mr-1" />}
+                        Open Investigation
+                      </button>
+                    ) : alert.investigator_name ? (
+                      <span className="text-xs text-muted">Investigator: {alert.investigator_name}</span>
+                    ) : null}
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-500 dark:text-gray-400">Provider</span>
-                    <span className="text-right max-w-[160px] truncate text-gray-700 dark:text-gray-300">
-                      {alert.provider}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-500 dark:text-gray-400">Amount</span>
-                    <span className="font-semibold text-gray-900 dark:text-gray-100">
-                      {formatCurrency(alert.amount)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-500 dark:text-gray-400">Detected</span>
-                    <span className="text-gray-700 dark:text-gray-300">
-                      {formatDate(alert.detectedDate)}
-                    </span>
-                  </div>
-                </div>
+                </Card>
+              )
+            })}
+          </div>
 
-                <div className="mt-3 flex items-center justify-between border-t border-border pt-3 dark:border-border-dark">
-                  <Badge variant={getFraudStatusVariant(alert.status)} dot>
-                    {alert.status}
-                  </Badge>
-                  <button className="text-xs font-medium text-primary hover:text-primary/80 transition-colors">
-                    <Eye className="inline h-3.5 w-3.5 mr-1" />
-                    Investigate
-                  </button>
+          {/* Active Investigations — from D1 */}
+          {d1Investigations.length > 0 && (
+            <Card header={<h3 className="font-display font-semibold text-text dark:text-text-dark">Active Investigations ({d1Investigations.filter((i) => i.status !== 'closed').length})</h3>}>
+              <div className="space-y-3">
+                {d1Investigations.filter((i) => i.status !== 'closed').map((inv) => (
+                  <div key={inv.id} className="flex items-start gap-4 p-3 rounded-lg bg-gray-50 dark:bg-slate-800">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-mono text-sm font-semibold text-primary">{inv.case_number}</span>
+                        <Badge variant={inv.priority === 'critical' ? 'error' : inv.priority === 'high' ? 'warning' : 'info'} size="sm">{inv.priority}</Badge>
+                        <Badge variant={inv.status === 'in_progress' ? 'warning' : 'info'} size="sm">{inv.status?.replace(/_/g, ' ')}</Badge>
+                      </div>
+                      <p className="text-sm text-text dark:text-text-dark">{(inv.alert_type || '').replace(/_/g, ' ')}</p>
+                      {inv.findings && <p className="text-xs text-muted mt-1 line-clamp-2">{inv.findings}</p>}
+                      <div className="flex items-center gap-4 mt-1 text-xs text-muted">
+                        {inv.claim_number && <span>Claim: {inv.claim_number}</span>}
+                        {inv.patient_name && <span>Patient: {inv.patient_name}</span>}
+                        {inv.investigator_name && <span>Investigator: {inv.investigator_name}</span>}
+                        {inv.notes_count != null && <span>{inv.notes_count} notes</span>}
+                      </div>
+                    </div>
+                    {inv.claimed_amount != null && (
+                      <div className="text-right shrink-0">
+                        <p className="text-sm font-bold text-text dark:text-text-dark">{formatCurrency(inv.claimed_amount)}</p>
+                        <p className="text-xs text-muted">flagged</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {/* Fraud Analytics from D1 */}
+          {d1FraudAnalytics && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card header={<h3 className="font-display font-semibold text-text dark:text-text-dark">By Alert Type</h3>}>
+                <div className="space-y-2">
+                  {(d1FraudAnalytics.by_type || []).map((t, i) => (
+                    <div key={i} className="flex items-center justify-between p-2 rounded hover:bg-gray-50 dark:hover:bg-white/5">
+                      <span className="text-sm text-text dark:text-text-dark">{t.alert_type.replace(/_/g, ' ')}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-muted">avg risk: {Math.round((t.avg_risk || 0) * 100)}%</span>
+                        <Badge variant="neutral" size="sm">{t.count}</Badge>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </Card>
-            ))}
-          </div>
+              <Card header={<h3 className="font-display font-semibold text-text dark:text-text-dark">Risk Distribution</h3>}>
+                <div className="space-y-2">
+                  {(d1FraudAnalytics.risk_distribution || []).map((r, i) => (
+                    <div key={i} className="flex items-center justify-between p-2 rounded hover:bg-gray-50 dark:hover:bg-white/5">
+                      <span className="text-sm text-text dark:text-text-dark">{r.risk_band}</span>
+                      <Badge variant={r.risk_band.includes('Critical') ? 'error' : r.risk_band.includes('High') ? 'warning' : 'neutral'} size="sm">{r.count}</Badge>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </div>
+          )}
         </div>
       )}
 

@@ -1,6 +1,6 @@
 # AyushmanLife Platform State — Honest Assessment
 
-> Last updated: 2026-03-30T14:30:00+05:30
+> Last updated: 2026-03-30T15:00:00+05:30
 > Git repository: [zovora2026/ayushmanlife](https://github.com/zovora2026/ayushmanlife) (main branch)
 > Live URL: https://ayushmanlife-516.pages.dev → https://ayushmanlife.in
 > Assessment criteria: APPLICATION_BUILD_LIST.md + HONEST_BUILD.md (replaces old benchmark)
@@ -11,8 +11,8 @@
 
 ```
 Frontend: React 19 + TypeScript 5.9 + Vite 8 + Tailwind CSS 4
-Backend:  Cloudflare Pages Functions (41 API routes)
-Database: Cloudflare D1 (ayushmanlife-db) — 29 tables, ~4700 rows, APAC region
+Backend:  Cloudflare Pages Functions (44 API routes)
+Database: Cloudflare D1 (ayushmanlife-db) — 31 tables, ~4800 rows, APAC region
 Auth:     Cookie-based D1 sessions + SHA-256 password hashing
 AI:       Claude API integration in Claims analysis (ICD-10/CPT coding)
 Deploy:   Cloudflare Pages (wrangler pages deploy)
@@ -222,7 +222,33 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 - WORKING: Payer claims endpoint with summary stats, enhanced with adjudication data
 - NOT YET: Auto-execution of rules on new claims, batch adjudication, pre-auth workflow, settlement/payment processing, appeal management UI, deductible/co-pay calculation
 - PARTIALLY FAKE: Other Payer tabs (TPA Management, Provider Network) still use mixed D1/hardcoded data
-### Build 8: Fraud Detection (APP 11) — NOT STARTED
+### Build 8: Fraud Detection (APP 11) — COMPLETE ✅
+
+**Definition of done**: System flags suspicious claims with risk scores and evidence. Investigators can open cases, document findings, and resolve alerts.
+
+**E2E Test Results** (verified via API calls on ayushmanlife-516.pages.dev):
+1. Fraud Alerts GET: 15 alerts across 13 fraud types, sorted by risk score, with claim/patient JOINs ✅
+2. Alert Summary: 6 open, 5 investigating, 2 confirmed, 2 resolved — risk bands (3 critical, 4 high, 6 medium, 2 low) ✅
+3. Alert PUT: Update status to under_investigation, assign investigator — persists to D1 ✅
+4. Investigations GET: 9 investigations with JOINs (alert details, claim, patient, investigator), summary stats ✅
+5. Investigation POST: Creates case (SIU-2026-XXX), updates alert status to under_investigation, assigns investigator ✅
+6. Investigation Note POST: Adds note to investigation with type and content, persists to D1 ✅
+7. Analytics GET: 15 alerts avg risk 0.80, 9 investigations (6 in-progress, 3 closed), ₹37K recovery, 4 risk bands, 13 fraud categories, 5 payer schemes ✅
+8. Frontend: Payer fraud tab with D1 KPIs, alert cards with risk scores, "Open Investigation" button, active investigations, analytics panels ✅
+
+**Honest Assessment Questions**:
+1. Can a real user complete the primary workflow? **YES** — Investigator can view fraud alerts sorted by risk score, see evidence/description, open an investigation case, add investigation notes, and resolve alerts. All from D1.
+2. Does data persist correctly? **YES** — Fraud alerts with risk scores and evidence in D1. Investigations linked to alerts via FK. Notes linked to investigations. Status changes cascade (alert→under_investigation when case opened). Recovery amounts tracked.
+3. Is the UI professional enough for a hospital environment? **YES** — Risk score badges with color coding, alert type labels, investigation case numbers (SIU-2026-XXX), evidence summary, analytics breakdowns by type and scheme.
+4. Would someone pay ₹1,000/month for this specific app? **MAYBE** — The fraud alert flagging with risk scores and evidence is genuinely useful for a TPA/SIU team. Investigation case management with notes is a real workflow. Missing: automated fraud detection rules engine (alerts are pre-seeded, not auto-generated from claims), document upload for evidence, SLA timers for investigation deadlines, reporting/export.
+5. What's the most embarrassing thing about it? Fraud alerts are seeded, not auto-generated — the system doesn't actually scan incoming claims to detect fraud patterns. The "risk score" is assigned manually in seed data, not computed by an algorithm. No evidence document upload. Investigation notes are text-only with no attachments. Monthly trend shows 14 of 15 alerts in March 2026 because that's when they were seeded.
+
+**What's actually working vs what's fake**:
+- WORKING: Fraud alert CRUD (15 alerts with risk scores, evidence JSON, claim/patient JOINs), investigation lifecycle (create→in_progress→closed), notes, analytics
+- WORKING: Risk distribution (critical/high/medium/low bands), fraud by type (13 categories), by payer scheme (5 schemes), flagged amount calculation
+- WORKING: Alert status management (open→under_investigation→confirmed→resolved), investigator assignment
+- NOT YET: Automated fraud detection from claims data, ML-based risk scoring, evidence document upload, investigation SLA timers, batch alert management, export/reporting
+- PARTIALLY FAKE: Monthly trend skewed by seed data timing, recovery amounts are seed data not computed from actual recoveries
 ### Build 9: Payer Analytics (APP 12) — NOT STARTED
 ### Build 10: Client Portal (APP 7) — NOT STARTED
 ### Build 11: EMR Test Management (APP 2) — NOT STARTED
@@ -233,4 +259,4 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 
 ---
 
-## Progress: 7/15 apps complete
+## Progress: 8/15 apps complete

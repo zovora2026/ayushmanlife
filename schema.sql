@@ -397,6 +397,31 @@ CREATE TABLE IF NOT EXISTS claim_timeline (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Fraud Investigation
+CREATE TABLE IF NOT EXISTS fraud_investigations (
+  id TEXT PRIMARY KEY,
+  alert_id TEXT NOT NULL REFERENCES fraud_alerts(id),
+  investigator_id TEXT REFERENCES users(id),
+  case_number TEXT UNIQUE NOT NULL,
+  status TEXT DEFAULT 'open',
+  priority TEXT DEFAULT 'medium',
+  findings TEXT,
+  evidence_summary TEXT,
+  recovery_amount REAL DEFAULT 0,
+  action_taken TEXT,
+  opened_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  closed_at DATETIME
+);
+
+CREATE TABLE IF NOT EXISTS fraud_investigation_notes (
+  id TEXT PRIMARY KEY,
+  investigation_id TEXT NOT NULL REFERENCES fraud_investigations(id),
+  author_id TEXT REFERENCES users(id),
+  note_type TEXT DEFAULT 'note',
+  content TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
@@ -431,3 +456,6 @@ CREATE INDEX IF NOT EXISTS idx_adjudications_claim ON claim_adjudications(claim_
 CREATE INDEX IF NOT EXISTS idx_adjudications_date ON claim_adjudications(decision_date);
 CREATE INDEX IF NOT EXISTS idx_timeline_claim ON claim_timeline(claim_id);
 CREATE INDEX IF NOT EXISTS idx_rules_scheme ON adjudication_rules(payer_scheme);
+CREATE INDEX IF NOT EXISTS idx_investigations_alert ON fraud_investigations(alert_id);
+CREATE INDEX IF NOT EXISTS idx_investigations_status ON fraud_investigations(status);
+CREATE INDEX IF NOT EXISTS idx_inv_notes_investigation ON fraud_investigation_notes(investigation_id);
