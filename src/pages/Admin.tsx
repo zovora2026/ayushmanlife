@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import { Settings, Building2, Users, Shield, Link2, CheckCircle, XCircle, AlertTriangle, ExternalLink, Fingerprint, ShieldCheck, UserCheck, BadgeCheck, Clock, Activity, Camera, Loader2, Search, Wifi, RefreshCw, Lock, Eye, Bug, Key, MonitorSmartphone, FileWarning, Globe, ServerCrash } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Settings, Building2, Users, Shield, Link2, CheckCircle, XCircle, AlertTriangle, ExternalLink, Fingerprint, ShieldCheck, UserCheck, BadgeCheck, Clock, Activity, Camera, Loader2, Search, Wifi, RefreshCw, Lock, Eye, Bug, Key, MonitorSmartphone, FileWarning, Globe, ServerCrash, Database } from 'lucide-react'
 import { cn } from '../lib/utils'
+import { workforce } from '../lib/api'
 
 const tabs = ['Hospital Setup', 'User Management', 'Identity & Verification', 'Compliance', 'Integrations', 'Security Center']
 
@@ -485,14 +486,124 @@ function SecurityCenterTab() {
   )
 }
 
+// Types for API staff used in Admin context
+interface APIStaffEntry {
+  id: string
+  user_id?: string
+  name?: string
+  role?: string
+  department?: string
+  designation?: string
+  contact?: string
+  status?: string
+  experience_years?: number
+  skills?: string[] | { skill_name: string; category: string; proficiency: number }[]
+  certifications?: { name?: string; certification_name?: string; status?: string; issued_by?: string; valid_until?: string | null; expiry_date?: string }[]
+  city?: string
+}
+
+interface CertSummary {
+  total: number
+  active: number
+  expiring_soon: number
+  expired: number
+  compliance_rate: number
+}
+
 export default function Admin() {
   const [activeTab, setActiveTab] = useState('Hospital Setup')
 
+  // Real data state
+  const [apiStaff, setApiStaff] = useState<APIStaffEntry[]>([])
+  const [certSummary, setCertSummary] = useState<CertSummary | null>(null)
+  const [staffLoading, setStaffLoading] = useState(true)
+  const [staffError, setStaffError] = useState<string | null>(null)
+  const [fetchedAt, setFetchedAt] = useState<Date | null>(null)
+
+  useEffect(() => {
+    let mounted = true
+    async function loadStaffData() {
+      setStaffLoading(true)
+      setStaffError(null)
+      try {
+        const [staffRes, certRes] = await Promise.all([
+          workforce.staff(),
+          workforce.certifications().catch(() => null),
+        ])
+        if (!mounted) return
+        if (staffRes.staff) {
+          setApiStaff(staffRes.staff as unknown as APIStaffEntry[])
+        }
+        if (certRes && (certRes as any).summary) {
+          setCertSummary((certRes as any).summary)
+        }
+        setFetchedAt(new Date())
+      } catch (err: any) {
+        if (mounted) {
+          setStaffError(err?.message || 'Failed to load staff data')
+        }
+      }
+      if (mounted) setStaffLoading(false)
+    }
+    loadStaffData()
+    return () => { mounted = false }
+  }, [])
+
+  // Derived stats from live API data
+  const staffCount = apiStaff.length
+  const departmentBreakdown = useMemo(() => {
+    const map: Record<string, number> = {}
+    apiStaff.forEach(s => {
+      const dept = s.department || 'Unknown'
+      map[dept] = (map[dept] || 0) + 1
+    })
+    return Object.entries(map).sort((a, b) => b[1] - a[1])
+  }, [apiStaff])
+
+  const activeStaffCount = useMemo(
+    () => apiStaff.filter(s => s.status === 'active' || s.status === 'Active').length,
+    [apiStaff]
+  )
+
+  const roleBreakdown = useMemo(() => {
+    const map: Record<string, number> = {}
+    apiStaff.forEach(s => {
+      const role = s.role || 'Unknown'
+      map[role] = (map[role] || 0) + 1
+    })
+    return Object.entries(map).sort((a, b) => b[1] - a[1])
+  }, [apiStaff])
+
+  // Merge API staff into the user management table (fallback to hardcoded if API returns nothing)
+  const mergedUsers = useMemo(() => {
+    if (apiStaff.length > 0) {
+      return apiStaff.map(s => ({
+        name: s.name || s.user_id || s.id,
+        email: s.contact || '',
+        role: s.role || s.designation || '-',
+        dept: s.department || '-',
+        status: (s.status === 'active' ? 'Active' : s.status === 'on-leave' ? 'On Leave' : s.status || 'Active') as string,
+        lastLogin: '-',
+        source: 'D1' as const,
+      }))
+    }
+    return users.map(u => ({ ...u, source: 'local' as const }))
+  }, [apiStaff])
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="font-display font-bold text-2xl text-text dark:text-text-dark">Administration</h1>
-        <p className="text-muted text-sm mt-1">Hospital configuration, user management, and compliance</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-display font-bold text-2xl text-text dark:text-text-dark">Administration</h1>
+          <p className="text-muted text-sm mt-1">Hospital configuration, user management, and compliance</p>
+        </div>
+        {fetchedAt && (
+          <div className="flex items-center gap-2 text-xs text-muted bg-white dark:bg-surface-dark border border-border dark:border-border-dark rounded-lg px-3 py-1.5">
+            <Database className="w-3.5 h-3.5 text-success" />
+            <span>D1 synced {fetchedAt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+            {staffCount > 0 && <span className="font-medium text-text dark:text-text-dark">({staffCount} staff)</span>}
+          </div>
+        )}
       </div>
 
       <div className="flex gap-1 border-b border-border dark:border-border-dark">
@@ -521,7 +632,7 @@ export default function Admin() {
                 ['NABH Status', 'Accredited'],
                 ['ABDM Facility ID', 'IN0110000845'],
                 ['Registration', 'MCI/DEL/2020/12345'],
-                ['Staff Count', '~800'],
+                ['Staff Count', staffLoading ? 'Loading...' : staffCount > 0 ? `${staffCount} (from D1)` : '~800'],
               ].map(([label, value]) => (
                 <div key={label} className="flex items-center justify-between py-2 border-b border-border dark:border-border-dark last:border-0">
                   <span className="text-sm text-muted">{label}</span>
@@ -541,41 +652,208 @@ export default function Admin() {
               ))}
             </div>
           </div>
+          {/* D1 Department Staff Distribution */}
+          {departmentBreakdown.length > 0 && (
+            <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-6">
+              <h2 className="font-display font-semibold text-lg text-text dark:text-text-dark mb-1 flex items-center gap-2">
+                <Database className="w-5 h-5 text-primary" /> Staff Distribution by Department
+              </h2>
+              <p className="text-xs text-muted mb-4">Live data from D1 workforce API</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {departmentBreakdown.map(([dept, count]) => (
+                  <div key={dept} className="px-3 py-3 rounded-lg border border-border dark:border-border-dark bg-gray-50 dark:bg-slate-800 flex items-center justify-between">
+                    <span className="text-sm text-text dark:text-text-dark">{dept}</span>
+                    <span className="text-sm font-bold text-primary">{count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {activeTab === 'User Management' && (
-        <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark overflow-hidden">
-          <div className="p-4 border-b border-border dark:border-border-dark flex items-center justify-between">
-            <h2 className="font-display font-semibold text-text dark:text-text-dark flex items-center gap-2">
-              <Users className="w-5 h-5 text-primary" /> Platform Users
-            </h2>
-            <span className="text-sm text-muted">{users.length} users</span>
+        <div className="space-y-6">
+          {/* User Management KPI Row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { label: 'Total Staff', value: staffLoading ? '...' : String(staffCount || users.length), icon: Users, color: 'text-primary', bg: 'bg-primary/10' },
+              { label: 'Active Now', value: staffLoading ? '...' : String(activeStaffCount || users.filter(u => u.status === 'Active').length), icon: UserCheck, color: 'text-success', bg: 'bg-success/10' },
+              { label: 'Departments', value: staffLoading ? '...' : String(departmentBreakdown.length || '16'), icon: Building2, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+              { label: 'Certifications', value: certSummary ? String(certSummary.total) : '-', icon: BadgeCheck, color: certSummary && certSummary.expired > 0 ? 'text-warning' : 'text-success', bg: certSummary && certSummary.expired > 0 ? 'bg-warning/10' : 'bg-success/10', sub: certSummary ? `${certSummary.compliance_rate}% compliant` : undefined },
+            ].map(s => (
+              <div key={s.label} className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-4">
+                <div className="flex items-center gap-3">
+                  <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center', s.bg)}>
+                    <s.icon className={cn('w-5 h-5', s.color)} />
+                  </div>
+                  <div>
+                    <p className={cn('font-display font-bold text-xl', s.color)}>{s.value}</p>
+                    {s.sub && <span className="text-xs text-muted">({s.sub})</span>}
+                  </div>
+                </div>
+                <p className="text-xs text-muted mt-2">{s.label}</p>
+              </div>
+            ))}
           </div>
-          <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50 dark:bg-slate-800">
-                {['Name', 'Email', 'Role', 'Department', 'Status', 'Last Login'].map(h => (
-                  <th key={h} className="text-left px-4 py-3 font-semibold text-muted text-xs uppercase tracking-wider">{h}</th>
+
+          {/* Role & Department Breakdown (from D1) */}
+          {apiStaff.length > 0 && (
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-5">
+                <h3 className="font-display font-semibold text-sm text-text dark:text-text-dark mb-3 flex items-center gap-2">
+                  <Database className="w-4 h-4 text-primary" /> By Role
+                </h3>
+                <div className="space-y-2">
+                  {roleBreakdown.map(([role, count]) => (
+                    <div key={role} className="flex items-center justify-between">
+                      <span className="text-sm text-muted">{role}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-24 h-2 rounded-full bg-gray-200 dark:bg-slate-700 overflow-hidden">
+                          <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${(count / staffCount) * 100}%` }} />
+                        </div>
+                        <span className="text-sm font-semibold text-text dark:text-text-dark w-6 text-right">{count}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-5">
+                <h3 className="font-display font-semibold text-sm text-text dark:text-text-dark mb-3 flex items-center gap-2">
+                  <Database className="w-4 h-4 text-primary" /> By Department
+                </h3>
+                <div className="space-y-2">
+                  {departmentBreakdown.map(([dept, count]) => (
+                    <div key={dept} className="flex items-center justify-between">
+                      <span className="text-sm text-muted">{dept}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-24 h-2 rounded-full bg-gray-200 dark:bg-slate-700 overflow-hidden">
+                          <div className="h-full rounded-full bg-success transition-all" style={{ width: `${(count / staffCount) * 100}%` }} />
+                        </div>
+                        <span className="text-sm font-semibold text-text dark:text-text-dark w-6 text-right">{count}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Certification Compliance (from D1) */}
+          {certSummary && (
+            <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-5">
+              <h3 className="font-display font-semibold text-sm text-text dark:text-text-dark mb-3 flex items-center gap-2">
+                <BadgeCheck className="w-4 h-4 text-primary" /> Certification Compliance
+                <span className="ml-auto text-xs text-muted font-normal">Source: D1 workforce/certifications</span>
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                {[
+                  { label: 'Total', value: certSummary.total, color: 'text-text dark:text-text-dark' },
+                  { label: 'Active', value: certSummary.active, color: 'text-success' },
+                  { label: 'Expiring Soon', value: certSummary.expiring_soon, color: 'text-warning' },
+                  { label: 'Expired', value: certSummary.expired, color: 'text-error' },
+                  { label: 'Compliance', value: `${certSummary.compliance_rate}%`, color: certSummary.compliance_rate >= 90 ? 'text-success' : 'text-warning' },
+                ].map(item => (
+                  <div key={item.label} className="text-center py-2">
+                    <p className={cn('font-display font-bold text-lg', item.color)}>{item.value}</p>
+                    <p className="text-xs text-muted">{item.label}</p>
+                  </div>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
-              {users.map(u => (
-                <tr key={u.email} className="border-b border-border dark:border-border-dark last:border-0 hover:bg-gray-50 dark:hover:bg-slate-800/50">
-                  <td className="px-4 py-3 font-medium text-text dark:text-text-dark">{u.name}</td>
-                  <td className="px-4 py-3 text-muted">{u.email}</td>
-                  <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">{u.role}</span></td>
-                  <td className="px-4 py-3 text-muted">{u.dept}</td>
-                  <td className="px-4 py-3">
-                    <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', u.status === 'Active' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning')}>{u.status}</span>
-                  </td>
-                  <td className="px-4 py-3 text-muted">{new Date(u.lastLogin).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+              </div>
+            </div>
+          )}
+
+          {/* Staff table */}
+          <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark overflow-hidden">
+            <div className="p-4 border-b border-border dark:border-border-dark flex items-center justify-between">
+              <h2 className="font-display font-semibold text-text dark:text-text-dark flex items-center gap-2">
+                <Users className="w-5 h-5 text-primary" /> Platform Users
+              </h2>
+              <div className="flex items-center gap-3">
+                {apiStaff.length > 0 && (
+                  <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-success/10 text-success text-xs font-medium">
+                    <Database className="w-3 h-3" /> Live D1
+                  </span>
+                )}
+                <span className="text-sm text-muted">{mergedUsers.length} users</span>
+              </div>
+            </div>
+
+            {staffLoading ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-primary mb-3" />
+                <p className="text-sm text-muted">Loading staff from D1 database...</p>
+              </div>
+            ) : staffError ? (
+              <div className="p-6">
+                <div className="flex items-center gap-2 text-warning mb-2">
+                  <AlertTriangle className="w-4 h-4" />
+                  <span className="text-sm font-medium">Could not load live data: {staffError}</span>
+                </div>
+                <p className="text-xs text-muted mb-4">Showing local fallback data instead.</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50 dark:bg-slate-800">
+                        {['Name', 'Email', 'Role', 'Department', 'Status', 'Last Login'].map(h => (
+                          <th key={h} className="text-left px-4 py-3 font-semibold text-muted text-xs uppercase tracking-wider">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map(u => (
+                        <tr key={u.email} className="border-b border-border dark:border-border-dark last:border-0 hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                          <td className="px-4 py-3 font-medium text-text dark:text-text-dark">{u.name}</td>
+                          <td className="px-4 py-3 text-muted">{u.email}</td>
+                          <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">{u.role}</span></td>
+                          <td className="px-4 py-3 text-muted">{u.dept}</td>
+                          <td className="px-4 py-3">
+                            <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', u.status === 'Active' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning')}>{u.status}</span>
+                          </td>
+                          <td className="px-4 py-3 text-muted">{new Date(u.lastLogin).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-slate-800">
+                      {['Name', 'Email / Contact', 'Role', 'Department', 'Status', mergedUsers[0]?.source === 'D1' ? 'Source' : 'Last Login'].map(h => (
+                        <th key={h} className="text-left px-4 py-3 font-semibold text-muted text-xs uppercase tracking-wider">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mergedUsers.map((u, idx) => (
+                      <tr key={u.email || idx} className="border-b border-border dark:border-border-dark last:border-0 hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                        <td className="px-4 py-3 font-medium text-text dark:text-text-dark">{u.name}</td>
+                        <td className="px-4 py-3 text-muted text-xs">{u.email || '-'}</td>
+                        <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">{u.role}</span></td>
+                        <td className="px-4 py-3 text-muted">{u.dept}</td>
+                        <td className="px-4 py-3">
+                          <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium',
+                            u.status === 'Active' ? 'bg-success/10 text-success' :
+                            u.status === 'On Leave' ? 'bg-warning/10 text-warning' :
+                            'bg-success/10 text-success'
+                          )}>{u.status}</span>
+                        </td>
+                        <td className="px-4 py-3 text-muted text-xs">
+                          {u.source === 'D1' ? (
+                            <span className="flex items-center gap-1 text-xs"><Database className="w-3 h-3 text-success" /> D1</span>
+                          ) : (
+                            u.lastLogin !== '-' ? new Date(u.lastLogin).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : '-'
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}

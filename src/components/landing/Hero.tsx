@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Play, Shield, Globe, Award, Heart, Activity, FileCheck, Brain } from 'lucide-react'
 import { cn } from '../../lib/utils'
+import type { DashboardKPIs } from '../../lib/api'
 
 function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: string }) {
   const [count, setCount] = useState(0)
@@ -31,7 +32,7 @@ const floatingIcons = [
   { icon: Brain, x: '15%', y: '75%', delay: 0.5 },
 ]
 
-export default function Hero() {
+export default function Hero({ stats }: { stats?: DashboardKPIs | null }) {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden gradient-hero">
       {floatingIcons.map((item, i) => {
@@ -85,9 +86,9 @@ export default function Hero() {
 
         <div className="flex justify-center gap-8 sm:gap-12 mb-12">
           {[
-            { value: 50000, suffix: '+', label: 'Claims Processed' },
-            { value: 100, suffix: '+', label: 'Hospitals' },
-            { value: 99, suffix: '.2%', label: 'Uptime' },
+            { value: stats?.active_claims ?? 0, suffix: '+', label: 'Claims Processed' },
+            { value: stats?.total_patients ?? 0, suffix: '+', label: 'Patients Served' },
+            { value: stats?.satisfaction_score ?? 0, suffix: '%', label: 'Satisfaction' },
           ].map((stat) => (
             <div key={stat.label} className="text-center">
               <div className="font-display font-bold text-2xl sm:text-3xl text-white">

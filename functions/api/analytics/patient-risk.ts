@@ -182,13 +182,14 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       });
     }
 
+    // risk_score is stored as 0.0-1.0 in D1, thresholds: high >= 0.7, medium 0.4-0.7, low < 0.4
     const [highResult, mediumResult, lowResult, countsResult] =
       await Promise.all([
         db
           .prepare(
             `SELECT id, name, age, gender, risk_score, chronic_conditions, last_visit, medical_history
              FROM patients
-             WHERE risk_score IS NOT NULL AND risk_score >= 75
+             WHERE risk_score IS NOT NULL AND risk_score >= 0.7
              ORDER BY risk_score DESC
              LIMIT 20`
           )
@@ -197,7 +198,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
           .prepare(
             `SELECT id, name, age, gender, risk_score, chronic_conditions, last_visit, medical_history
              FROM patients
-             WHERE risk_score IS NOT NULL AND risk_score >= 40 AND risk_score < 75
+             WHERE risk_score IS NOT NULL AND risk_score >= 0.4 AND risk_score < 0.7
              ORDER BY risk_score DESC
              LIMIT 20`
           )
@@ -206,7 +207,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
           .prepare(
             `SELECT id, name, age, gender, risk_score, chronic_conditions, last_visit, medical_history
              FROM patients
-             WHERE risk_score IS NOT NULL AND risk_score < 40
+             WHERE risk_score IS NOT NULL AND risk_score < 0.4
              ORDER BY risk_score DESC
              LIMIT 20`
           )
@@ -214,9 +215,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         db
           .prepare(
             `SELECT
-              SUM(CASE WHEN risk_score >= 75 THEN 1 ELSE 0 END) as total_high,
-              SUM(CASE WHEN risk_score >= 40 AND risk_score < 75 THEN 1 ELSE 0 END) as total_medium,
-              SUM(CASE WHEN risk_score < 40 THEN 1 ELSE 0 END) as total_low
+              SUM(CASE WHEN risk_score >= 0.7 THEN 1 ELSE 0 END) as total_high,
+              SUM(CASE WHEN risk_score >= 0.4 AND risk_score < 0.7 THEN 1 ELSE 0 END) as total_medium,
+              SUM(CASE WHEN risk_score < 0.4 THEN 1 ELSE 0 END) as total_low
              FROM patients
              WHERE risk_score IS NOT NULL`
           )

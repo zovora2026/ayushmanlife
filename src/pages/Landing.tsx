@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import Navbar from '../components/layout/Navbar'
 import Footer from '../components/layout/Footer'
 import Hero from '../components/landing/Hero'
@@ -9,12 +10,22 @@ import Testimonials from '../components/landing/Testimonials'
 import Pricing from '../components/landing/Pricing'
 import Partners from '../components/landing/Partners'
 import CTA from '../components/landing/CTA'
+import { analytics } from '../lib/api'
+import type { DashboardKPIs } from '../lib/api'
 
 export default function Landing() {
+  const [stats, setStats] = useState<DashboardKPIs | null>(null)
+
+  useEffect(() => {
+    analytics.dashboard()
+      .then(setStats)
+      .catch(() => {})
+  }, [])
+
   return (
     <div className="min-h-screen">
       <Navbar />
-      <Hero />
+      <Hero stats={stats} />
       <Features />
       <PlatformPreview />
       <ServiceStack />

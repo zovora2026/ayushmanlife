@@ -171,8 +171,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
                     CAST(julianday('now') - julianday(last_visit) AS INTEGER) as days_since_visit,
                     chronic_conditions, satisfaction_score
              FROM patients
-             WHERE churn_risk IS NOT NULL AND churn_risk >= 0.7
-             ORDER BY churn_risk DESC
+             WHERE churn_risk IN ('medium', 'high')
+             ORDER BY CASE churn_risk WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END, last_visit ASC
              LIMIT 20`
           )
           .all(),
