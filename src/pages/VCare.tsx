@@ -20,6 +20,15 @@ import {
   CheckSquare,
   CheckCircle,
   CalendarPlus,
+  Stethoscope,
+  Brain,
+  Bone,
+  Eye,
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  ShieldCheck,
+  Phone,
 } from 'lucide-react'
 import { useChatStore } from '../store/chatStore'
 import { patients as patientsAPI } from '../lib/api'
@@ -35,6 +44,110 @@ const quickReplies = [
   'Medication Reminder',
   'Talk to Doctor',
 ]
+
+// --- Symptom Checker Data ---
+type BodySystem = {
+  id: string
+  label: string
+  icon: typeof Activity
+  symptoms: string[]
+}
+
+const bodySystems: BodySystem[] = [
+  { id: 'head_neck', label: 'Head & Neck', icon: User, symptoms: ['Headache', 'Dizziness', 'Sore Throat', 'Earache', 'Vision Changes', 'Nasal Congestion'] },
+  { id: 'chest_respiratory', label: 'Chest & Respiratory', icon: Wind, symptoms: ['Cough', 'Shortness of Breath', 'Chest Pain', 'Wheezing', 'Fever', 'Fatigue'] },
+  { id: 'abdomen_gi', label: 'Abdomen & GI', icon: Pill, symptoms: ['Nausea', 'Vomiting', 'Abdominal Pain', 'Diarrhea', 'Constipation', 'Bloating'] },
+  { id: 'cardiovascular', label: 'Cardiovascular', icon: Heart, symptoms: ['Palpitations', 'Chest Tightness', 'Swelling in Legs', 'Rapid Heartbeat', 'Fainting', 'Cold Extremities'] },
+  { id: 'musculoskeletal', label: 'Musculoskeletal', icon: Bone, symptoms: ['Joint Pain', 'Back Pain', 'Muscle Weakness', 'Stiffness', 'Swelling', 'Limited Mobility'] },
+  { id: 'neurological', label: 'Neurological', icon: Brain, symptoms: ['Numbness', 'Tingling', 'Memory Loss', 'Tremors', 'Seizures', 'Balance Issues'] },
+  { id: 'skin_dermatology', label: 'Skin & Dermatology', icon: Eye, symptoms: ['Rash', 'Itching', 'Skin Discoloration', 'Dry Skin', 'Wound Not Healing', 'Hair Loss'] },
+  { id: 'general_systemic', label: 'General / Systemic', icon: Stethoscope, symptoms: ['Fever', 'Fatigue', 'Weight Loss', 'Night Sweats', 'Loss of Appetite', 'General Weakness'] },
+]
+
+const durationOptions = [
+  'Less than 24 hours',
+  '1-3 days',
+  '3-7 days',
+  '1-2 weeks',
+  'More than 2 weeks',
+]
+
+const severityLabels: Record<number, { label: string; color: string }> = {
+  1: { label: 'Mild', color: 'bg-green-500' },
+  2: { label: 'Moderate', color: 'bg-blue-500' },
+  3: { label: 'Significant', color: 'bg-yellow-500' },
+  4: { label: 'Severe', color: 'bg-orange-500' },
+  5: { label: 'Critical', color: 'bg-red-500' },
+}
+
+function getTriageResult(severity: number) {
+  if (severity <= 2) {
+    return {
+      level: 'Self-Care',
+      color: 'text-green-600',
+      bgColor: 'bg-green-50 dark:bg-green-900/20',
+      borderColor: 'border-green-200 dark:border-green-800',
+      iconColor: 'text-green-500',
+      advice: 'Your symptoms suggest a mild condition that can likely be managed at home.',
+      steps: [
+        'Rest and stay hydrated',
+        'Over-the-counter medications as appropriate',
+        'Monitor symptoms for any changes',
+        'Consult a doctor if symptoms persist beyond 5 days',
+      ],
+      showBooking: false,
+    }
+  }
+  if (severity === 3) {
+    return {
+      level: 'Routine',
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
+      borderColor: 'border-blue-200 dark:border-blue-800',
+      iconColor: 'text-blue-500',
+      advice: 'Your symptoms warrant medical attention. Please book an appointment within 1 week.',
+      steps: [
+        'Schedule a consultation with your doctor',
+        'Keep a symptom diary until your appointment',
+        'Take prescribed medications as directed',
+        'Avoid activities that worsen symptoms',
+      ],
+      showBooking: true,
+    }
+  }
+  if (severity === 4) {
+    return {
+      level: 'Urgent',
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-50 dark:bg-orange-900/20',
+      borderColor: 'border-orange-200 dark:border-orange-800',
+      iconColor: 'text-orange-500',
+      advice: 'Your symptoms require prompt medical attention. See a doctor within 24 hours.',
+      steps: [
+        'Visit your nearest clinic or hospital today',
+        'Do not ignore worsening symptoms',
+        'Bring a list of current medications',
+        'Have someone accompany you if possible',
+      ],
+      showBooking: true,
+    }
+  }
+  return {
+    level: 'Emergency',
+    color: 'text-red-600',
+    bgColor: 'bg-red-50 dark:bg-red-900/20',
+    borderColor: 'border-red-200 dark:border-red-800',
+    iconColor: 'text-red-500',
+    advice: 'Your symptoms indicate a potentially serious condition. Seek emergency care immediately.',
+    steps: [
+      'Call 108 (Emergency Ambulance) immediately',
+      'Go to the nearest Emergency Room',
+      'Do NOT drive yourself — ask for help',
+      'Bring your ID and insurance documents',
+    ],
+    showBooking: false,
+  }
+}
 
 const defaultVitals = [
   { label: 'Blood Pressure', value: '128/82', unit: 'mmHg', icon: Activity, color: 'text-error' },
@@ -107,6 +220,29 @@ export default function VCare() {
   const [bookingDate, setBookingDate] = useState('')
   const [bookingTime, setBookingTime] = useState('')
   const [bookingConfirmed, setBookingConfirmed] = useState(false)
+  // Symptom Checker state
+  const [scStep, setScStep] = useState(1)
+  const [scSystem, setScSystem] = useState<BodySystem | null>(null)
+  const [scSymptoms, setScSymptoms] = useState<string[]>([])
+  const [scDuration, setScDuration] = useState('')
+  const [scSeverity, setScSeverity] = useState(0)
+  const [scNotes, setScNotes] = useState('')
+
+  const resetSymptomChecker = () => {
+    setScStep(1)
+    setScSystem(null)
+    setScSymptoms([])
+    setScDuration('')
+    setScSeverity(0)
+    setScNotes('')
+  }
+
+  const toggleSymptom = (symptom: string) => {
+    setScSymptoms(prev =>
+      prev.includes(symptom) ? prev.filter(s => s !== symptom) : [...prev, symptom]
+    )
+  }
+
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -249,6 +385,233 @@ export default function VCare() {
           </div>
         </Card>
 
+        {/* Symptom Checker */}
+        <Card header={
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2">
+              <Stethoscope className="h-4 w-4 text-primary" />
+              <h3 className="font-display font-semibold text-text dark:text-text-dark">Symptom Checker</h3>
+            </div>
+            {scStep > 1 && scStep < 4 && (
+              <span className="text-[10px] font-medium text-muted">Step {scStep} of 4</span>
+            )}
+          </div>
+        }>
+          {/* Step 1: Body System Selection */}
+          {scStep === 1 && (
+            <div>
+              <p className="text-xs text-muted mb-3">Select the body system related to your symptoms:</p>
+              <div className="grid grid-cols-2 gap-2">
+                {bodySystems.map((sys) => (
+                  <button
+                    key={sys.id}
+                    onClick={() => { setScSystem(sys); setScStep(2) }}
+                    className="flex items-center gap-2 rounded-lg border border-border dark:border-border-dark px-3 py-2.5 text-left text-xs font-medium text-text dark:text-text-dark transition-all hover:border-primary hover:bg-primary/5 hover:text-primary"
+                  >
+                    <sys.icon className="h-4 w-4 shrink-0 text-primary" />
+                    <span className="leading-tight">{sys.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Symptom Selection */}
+          {scStep === 2 && scSystem && (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <button onClick={() => { setScStep(1); setScSymptoms([]) }} className="flex items-center gap-1 text-xs text-primary hover:underline">
+                  <ArrowLeft className="h-3 w-3" /> Back
+                </button>
+                <span className="text-xs text-muted">|</span>
+                <span className="text-xs font-medium text-text dark:text-text-dark">{scSystem.label}</span>
+              </div>
+              <p className="text-xs text-muted mb-3">Select all symptoms that apply:</p>
+              <div className="space-y-2">
+                {scSystem.symptoms.map((symptom) => (
+                  <label key={symptom} className="flex items-center gap-2.5 cursor-pointer rounded-lg border border-border dark:border-border-dark px-3 py-2 transition-colors hover:border-primary/40 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                    <input
+                      type="checkbox"
+                      checked={scSymptoms.includes(symptom)}
+                      onChange={() => toggleSymptom(symptom)}
+                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary/20"
+                    />
+                    <span className="text-xs font-medium text-text dark:text-text-dark">{symptom}</span>
+                  </label>
+                ))}
+              </div>
+              <button
+                onClick={() => { if (scSymptoms.length > 0) setScStep(3) }}
+                disabled={scSymptoms.length === 0}
+                className={cn(
+                  'mt-4 w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-medium transition-colors',
+                  scSymptoms.length > 0
+                    ? 'bg-primary text-white hover:bg-primary/90'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
+                )}
+              >
+                Continue <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Step 3: Duration & Severity */}
+          {scStep === 3 && (
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <button onClick={() => setScStep(2)} className="flex items-center gap-1 text-xs text-primary hover:underline">
+                  <ArrowLeft className="h-3 w-3" /> Back
+                </button>
+                <span className="text-xs text-muted">|</span>
+                <span className="text-xs font-medium text-text dark:text-text-dark">Duration & Severity</span>
+              </div>
+
+              <div className="space-y-4">
+                {/* Duration */}
+                <div>
+                  <label className="block text-[10px] font-medium uppercase tracking-wider text-muted mb-1.5">How long have you had these symptoms?</label>
+                  <select
+                    value={scDuration}
+                    onChange={(e) => setScDuration(e.target.value)}
+                    className="w-full rounded-lg border border-border dark:border-border-dark bg-background dark:bg-background-dark text-text dark:text-text-dark text-xs px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  >
+                    <option value="">Select duration...</option>
+                    {durationOptions.map((opt) => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Severity */}
+                <div>
+                  <label className="block text-[10px] font-medium uppercase tracking-wider text-muted mb-1.5">Severity level</label>
+                  <div className="flex gap-1.5">
+                    {[1, 2, 3, 4, 5].map((level) => (
+                      <button
+                        key={level}
+                        onClick={() => setScSeverity(level)}
+                        className={cn(
+                          'flex-1 flex flex-col items-center gap-1 rounded-lg border py-2 transition-all text-[10px] font-medium',
+                          scSeverity === level
+                            ? `${severityLabels[level].color} text-white border-transparent`
+                            : 'border-border dark:border-border-dark text-muted hover:border-primary/40'
+                        )}
+                      >
+                        <span className="text-sm font-bold">{level}</span>
+                        <span className="leading-none">{severityLabels[level].label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <label className="block text-[10px] font-medium uppercase tracking-wider text-muted mb-1.5">Additional notes (optional)</label>
+                  <textarea
+                    value={scNotes}
+                    onChange={(e) => setScNotes(e.target.value)}
+                    placeholder="Describe any other relevant details..."
+                    rows={2}
+                    className="w-full rounded-lg border border-border dark:border-border-dark bg-background dark:bg-background-dark text-text dark:text-text-dark text-xs px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={() => { if (scDuration && scSeverity > 0) setScStep(4) }}
+                disabled={!scDuration || scSeverity === 0}
+                className={cn(
+                  'mt-4 w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-medium transition-colors',
+                  scDuration && scSeverity > 0
+                    ? 'bg-primary text-white hover:bg-primary/90'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
+                )}
+              >
+                Get AI Assessment <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Step 4: AI Triage Result */}
+          {scStep === 4 && scSystem && (() => {
+            const triage = getTriageResult(scSeverity)
+            return (
+              <div>
+                {/* Triage Level Badge */}
+                <div className={cn('rounded-lg border p-3 mb-3', triage.bgColor, triage.borderColor)}>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    {scSeverity <= 2 && <ShieldCheck className={cn('h-5 w-5', triage.iconColor)} />}
+                    {scSeverity === 3 && <Calendar className={cn('h-5 w-5', triage.iconColor)} />}
+                    {scSeverity === 4 && <AlertTriangle className={cn('h-5 w-5', triage.iconColor)} />}
+                    {scSeverity === 5 && <Phone className={cn('h-5 w-5', triage.iconColor)} />}
+                    <span className={cn('text-sm font-bold', triage.color)}>
+                      {triage.level}
+                    </span>
+                  </div>
+                  <p className="text-xs text-text dark:text-text-dark leading-relaxed">{triage.advice}</p>
+                </div>
+
+                {/* Summary */}
+                <div className="rounded-lg bg-gray-50 dark:bg-white/5 p-3 mb-3 space-y-1.5">
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Assessment Summary</p>
+                  <p className="text-xs text-text dark:text-text-dark"><span className="text-muted">System:</span> {scSystem.label}</p>
+                  <p className="text-xs text-text dark:text-text-dark"><span className="text-muted">Symptoms:</span> {scSymptoms.join(', ')}</p>
+                  <p className="text-xs text-text dark:text-text-dark"><span className="text-muted">Duration:</span> {scDuration}</p>
+                  <p className="text-xs text-text dark:text-text-dark"><span className="text-muted">Severity:</span> {scSeverity}/5 ({severityLabels[scSeverity].label})</p>
+                  {scNotes && <p className="text-xs text-text dark:text-text-dark"><span className="text-muted">Notes:</span> {scNotes}</p>}
+                </div>
+
+                {/* Recommended Steps */}
+                <div className="mb-3">
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted mb-2">Recommended Next Steps</p>
+                  <ul className="space-y-1.5">
+                    {triage.steps.map((step, i) => (
+                      <li key={i} className="flex items-start gap-2 text-xs text-text dark:text-text-dark">
+                        <CheckCircle className="h-3.5 w-3.5 shrink-0 text-primary mt-0.5" />
+                        <span>{step}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-col gap-2">
+                  {triage.showBooking && (
+                    <button
+                      onClick={() => {
+                        resetSymptomChecker()
+                        // Scroll to booking card (best-effort)
+                        document.getElementById('book-appointment-card')?.scrollIntoView({ behavior: 'smooth' })
+                      }}
+                      className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary/90 transition-colors"
+                    >
+                      <CalendarPlus className="h-3.5 w-3.5" /> Book Appointment
+                    </button>
+                  )}
+                  {scSeverity === 5 && (
+                    <a
+                      href="tel:108"
+                      className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-red-600 text-white text-xs font-medium hover:bg-red-700 transition-colors"
+                    >
+                      <Phone className="h-3.5 w-3.5" /> Call 108 - Emergency
+                    </a>
+                  )}
+                  <button
+                    onClick={resetSymptomChecker}
+                    className="w-full py-2.5 rounded-lg bg-gray-100 dark:bg-white/10 text-muted text-xs font-medium hover:bg-gray-200 dark:hover:bg-white/15 transition-colors"
+                  >
+                    Start New Assessment
+                  </button>
+                </div>
+
+                <p className="mt-3 text-[10px] text-muted text-center leading-relaxed">
+                  This is an AI-based assessment and not a medical diagnosis. Always consult a qualified healthcare professional.
+                </p>
+              </div>
+            )
+          })()}
+        </Card>
+
         <Card header={<div className="flex items-center gap-2"><Wind className="h-4 w-4 text-primary" /><h3 className="font-display font-semibold text-text dark:text-text-dark">Recent Vitals</h3></div>} padding="sm">
           {contextLoading ? (
             <div className="flex items-center justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-muted" /></div>
@@ -283,7 +646,7 @@ export default function VCare() {
           </ul>
         </Card>
 
-        <Card header={<div className="flex items-center gap-2"><CalendarPlus className="h-4 w-4 text-primary" /><h3 className="font-display font-semibold text-text dark:text-text-dark">Book Appointment</h3></div>}>
+        <Card header={<div id="book-appointment-card" className="flex items-center gap-2"><CalendarPlus className="h-4 w-4 text-primary" /><h3 className="font-display font-semibold text-text dark:text-text-dark">Book Appointment</h3></div>}>
           {bookingConfirmed ? (
             <div className="text-center py-3">
               <CheckCircle className="h-10 w-10 text-success mx-auto mb-2" />

@@ -983,3 +983,316 @@ INSERT INTO vitals (id, patient_id, type, value, unit, recorded_at, recorded_by,
 ('vit-498', 'pat-048', 'bp_systolic', 133, 'mmHg', '2026-01-04 13:00:00', 'usr-003', 'manual'),
 ('vit-499', 'pat-049', 'bp_diastolic', 101, 'mmHg', '2026-02-23 06:15:00', 'usr-010', 'manual'),
 ('vit-500', 'pat-050', 'heart_rate', 74, 'bpm', '2026-03-26 19:30:00', 'usr-008', 'manual');
+
+-- ============================================================
+-- MEDICATIONS (30 active)
+-- ============================================================
+INSERT INTO medications (id, patient_id, name, dosage, frequency, route, start_date, end_date, prescribed_by, status, reminder_enabled, adherence_rate, notes) VALUES
+('med-001', 'pat-001', 'Metformin', '1000mg', 'twice daily', 'oral', '2025-01-15', NULL, 'usr-003', 'active', 1, 0.85, 'Take with meals to reduce GI side effects'),
+('med-002', 'pat-001', 'Dapagliflozin', '10mg', 'once daily', 'oral', '2026-03-15', NULL, 'usr-003', 'active', 1, 0.90, 'Monitor for UTI symptoms, maintain hydration'),
+('med-003', 'pat-001', 'Telmisartan', '40mg', 'once daily', 'oral', '2025-03-10', NULL, 'usr-002', 'active', 1, 0.88, 'For hypertension and renal protection'),
+('med-004', 'pat-003', 'Atorvastatin', '40mg', 'once daily at bedtime', 'oral', '2025-02-01', NULL, 'usr-002', 'active', 1, 0.92, 'Post-CABG mandatory statin therapy'),
+('med-005', 'pat-003', 'Aspirin', '75mg', 'once daily', 'oral', '2025-02-01', NULL, 'usr-002', 'active', 1, 0.95, 'Lifelong antiplatelet post-CABG'),
+('med-006', 'pat-003', 'Sacubitril/Valsartan', '50mg', 'twice daily', 'oral', '2026-03-16', NULL, 'usr-002', 'active', 1, 0.80, 'ARNI for HFrEF, titrate up if tolerated'),
+('med-007', 'pat-005', 'Tiotropium', '18mcg', 'once daily', 'inhalation', '2025-02-15', NULL, 'usr-003', 'active', 1, 0.78, 'LAMA for COPD, HandiHaler device'),
+('med-008', 'pat-005', 'Formoterol + Budesonide', '12mcg/400mcg', 'twice daily', 'inhalation', '2025-02-15', NULL, 'usr-003', 'active', 1, 0.75, 'LABA+ICS combination inhaler'),
+('med-009', 'pat-008', 'Vildagliptin', '50mg', 'twice daily', 'oral', '2025-04-01', NULL, 'usr-003', 'active', 1, 0.82, 'DPP-4i for diabetes, Metformin intolerant'),
+('med-010', 'pat-008', 'Amlodipine', '5mg', 'once daily', 'oral', '2025-04-01', NULL, 'usr-003', 'active', 1, 0.88, 'For hypertension'),
+('med-011', 'pat-011', 'Losartan', '50mg', 'once daily', 'oral', '2025-05-01', NULL, 'usr-002', 'active', 1, 0.85, 'For hypertension with LVH'),
+('med-012', 'pat-011', 'Metoprolol Succinate', '50mg', 'once daily', 'oral', '2025-05-01', NULL, 'usr-002', 'active', 1, 0.87, 'Beta-blocker for rate control and LVH'),
+('med-013', 'pat-015', 'Clopidogrel', '75mg', 'once daily', 'oral', '2026-01-25', '2027-01-25', 'usr-002', 'active', 1, 0.93, 'DAPT post-stent for 12 months'),
+('med-014', 'pat-015', 'Rosuvastatin', '20mg', 'once daily at bedtime', 'oral', '2025-07-20', NULL, 'usr-002', 'active', 1, 0.90, 'High-intensity statin post-ACS'),
+('med-015', 'pat-015', 'Insulin Glargine', '18 units', 'once daily at bedtime', 'subcutaneous', '2026-02-01', NULL, 'usr-003', 'active', 1, 0.80, 'Basal insulin for uncontrolled DM'),
+('med-016', 'pat-017', 'Levodopa/Carbidopa', '250/25mg', 'three times daily', 'oral', '2025-06-01', NULL, 'usr-003', 'active', 1, 0.88, 'Parkinson disease, adjust based on ON/OFF periods'),
+('med-017', 'pat-018', 'Tamoxifen', '20mg', 'once daily', 'oral', '2025-09-01', '2030-09-01', 'usr-003', 'active', 1, 0.92, 'Adjuvant hormonal therapy for breast cancer, 5 years'),
+('med-018', 'pat-022', 'Hydroxychloroquine', '200mg', 'twice daily', 'oral', '2025-07-05', NULL, 'usr-003', 'active', 1, 0.86, 'For SLE maintenance, annual eye exam required'),
+('med-019', 'pat-025', 'Bicalutamide', '50mg', 'once daily', 'oral', '2026-03-12', NULL, 'usr-003', 'active', 1, 0.90, 'Antiandrogen for prostate cancer'),
+('med-020', 'pat-027', 'Insulin Aspart', '8-10-8 units', 'three times daily before meals', 'subcutaneous', '2025-09-01', NULL, 'usr-003', 'active', 1, 0.75, 'Rapid-acting insulin for diabetic foot, tight control needed'),
+('med-021', 'pat-030', 'Glimepiride', '2mg', 'once daily before breakfast', 'oral', '2025-09-05', NULL, 'usr-003', 'active', 1, 0.82, 'Sulfonylurea for Type 2 DM'),
+('med-022', 'pat-035', 'Salbutamol Nebulization', '2.5mg', 'four times daily PRN', 'nebulization', '2025-10-10', NULL, 'usr-003', 'active', 1, 0.70, 'Rescue bronchodilator for COPD'),
+('med-023', 'pat-037', 'Erythropoietin', '4000 IU', 'twice weekly', 'subcutaneous', '2025-12-01', NULL, 'usr-003', 'active', 1, 0.85, 'For anemia of CKD/ESRD, target Hb 10-11'),
+('med-024', 'pat-041', 'Warfarin', '4mg', 'once daily', 'oral', '2025-12-01', NULL, 'usr-002', 'active', 1, 0.90, 'Mechanical mitral valve, target INR 2.5-3.5, dose recently reduced'),
+('med-025', 'pat-043', 'Timolol Eye Drops', '0.5%', 'twice daily', 'ophthalmic', '2025-12-10', NULL, 'usr-010', 'active', 1, 0.80, 'For glaucoma left eye, monitor IOP'),
+('med-026', 'pat-046', 'Apixaban', '5mg', 'twice daily', 'oral', '2026-03-24', NULL, 'usr-002', 'active', 1, 0.92, 'Switched from Warfarin for AF, renal function adequate'),
+('med-027', 'pat-048', 'Isoniazid + Rifampicin', '300mg/450mg', 'once daily empty stomach', 'oral', '2026-01-20', '2026-07-20', 'usr-003', 'active', 1, 0.88, 'Continuation phase ATT, monitor LFT monthly'),
+('med-028', 'pat-049', 'Torsemide', '10mg', 'once daily morning', 'oral', '2026-03-28', NULL, 'usr-003', 'active', 1, 0.85, 'Loop diuretic for CKD with volume overload'),
+('med-029', 'pat-049', 'Prazosin', '0.5mg', 'once daily at bedtime', 'oral', '2026-03-28', NULL, 'usr-003', 'active', 1, 0.80, 'Added for resistant hypertension, titrate up'),
+('med-030', 'pat-014', 'Levothyroxine', '50mcg', 'once daily empty stomach', 'oral', '2025-05-05', NULL, 'usr-003', 'active', 1, 0.91, 'For hypothyroidism, take 30 min before breakfast');
+
+-- ============================================================
+-- STAFF CERTIFICATIONS (for all 10 staff)
+-- ============================================================
+INSERT INTO staff_certifications (id, user_id, certification_name, issuing_body, certification_id, issued_date, expiry_date, status, verified) VALUES
+('cert-001', 'usr-001', 'Hospital Administration Certificate', 'Indian Institute of Hospital Administration', 'IIHA-2024-001', '2024-06-15', '2027-06-15', 'active', 1),
+('cert-002', 'usr-002', 'DM Cardiology', 'All India Institute of Medical Sciences', 'AIIMS-DM-2018-342', '2018-07-01', NULL, 'active', 1),
+('cert-003', 'usr-002', 'ACLS Provider', 'American Heart Association', 'AHA-ACLS-2025-1122', '2025-03-15', '2027-03-15', 'active', 1),
+('cert-004', 'usr-003', 'MD General Medicine', 'Madras Medical College', 'MMC-MD-2016-567', '2016-05-20', NULL, 'active', 1),
+('cert-005', 'usr-003', 'FCGP', 'College of General Practitioners India', 'FCGP-2020-089', '2020-01-10', NULL, 'active', 1),
+('cert-006', 'usr-004', 'MS Orthopedics', 'JIPMER Puducherry', 'JIPMER-MS-2017-234', '2017-06-30', NULL, 'active', 1),
+('cert-007', 'usr-004', 'AO Trauma Course Advanced', 'AO Foundation', 'AO-ADV-2024-456', '2024-11-10', '2026-11-10', 'active', 1),
+('cert-008', 'usr-005', 'MD Obstetrics & Gynecology', 'KGMU Lucknow', 'KGMU-MD-2019-123', '2019-04-15', NULL, 'active', 1),
+('cert-009', 'usr-006', 'BSc Nursing', 'RAK College of Nursing Delhi', 'RAK-BSN-2020-789', '2020-08-01', NULL, 'active', 1),
+('cert-010', 'usr-006', 'Critical Care Nursing Certificate', 'Indian Nursing Council', 'INC-CCN-2023-456', '2023-09-15', '2026-09-15', 'active', 1),
+('cert-011', 'usr-007', 'GNM Nursing', 'RML Hospital School of Nursing', 'RML-GNM-2019-321', '2019-06-01', NULL, 'active', 1),
+('cert-012', 'usr-007', 'BLS Provider', 'Indian Resuscitation Council', 'IRC-BLS-2025-567', '2025-01-20', '2027-01-20', 'active', 1),
+('cert-013', 'usr-008', 'BSc Nursing (Pediatrics)', 'CMC Vellore', 'CMC-BSN-2021-890', '2021-07-15', NULL, 'active', 1),
+('cert-014', 'usr-008', 'Neonatal Resuscitation Program', 'NNF India', 'NRP-2024-234', '2024-05-10', '2026-05-10', 'active', 1),
+('cert-015', 'usr-009', 'MBA Healthcare Management', 'IIHMR Jaipur', 'IIHMR-MBA-2022-567', '2022-05-30', NULL, 'active', 1),
+('cert-016', 'usr-009', 'NABH Assessor Training', 'NABH QCI', 'NABH-AT-2024-089', '2024-08-20', '2026-08-20', 'active', 1),
+('cert-017', 'usr-010', 'MD Pediatrics', 'BJ Medical College Ahmedabad', 'BJMC-MD-2020-345', '2020-03-25', NULL, 'active', 1),
+('cert-018', 'usr-010', 'IAP Fellowship Neonatology', 'Indian Academy of Pediatrics', 'IAP-NEO-2023-678', '2023-12-01', '2026-12-01', 'active', 1),
+('cert-019', 'usr-001', 'NABH Internal Auditor', 'NABH QCI', 'NABH-IA-2025-012', '2025-02-15', '2027-02-15', 'active', 1),
+('cert-020', 'usr-005', 'Laparoscopic Surgery Certificate', 'AGES India', 'AGES-LAP-2022-789', '2022-10-20', '2025-10-20', 'expired', 1);
+
+-- ============================================================
+-- STAFF SKILLS (for all 10 staff)
+-- ============================================================
+INSERT INTO staff_skills (id, user_id, skill_name, category, proficiency, verified, last_assessed) VALUES
+('skill-001', 'usr-001', 'Hospital Administration', 'management', 5, 1, '2026-01-15 10:00:00'),
+('skill-002', 'usr-001', 'Healthcare Compliance', 'management', 4, 1, '2026-01-15 10:00:00'),
+('skill-003', 'usr-001', 'NABH Quality Standards', 'management', 5, 1, '2025-12-01 09:00:00'),
+('skill-004', 'usr-002', 'Interventional Cardiology', 'clinical', 5, 1, '2026-02-01 10:00:00'),
+('skill-005', 'usr-002', 'Echocardiography', 'clinical', 5, 1, '2026-02-01 10:00:00'),
+('skill-006', 'usr-002', 'Cardiac Catheterization', 'clinical', 4, 1, '2025-11-15 09:00:00'),
+('skill-007', 'usr-003', 'Internal Medicine', 'clinical', 5, 1, '2026-01-20 10:00:00'),
+('skill-008', 'usr-003', 'Diabetes Management', 'clinical', 5, 1, '2026-01-20 10:00:00'),
+('skill-009', 'usr-003', 'Pulmonology', 'clinical', 4, 1, '2025-10-10 09:00:00'),
+('skill-010', 'usr-004', 'Joint Replacement Surgery', 'clinical', 5, 1, '2026-02-15 10:00:00'),
+('skill-011', 'usr-004', 'Arthroscopic Surgery', 'clinical', 4, 1, '2026-02-15 10:00:00'),
+('skill-012', 'usr-004', 'Trauma Surgery', 'clinical', 5, 1, '2025-12-20 09:00:00'),
+('skill-013', 'usr-005', 'High Risk Obstetrics', 'clinical', 5, 1, '2026-01-10 10:00:00'),
+('skill-014', 'usr-005', 'Laparoscopic Gynecology', 'clinical', 4, 1, '2025-09-15 09:00:00'),
+('skill-015', 'usr-005', 'Infertility Management', 'clinical', 3, 1, '2025-08-20 09:00:00'),
+('skill-016', 'usr-006', 'Critical Care Nursing', 'nursing', 5, 1, '2026-03-01 10:00:00'),
+('skill-017', 'usr-006', 'IV Therapy Management', 'nursing', 5, 1, '2026-03-01 10:00:00'),
+('skill-018', 'usr-006', 'Ventilator Care', 'nursing', 4, 1, '2025-11-01 09:00:00'),
+('skill-019', 'usr-007', 'Cardiac Monitoring', 'nursing', 5, 1, '2026-02-20 10:00:00'),
+('skill-020', 'usr-007', 'ECG Interpretation', 'nursing', 4, 1, '2026-02-20 10:00:00'),
+('skill-021', 'usr-007', 'BLS/ACLS', 'nursing', 4, 1, '2025-12-15 09:00:00'),
+('skill-022', 'usr-008', 'Pediatric Nursing', 'nursing', 5, 1, '2026-03-10 10:00:00'),
+('skill-023', 'usr-008', 'Neonatal Care', 'nursing', 5, 1, '2026-03-10 10:00:00'),
+('skill-024', 'usr-008', 'Immunization Administration', 'nursing', 5, 1, '2025-10-20 09:00:00'),
+('skill-025', 'usr-009', 'Financial Management', 'management', 4, 1, '2026-01-05 10:00:00'),
+('skill-026', 'usr-009', 'Claims Processing', 'management', 5, 1, '2026-01-05 10:00:00'),
+('skill-027', 'usr-009', 'AB-PMJAY Operations', 'management', 5, 1, '2025-11-10 09:00:00'),
+('skill-028', 'usr-010', 'Pediatric Emergency', 'clinical', 5, 1, '2026-02-10 10:00:00'),
+('skill-029', 'usr-010', 'Neonatal Resuscitation', 'clinical', 5, 1, '2026-02-10 10:00:00'),
+('skill-030', 'usr-010', 'Developmental Assessment', 'clinical', 4, 1, '2025-09-25 09:00:00');
+
+-- ============================================================
+-- SHIFT SCHEDULES (sample shifts for staff)
+-- ============================================================
+INSERT INTO shift_schedules (id, user_id, date, shift_type, start_time, end_time, department, status) VALUES
+('shift-001', 'usr-006', '2026-03-28', 'morning', '06:00', '14:00', 'General Medicine', 'scheduled'),
+('shift-002', 'usr-007', '2026-03-28', 'evening', '14:00', '22:00', 'Cardiology', 'scheduled'),
+('shift-003', 'usr-008', '2026-03-28', 'morning', '06:00', '14:00', 'Pediatrics', 'scheduled'),
+('shift-004', 'usr-006', '2026-03-29', 'evening', '14:00', '22:00', 'General Medicine', 'scheduled'),
+('shift-005', 'usr-007', '2026-03-29', 'night', '22:00', '06:00', 'Cardiology', 'scheduled'),
+('shift-006', 'usr-008', '2026-03-29', 'morning', '06:00', '14:00', 'Pediatrics', 'scheduled'),
+('shift-007', 'usr-006', '2026-03-30', 'night', '22:00', '06:00', 'General Medicine', 'scheduled'),
+('shift-008', 'usr-007', '2026-03-30', 'morning', '06:00', '14:00', 'Cardiology', 'scheduled'),
+('shift-009', 'usr-008', '2026-03-30', 'evening', '14:00', '22:00', 'Pediatrics', 'scheduled'),
+('shift-010', 'usr-002', '2026-03-28', 'morning', '08:00', '16:00', 'Cardiology', 'scheduled'),
+('shift-011', 'usr-003', '2026-03-28', 'morning', '08:00', '16:00', 'General Medicine', 'scheduled'),
+('shift-012', 'usr-004', '2026-03-28', 'morning', '08:00', '16:00', 'Orthopedics', 'scheduled'),
+('shift-013', 'usr-005', '2026-03-28', 'morning', '08:00', '16:00', 'Gynecology', 'scheduled'),
+('shift-014', 'usr-010', '2026-03-28', 'morning', '08:00', '16:00', 'Pediatrics', 'scheduled'),
+('shift-015', 'usr-002', '2026-03-29', 'morning', '08:00', '16:00', 'Cardiology', 'scheduled'),
+('shift-016', 'usr-003', '2026-03-29', 'morning', '08:00', '16:00', 'General Medicine', 'scheduled'),
+('shift-017', 'usr-006', '2026-03-27', 'morning', '06:00', '14:00', 'General Medicine', 'completed'),
+('shift-018', 'usr-007', '2026-03-27', 'evening', '14:00', '22:00', 'Cardiology', 'completed'),
+('shift-019', 'usr-008', '2026-03-27', 'night', '22:00', '06:00', 'Pediatrics', 'completed'),
+('shift-020', 'usr-006', '2026-03-26', 'evening', '14:00', '22:00', 'General Medicine', 'completed');
+
+-- ============================================================
+-- TICKETS (20 service desk tickets)
+-- ============================================================
+INSERT INTO tickets (id, ticket_number, title, description, category, priority, status, assigned_to, created_by, sla_hours, sla_breached, resolution, created_at, updated_at, resolved_at) VALUES
+('tkt-001', 'TKT-2026-001', 'Login issue for claims portal', 'Unable to login to the AB-PMJAY TMS portal since this morning. Getting authentication error 403.', 'it_support', 'high', 'resolved', 'usr-009', 'usr-001', 4, 0, 'Password reset and browser cache cleared. TMS portal access restored.', '2026-03-10 09:00:00', '2026-03-10 11:30:00', '2026-03-10 11:30:00'),
+('tkt-002', 'TKT-2026-002', 'ECG machine calibration needed', 'Cardiology ECG machine (Philips TC50) showing inconsistent readings. Last calibration was 8 months ago.', 'biomedical', 'high', 'resolved', 'usr-009', 'usr-007', 8, 0, 'Biomedical team recalibrated. Machine certified accurate. Next calibration due Sep 2026.', '2026-03-12 10:00:00', '2026-03-12 16:00:00', '2026-03-12 16:00:00'),
+('tkt-003', 'TKT-2026-003', 'Patient portal password reset requests', 'Multiple patients reporting inability to reset passwords on the patient portal. Error in OTP delivery.', 'it_support', 'medium', 'resolved', 'usr-009', 'usr-001', 12, 0, 'SMS gateway configuration updated. OTP delivery restored. Tested with 5 patients successfully.', '2026-03-14 08:30:00', '2026-03-14 18:00:00', '2026-03-14 18:00:00'),
+('tkt-004', 'TKT-2026-004', 'AC not working in Ward B', 'Air conditioning unit in Ward B (General Medicine) has stopped working. Temperature rising to 32°C. Patient comfort affected.', 'facilities', 'high', 'resolved', 'usr-009', 'usr-006', 4, 0, 'HVAC technician replaced faulty compressor. AC restored to normal operation.', '2026-03-15 11:00:00', '2026-03-15 15:00:00', '2026-03-15 15:00:00'),
+('tkt-005', 'TKT-2026-005', 'Claim CLM-2026-00071 wrongly rejected', 'HDFC Ergo rejected claim for osteoporosis citing pre-existing condition. Patient had continuous coverage for 4 years. Need to appeal.', 'claims', 'medium', 'in_progress', 'usr-009', 'usr-001', 24, 0, NULL, '2026-03-16 09:00:00', '2026-03-28 10:00:00', NULL),
+('tkt-006', 'TKT-2026-006', 'Pharmacy stock alert - Insulin Glargine low', 'Insulin Glargine (Lantus/Basalog) stock at 5 vials. Expected consumption this week: 12 vials. Urgent procurement needed.', 'pharmacy', 'high', 'resolved', 'usr-009', 'usr-008', 8, 0, 'Emergency procurement order placed with local distributor. 30 vials received next day delivery.', '2026-03-17 07:00:00', '2026-03-18 09:00:00', '2026-03-18 09:00:00'),
+('tkt-007', 'TKT-2026-007', 'NABH documentation audit preparation', 'Upcoming NABH surveillance audit on April 15. Need to prepare all quality documentation and SOP files for review.', 'quality', 'medium', 'in_progress', 'usr-009', 'usr-001', 168, 0, NULL, '2026-03-18 10:00:00', '2026-03-28 09:00:00', NULL),
+('tkt-008', 'TKT-2026-008', 'Network connectivity issues in OPD', 'Intermittent WiFi disconnection in OPD area affecting EMR access during consultations. Happening since Monday.', 'it_support', 'high', 'resolved', 'usr-009', 'usr-003', 4, 1, 'Faulty access point replaced. Network stability confirmed over 48-hour monitoring. SLA breached by 2 hours due to equipment procurement delay.', '2026-03-19 08:00:00', '2026-03-19 14:00:00', '2026-03-19 14:00:00'),
+('tkt-009', 'TKT-2026-009', 'Blood bank refrigerator temperature alarm', 'Blood bank refrigerator showing temperature of 8°C (should be 2-6°C). Alarm triggered at 3 AM.', 'biomedical', 'critical', 'resolved', 'usr-009', 'usr-006', 2, 0, 'Blood products shifted to backup unit immediately. Thermostat replaced. Temperature normalized to 4°C. All blood products integrity verified.', '2026-03-20 03:00:00', '2026-03-20 04:30:00', '2026-03-20 04:30:00'),
+('tkt-010', 'TKT-2026-010', 'New staff onboarding - 3 nurses joining', 'Three new nurses joining Cardiology and Pediatrics departments on April 1. Need system access, ID cards, and orientation schedule.', 'hr', 'medium', 'in_progress', 'usr-009', 'usr-001', 72, 0, NULL, '2026-03-21 09:00:00', '2026-03-28 10:00:00', NULL),
+('tkt-011', 'TKT-2026-011', 'Ambulance GPS tracking not working', 'GPS tracker on Ambulance-2 stopped transmitting location. Last known location was 6 hours ago.', 'it_support', 'high', 'resolved', 'usr-009', 'usr-009', 4, 0, 'SIM card in GPS device had expired. New SIM activated. GPS tracking restored and verified.', '2026-03-22 11:00:00', '2026-03-22 14:00:00', '2026-03-22 14:00:00'),
+('tkt-012', 'TKT-2026-012', 'Patient complaint - long OPD waiting time', 'Patient Ganesh Rao (pat-013) complained about 2.5 hour wait for scheduled appointment. Requesting process improvement.', 'patient_relations', 'medium', 'resolved', 'usr-009', 'usr-003', 24, 0, 'Appointment scheduling reviewed. Implemented 15-minute buffer slots between complex cases. Patient called and apologized. Token system upgraded.', '2026-03-23 14:00:00', '2026-03-25 10:00:00', '2026-03-25 10:00:00'),
+('tkt-013', 'TKT-2026-013', 'AB-PMJAY pre-auth portal down', 'The TMS pre-authorization module is showing server error since 2 PM. Cannot process new pre-auth requests for 5 pending admissions.', 'claims', 'critical', 'resolved', 'usr-009', 'usr-001', 2, 0, 'NHA confirmed nationwide server maintenance. Portal restored at 6 PM. All pending pre-auths processed successfully.', '2026-03-24 14:30:00', '2026-03-24 18:30:00', '2026-03-24 18:30:00'),
+('tkt-014', 'TKT-2026-014', 'Fire extinguisher inspection overdue', 'Monthly fire extinguisher inspection for March not completed. 12 units across 4 floors need inspection per NABH requirement.', 'facilities', 'medium', 'in_progress', 'usr-009', 'usr-009', 48, 0, NULL, '2026-03-25 09:00:00', '2026-03-28 09:00:00', NULL),
+('tkt-015', 'TKT-2026-015', 'Printer jam in billing department', 'HP LaserJet in billing counter producing blank pages and jamming frequently. Delaying patient billing and discharge process.', 'it_support', 'medium', 'resolved', 'usr-009', 'usr-009', 8, 0, 'Toner cartridge replaced and rollers cleaned. Test prints successful. Ordered spare toner for backup.', '2026-03-25 11:00:00', '2026-03-25 14:00:00', '2026-03-25 14:00:00'),
+('tkt-016', 'TKT-2026-016', 'Request for wheelchair ramp repair', 'Wheelchair ramp at main entrance has cracked concrete creating a bump. Difficult for wheelchair patients to navigate safely.', 'facilities', 'high', 'in_progress', 'usr-009', 'usr-006', 24, 0, NULL, '2026-03-26 08:00:00', '2026-03-28 09:00:00', NULL),
+('tkt-017', 'TKT-2026-017', 'CGHS claim reimbursement delayed 45 days', 'Batch of 8 CGHS claims submitted in February still showing processing status. Usual turnaround is 21 days. Need follow-up.', 'claims', 'medium', 'open', 'usr-009', 'usr-001', 48, 0, NULL, '2026-03-27 09:00:00', '2026-03-28 09:00:00', NULL),
+('tkt-018', 'TKT-2026-018', 'Training room projector bulb replacement', 'Projector in Training Room A has dim output. Bulb needs replacement before the April 2 CME session.', 'facilities', 'low', 'open', 'usr-009', 'usr-009', 72, 0, NULL, '2026-03-27 14:00:00', '2026-03-28 09:00:00', NULL),
+('tkt-019', 'TKT-2026-019', 'Data backup verification needed', 'Monthly backup verification for patient database not completed for March. NABH requirement for disaster recovery compliance.', 'it_support', 'high', 'open', 'usr-009', 'usr-001', 24, 0, NULL, '2026-03-28 08:00:00', '2026-03-28 08:00:00', NULL),
+('tkt-020', 'TKT-2026-020', 'WhatsApp Business API setup request', 'Need WhatsApp Business API integration for patient appointment reminders and claim status notifications. Ref: conversation with admin.', 'it_support', 'medium', 'open', 'usr-009', 'usr-001', 168, 0, NULL, '2026-03-28 10:00:00', '2026-03-28 10:00:00', NULL);
+
+-- ============================================================
+-- POLICIES (10 insurance policies)
+-- ============================================================
+INSERT INTO policies (id, policy_number, scheme, provider_name, holder_name, holder_id, patient_id, coverage_amount, premium_amount, start_date, end_date, status, benefits, created_at) VALUES
+('pol-001', 'AB-DL-2025-00001', 'ayushman_bharat', 'PMJAY', 'Ramesh Kumar', 'AADHAAR-XXXX-1001', 'pat-001', 500000.00, 0, '2025-01-01', '2025-12-31', 'active', '{"hospitalization": true, "daycare": true, "pre_post_hospitalization": true, "transport": 500}', '2025-01-01 00:00:00'),
+('pol-002', 'CGHS-TN-78452', 'cghs', 'CGHS', 'Lakshmi Devi', 'CGHS-BEN-78452', 'pat-002', 1000000.00, 0, '2025-01-01', '2025-12-31', 'active', '{"ward_entitlement": "private", "empanelled_hospitals": true, "referral_required": true}', '2025-01-01 00:00:00'),
+('pol-003', 'ECHS-AP-34521', 'echs', 'ECHS', 'Suresh Babu', 'ECHS-RET-34521', 'pat-003', 750000.00, 0, '2025-01-01', '2025-12-31', 'active', '{"dependent_coverage": true, "polyclinic_referral": true, "tertiary_care": true}', '2025-01-01 00:00:00'),
+('pol-004', 'STAR-WB-99012', 'private', 'Star Health', 'Fatima Begum', 'PAN-XXXX-1004', 'pat-004', 500000.00, 15000.00, '2025-04-01', '2026-03-31', 'active', '{"room_rent": 5000, "icu_limit": 10000, "pre_post_hospitalization_days": "30/60", "maternity": 50000, "newborn": 50000}', '2025-04-01 00:00:00'),
+('pol-005', 'HDFC-RJ-45678', 'private', 'HDFC Ergo', 'Geeta Sharma', 'PAN-XXXX-1006', 'pat-006', 1000000.00, 22000.00, '2024-08-01', '2025-07-31', 'active', '{"room_rent": "no_limit", "pre_existing_wait": "4_years", "copay": 0, "no_claim_bonus": "10_percent"}', '2024-08-01 00:00:00'),
+('pol-006', 'ICICI-MH-67890', 'private', 'ICICI Lombard', 'Vijay Patil', 'PAN-XXXX-1009', 'pat-009', 750000.00, 18500.00, '2025-06-01', '2026-05-31', 'active', '{"room_rent": 7500, "daycare": true, "ambulance": 3000, "restoration": "100_percent"}', '2025-06-01 00:00:00'),
+('pol-007', 'BAJAJ-MH-12345', 'private', 'Bajaj Allianz', 'Nandini Kulkarni', 'PAN-XXXX-1016', 'pat-016', 500000.00, 12000.00, '2025-09-01', '2026-08-31', 'active', '{"room_rent": 4000, "copay_senior": "10_percent", "pre_existing_wait": "3_years", "maternity": 40000}', '2025-09-01 00:00:00'),
+('pol-008', 'NIVA-TN-23456', 'private', 'Niva Bupa', 'Sudha Raghavan', 'PAN-XXXX-1022', 'pat-022', 2000000.00, 35000.00, '2025-03-01', '2026-02-28', 'active', '{"room_rent": "no_limit", "pre_existing_wait": "3_years", "wellness_benefit": 5000, "opd_cover": 15000}', '2025-03-01 00:00:00'),
+('pol-009', 'MAX-WB-34567', 'private', 'Max Bupa', 'Pooja Agarwal', 'PAN-XXXX-1012', 'pat-012', 300000.00, 8500.00, '2025-07-01', '2026-06-30', 'active', '{"room_rent": 3000, "daycare": true, "no_claim_bonus": "20_percent", "copay": 0}', '2025-07-01 00:00:00'),
+('pol-010', 'CARE-GJ-78901', 'private', 'Care Health', 'Malini Desai', 'PAN-XXXX-1026', 'pat-026', 500000.00, 14000.00, '2025-11-01', '2026-10-31', 'active', '{"room_rent": 5000, "pre_post_hospitalization_days": "60/90", "alternative_treatment": 25000, "mental_health": true}', '2025-11-01 00:00:00');
+
+-- ============================================================
+-- FRAUD ALERTS (5)
+-- ============================================================
+INSERT INTO fraud_alerts (id, claim_id, alert_type, risk_score, description, evidence, status, investigated_by, created_at, resolved_at) VALUES
+('fraud-001', 'clm-041', 'duplicate_billing', 0.85, 'Potential duplicate billing detected. Similar claim for mitral valve procedure found within 30-day window. Amount: Rs 3,50,000.', '{"duplicate_claim": "CLM-2025-00041-DUP", "similarity_score": 0.92, "same_procedure_code": "33430", "date_proximity_days": 15}', 'resolved', 'usr-009', '2026-03-23 10:00:00', '2026-03-25 14:00:00'),
+('fraud-002', 'clm-098', 'excessive_amount', 0.72, 'Claim amount Rs 1,80,000 for obesity management exceeds 95th percentile for this procedure category. Average package rate is Rs 80,000.', '{"claimed_amount": 180000, "average_amount": 80000, "percentile_95": 120000, "variance": "125%"}', 'under_investigation', 'usr-009', '2026-03-25 09:00:00', NULL),
+('fraud-003', 'clm-076', 'policy_mismatch', 0.68, 'Pre-existing condition claimed under policy with 4-year waiting period. Policy start date suggests waiting period not completed for rheumatoid arthritis.', '{"policy_start": "2024-08-01", "condition_onset": "2020-01-01", "waiting_period_years": 4, "waiting_complete_date": "2028-08-01"}', 'under_investigation', 'usr-001', '2026-03-08 14:00:00', NULL),
+('fraud-004', 'clm-037', 'phantom_billing', 0.78, 'AI detected potential phantom billing: dialysis session claimed on a date when patient was recorded as outpatient visit only. No dialysis documentation found.', '{"claimed_service": "hemodialysis_session", "date": "2026-03-22", "documentation_status": "missing", "patient_location": "opd_visit_only"}', 'open', NULL, '2026-03-27 11:00:00', NULL),
+('fraud-005', 'clm-046', 'upcoding', 0.65, 'Electrophysiology study (CPT 93609) may be upcoded. Clinical notes suggest routine ECG and echo only. No EP study documentation in operative notes.', '{"claimed_procedure": "93609", "suggested_procedure": "93000", "price_difference": 95000, "documentation_gap": "no_ep_study_notes"}', 'open', NULL, '2026-03-28 14:00:00', NULL);
+
+-- ============================================================
+-- LEARNING PATHS (8)
+-- ============================================================
+INSERT INTO learning_paths (id, name, description, category, difficulty, modules_count, estimated_hours, status) VALUES
+('lp-001', 'AB-PMJAY Claims Processing Masterclass', 'Comprehensive training on Ayushman Bharat claim submission, pre-authorization, TMS portal operations, and package rate optimization.', 'claims', 'intermediate', 12, 24, 'active'),
+('lp-002', 'ICD-10 Medical Coding Essentials', 'Learn accurate ICD-10-CM/PCS coding for common Indian healthcare conditions. Includes hands-on exercises with real claim scenarios.', 'coding', 'intermediate', 10, 20, 'active'),
+('lp-003', 'Diabetes Management for Primary Care', 'Evidence-based diabetes care following ICMR/ADA guidelines. Covers insulin initiation, SGLT2i use, complications screening, and patient education.', 'clinical', 'advanced', 15, 30, 'active'),
+('lp-004', 'NABH Quality Standards and Compliance', 'Prepare for NABH accreditation with comprehensive training on documentation, SOPs, quality indicators, and patient safety protocols.', 'quality', 'intermediate', 8, 16, 'active'),
+('lp-005', 'Cardiac Emergency Protocols - ACLS', 'Advanced Cardiac Life Support training including acute MI management, arrhythmia recognition, and post-cardiac arrest care pathways.', 'clinical', 'advanced', 10, 20, 'active'),
+('lp-006', 'Healthcare Data Privacy and DPDP Act', 'Understanding India Digital Personal Data Protection Act 2023 compliance in healthcare. Covers patient consent, data handling, and breach notification.', 'compliance', 'beginner', 6, 12, 'active'),
+('lp-007', 'Nursing Excellence in Critical Care', 'Advanced nursing skills for ICU/CCU including ventilator management, hemodynamic monitoring, sepsis protocols, and end-of-life care.', 'nursing', 'advanced', 12, 24, 'active'),
+('lp-008', 'Patient Communication and Counseling Skills', 'Effective communication techniques for healthcare professionals. Breaking bad news, informed consent, cultural sensitivity, and health literacy.', 'soft_skills', 'beginner', 8, 16, 'active');
+
+-- ============================================================
+-- LEARNING ENROLLMENTS (20 enrollments across staff)
+-- ============================================================
+INSERT INTO learning_enrollments (id, user_id, path_id, progress_percent, started_at, completed_at, status) VALUES
+('enr-001', 'usr-001', 'lp-001', 100.0, '2025-06-01 09:00:00', '2025-07-15 14:00:00', 'completed'),
+('enr-002', 'usr-001', 'lp-004', 85.0, '2025-09-01 10:00:00', NULL, 'in_progress'),
+('enr-003', 'usr-001', 'lp-006', 100.0, '2025-11-01 09:00:00', '2025-12-10 11:00:00', 'completed'),
+('enr-004', 'usr-002', 'lp-005', 100.0, '2025-04-01 09:00:00', '2025-05-20 16:00:00', 'completed'),
+('enr-005', 'usr-002', 'lp-003', 60.0, '2026-01-15 10:00:00', NULL, 'in_progress'),
+('enr-006', 'usr-003', 'lp-003', 100.0, '2025-05-01 09:00:00', '2025-07-01 14:00:00', 'completed'),
+('enr-007', 'usr-003', 'lp-002', 45.0, '2026-02-01 10:00:00', NULL, 'in_progress'),
+('enr-008', 'usr-004', 'lp-005', 100.0, '2025-06-15 09:00:00', '2025-08-10 11:00:00', 'completed'),
+('enr-009', 'usr-004', 'lp-008', 30.0, '2026-03-01 10:00:00', NULL, 'in_progress'),
+('enr-010', 'usr-005', 'lp-008', 100.0, '2025-08-01 09:00:00', '2025-09-15 14:00:00', 'completed'),
+('enr-011', 'usr-005', 'lp-006', 70.0, '2026-01-10 10:00:00', NULL, 'in_progress'),
+('enr-012', 'usr-006', 'lp-007', 100.0, '2025-07-01 09:00:00', '2025-09-30 16:00:00', 'completed'),
+('enr-013', 'usr-006', 'lp-001', 50.0, '2026-02-15 10:00:00', NULL, 'in_progress'),
+('enr-014', 'usr-007', 'lp-005', 75.0, '2025-10-01 09:00:00', NULL, 'in_progress'),
+('enr-015', 'usr-007', 'lp-007', 100.0, '2025-05-01 09:00:00', '2025-07-20 14:00:00', 'completed'),
+('enr-016', 'usr-008', 'lp-007', 90.0, '2025-09-01 10:00:00', NULL, 'in_progress'),
+('enr-017', 'usr-008', 'lp-008', 100.0, '2025-06-01 09:00:00', '2025-07-25 11:00:00', 'completed'),
+('enr-018', 'usr-009', 'lp-001', 100.0, '2025-03-01 09:00:00', '2025-04-15 14:00:00', 'completed'),
+('enr-019', 'usr-009', 'lp-004', 100.0, '2025-07-01 10:00:00', '2025-08-20 16:00:00', 'completed'),
+('enr-020', 'usr-010', 'lp-003', 40.0, '2026-02-01 09:00:00', NULL, 'in_progress');
+
+-- ============================================================
+-- FEEDBACK (30 entries)
+-- ============================================================
+INSERT INTO feedback (id, patient_id, type, department, rating, nps_score, comment, sentiment, status, created_at) VALUES
+('fb-001', 'pat-001', 'post_visit', 'Cardiology', 4, 8, 'Dr. Rajesh Sharma was very thorough with the cardiac checkup. Explained everything clearly about my diabetes and heart health connection.', 'positive', 'reviewed', '2026-03-20 16:00:00'),
+('fb-002', 'pat-002', 'post_visit', 'General Medicine', 5, 9, 'Dr. Priya Patel is excellent. My asthma is much better controlled now. She took time to check my inhaler technique which no one did before.', 'positive', 'reviewed', '2026-03-18 15:00:00'),
+('fb-003', 'pat-003', 'post_visit', 'Cardiology', 3, 5, 'Treatment is good but waiting time was too long. Had to wait 1.5 hours despite having a scheduled appointment. The echo report was delayed.', 'mixed', 'reviewed', '2026-03-22 17:00:00'),
+('fb-004', 'pat-004', 'post_visit', 'Gynecology', 5, 10, 'Dr. Sunita Reddy is wonderful. She made me feel very comfortable during the pregnancy checkup. The ultrasound facility is excellent. Highly recommend.', 'positive', 'reviewed', '2026-03-25 14:00:00'),
+('fb-005', 'pat-005', 'post_visit', 'General Medicine', 3, 5, 'Medicine is helping but I feel the hospital should have better parking facility. Also, the pharmacy took 45 minutes to dispense medicines.', 'mixed', 'reviewed', '2026-03-15 12:00:00'),
+('fb-006', 'pat-007', 'post_visit', 'General Medicine', 5, 9, 'Very happy with the treatment for dengue recovery. The nursing staff was caring and attentive. Quick lab report turnaround time.', 'positive', 'reviewed', '2026-03-10 18:00:00'),
+('fb-007', 'pat-008', 'post_visit', 'General Medicine', 4, 7, 'Good care for my kidney condition. The diet chart they provided was very helpful. However, the lab reports could be explained better.', 'positive', 'reviewed', '2026-03-24 16:30:00'),
+('fb-008', 'pat-009', 'post_visit', 'Orthopedics', 5, 10, 'Dr. Amit Verma is brilliant. My back pain has significantly reduced after following his treatment plan. The physiotherapy team is also excellent.', 'positive', 'new', '2026-03-21 11:00:00'),
+('fb-009', 'pat-010', 'post_visit', 'Gynecology', 4, 8, 'Good experience overall. The PCOS management plan is comprehensive. Would appreciate if follow-up appointments were easier to book online.', 'positive', 'reviewed', '2026-03-12 15:00:00'),
+('fb-010', 'pat-013', 'complaint', 'General Medicine', 2, 2, 'Had to wait 2.5 hours for a scheduled appointment. The reception staff was unhelpful when I asked about the delay. Very frustrating experience.', 'negative', 'escalated', '2026-03-26 14:00:00'),
+('fb-011', 'pat-015', 'post_visit', 'Cardiology', 4, 8, 'The cardiac care is top-notch. Dr. Sharma explains the stent procedure follow-up very well. The stress test facility is modern and well-maintained.', 'positive', 'reviewed', '2026-02-01 16:00:00'),
+('fb-012', 'pat-018', 'post_visit', 'General Medicine', 4, 7, 'Satisfied with the cancer follow-up care. The oncology team coordinates well. Only concern is the Tamoxifen side effects which I hope will improve.', 'positive', 'reviewed', '2026-03-22 13:00:00'),
+('fb-013', 'pat-020', 'post_visit', 'General Medicine', 5, 10, 'Amazing post-surgery care for my appendectomy. The nursing team was exceptional. Food quality in the ward was also good. Total recovery was smooth.', 'positive', 'new', '2026-03-05 17:00:00'),
+('fb-014', 'pat-024', 'post_visit', 'General Medicine', 5, 9, 'Very happy that my anemia is finally under control. Dr. Priya explained everything about iron supplements and diet in simple language. Thank you.', 'positive', 'reviewed', '2026-03-10 14:00:00'),
+('fb-015', 'pat-027', 'post_visit', 'Orthopedics', 3, 5, 'The wound care for my diabetic foot is good but I wish the dressing changes were less painful. Also, the appointment scheduling system needs improvement.', 'mixed', 'reviewed', '2026-03-23 11:00:00'),
+('fb-016', 'pat-030', 'post_visit', 'Orthopedics', 4, 7, 'Dr. Amit is very knowledgeable about knee replacement. Glad he discussed all options before recommending surgery. The pre-op process is well organized.', 'positive', 'new', '2026-03-25 16:00:00'),
+('fb-017', 'pat-033', 'post_visit', 'Orthopedics', 5, 9, 'Excellent ACL surgery outcome. The rehab team was fantastic. I am already seeing improvement in knee stability. Highly recommend the sports medicine program.', 'positive', 'reviewed', '2026-03-15 15:00:00'),
+('fb-018', 'pat-035', 'post_visit', 'Cardiology', 2, 3, 'I am worried about my COPD getting worse. The oxygen therapy explanation was rushed. I would like more time with the doctor to understand my condition.', 'negative', 'escalated', '2026-03-27 12:00:00'),
+('fb-019', 'pat-037', 'post_visit', 'General Medicine', 3, 5, 'Dialysis care is adequate but the waiting area for dialysis patients needs improvement. The chairs are uncomfortable for long waits. Also need better AC.', 'mixed', 'reviewed', '2026-03-26 10:00:00'),
+('fb-020', 'pat-040', 'post_visit', 'Gynecology', 5, 10, 'Wonderful experience for my delivery. Dr. Sunita and the nursing team were incredible. The labor room is well-equipped and the postnatal care was excellent.', 'positive', 'reviewed', '2026-03-09 11:00:00'),
+('fb-021', 'pat-042', 'post_visit', 'General Medicine', 4, 8, 'Peptic ulcer treatment going well. The endoscopy was done smoothly with minimal discomfort. The post-procedure instructions were clear and helpful.', 'positive', 'new', '2026-03-17 16:30:00'),
+('fb-022', 'pat-044', 'post_visit', 'General Medicine', 5, 9, 'Grateful for the excellent care during my dengue treatment. The nursing staff monitored my platelet count regularly and kept my family informed throughout.', 'positive', 'reviewed', '2026-02-25 14:00:00'),
+('fb-023', 'pat-046', 'post_visit', 'Cardiology', 4, 7, 'Good cardiac care. The switch from Warfarin to new medicine was explained well. Appreciate the detailed counseling about my AF condition and stroke prevention.', 'positive', 'new', '2026-03-27 15:00:00'),
+('fb-024', 'pat-048', 'post_visit', 'General Medicine', 4, 8, 'TB treatment is going well. The DOTS counselor is very supportive. The lab testing is prompt and results are available quickly. Happy with the care.', 'positive', 'reviewed', '2026-03-25 12:00:00'),
+('fb-025', 'pat-050', 'post_visit', 'Orthopedics', 5, 9, 'Great outcome for my femur fracture treatment. Dr. Amit and team did an excellent job with the surgery. Physiotherapy team helped me walk again in 6 weeks.', 'positive', 'reviewed', '2026-03-20 13:00:00'),
+('fb-026', 'pat-011', 'suggestion', 'Cardiology', NULL, NULL, 'Please consider adding a dedicated cardiac rehabilitation gym with trained physiotherapists. Many post-surgery patients would benefit from supervised exercise.', 'neutral', 'new', '2026-03-23 14:00:00'),
+('fb-027', 'pat-014', 'suggestion', 'General Medicine', NULL, NULL, 'It would be helpful to have a patient education library or health awareness sessions in the OPD waiting area. Many patients have questions about their conditions.', 'neutral', 'new', '2026-03-17 10:00:00'),
+('fb-028', 'pat-022', 'complaint', 'General Medicine', 2, 1, 'The billing process for insurance claims is very confusing. I had to visit the billing counter 3 times to get my claim paperwork sorted. Please streamline this.', 'negative', 'escalated', '2026-03-21 16:00:00'),
+('fb-029', 'pat-032', 'post_visit', 'General Medicine', 4, 7, 'Good treatment for my cervical spondylosis. The physiotherapy sessions are helping. The only issue is parking - always full during peak hours.', 'positive', 'reviewed', '2026-03-22 17:00:00'),
+('fb-030', 'pat-041', 'post_visit', 'Cardiology', 4, 8, 'My valve replacement follow-up is going smoothly. The anticoagulation clinic is well-managed. Nurses are knowledgeable about INR monitoring and dose adjustment.', 'positive', 'new', '2026-03-21 12:00:00');
+
+-- ============================================================
+-- AUDIT LOG (50 sample entries)
+-- ============================================================
+INSERT INTO audit_log (id, user_id, action, entity_type, entity_id, details, ip_address, created_at) VALUES
+('audit-001', 'usr-001', 'login', 'user', 'usr-001', '{"method": "password", "browser": "Chrome 122"}', '192.168.1.100', '2026-03-28 10:00:00'),
+('audit-002', 'usr-001', 'create', 'claim', 'clm-056', '{"claim_number": "CLM-2026-00056", "patient": "pat-013", "amount": 22000}', '192.168.1.100', '2026-03-27 10:05:00'),
+('audit-003', 'usr-002', 'login', 'user', 'usr-002', '{"method": "password", "browser": "Safari 18"}', '192.168.1.101', '2026-03-27 14:30:00'),
+('audit-004', 'usr-002', 'update', 'appointment', 'apt-025', '{"field": "notes", "old": null, "new": "Hypertension review, echo satisfactory"}', '192.168.1.101', '2026-03-20 10:00:00'),
+('audit-005', 'usr-003', 'login', 'user', 'usr-003', '{"method": "password", "browser": "Chrome 122"}', '192.168.1.102', '2026-03-28 09:00:00'),
+('audit-006', 'usr-003', 'create', 'medication', 'med-029', '{"drug": "Prazosin", "patient": "pat-049", "dose": "0.5mg"}', '192.168.1.102', '2026-03-28 09:30:00'),
+('audit-007', 'usr-003', 'update', 'patient', 'pat-049', '{"field": "last_visit", "new": "2026-03-28"}', '192.168.1.102', '2026-03-28 09:35:00'),
+('audit-008', 'usr-009', 'update', 'ticket', 'tkt-005', '{"field": "status", "old": "open", "new": "in_progress"}', '192.168.1.103', '2026-03-17 09:00:00'),
+('audit-009', 'usr-006', 'create', 'vitals', 'vit-498', '{"patient": "pat-035", "type": "spo2", "value": 91}', '192.168.1.104', '2026-03-28 07:15:00'),
+('audit-010', 'usr-001', 'update', 'claim', 'clm-051', '{"field": "status", "old": "draft", "new": "submitted"}', '192.168.1.100', '2026-03-22 09:00:00'),
+('audit-011', 'usr-002', 'create', 'appointment', 'apt-036', '{"patient": "pat-001", "date": "2026-04-05", "department": "Cardiology"}', '192.168.1.101', '2026-03-25 10:00:00'),
+('audit-012', 'usr-003', 'update', 'medication', 'med-024', '{"field": "dosage", "old": "5mg", "new": "4mg", "reason": "INR elevated 3.8"}', '192.168.1.102', '2026-03-23 09:05:00'),
+('audit-013', 'usr-009', 'update', 'ticket', 'tkt-009', '{"field": "status", "old": "open", "new": "resolved", "resolution_time_hours": 1.5}', '192.168.1.103', '2026-03-20 04:30:00'),
+('audit-014', 'usr-001', 'create', 'chat_conversation', 'conv-010', '{"title": "System Configuration Help", "mode": "general"}', '192.168.1.100', '2026-03-22 10:00:00'),
+('audit-015', 'usr-005', 'update', 'appointment', 'apt-016', '{"field": "status", "old": "scheduled", "new": "completed"}', '192.168.1.105', '2026-02-10 15:00:00'),
+('audit-016', 'usr-004', 'create', 'appointment', 'apt-044', '{"patient": "pat-030", "date": "2026-04-25", "type": "procedure"}', '192.168.1.106', '2026-03-28 09:00:00'),
+('audit-017', 'usr-001', 'update', 'fraud_alert', 'fraud-001', '{"field": "status", "old": "open", "new": "resolved", "investigated_by": "usr-009"}', '192.168.1.100', '2026-03-25 14:00:00'),
+('audit-018', 'usr-007', 'create', 'vitals', 'vit-485', '{"patient": "pat-046", "type": "heart_rate", "value": 95, "note": "irregular rhythm"}', '192.168.1.107', '2026-03-27 19:30:00'),
+('audit-019', 'usr-003', 'update', 'patient', 'pat-001', '{"field": "risk_score", "old": 0.55, "new": 0.65}', '192.168.1.102', '2026-03-20 10:00:00'),
+('audit-020', 'usr-009', 'create', 'ticket', 'tkt-020', '{"title": "WhatsApp Business API setup request", "category": "it_support"}', '192.168.1.103', '2026-03-28 10:00:00'),
+('audit-021', 'usr-001', 'login', 'user', 'usr-001', '{"method": "password", "browser": "Chrome 122"}', '192.168.1.100', '2026-03-27 09:00:00'),
+('audit-022', 'usr-003', 'create', 'claim', 'clm-100', '{"claim_number": "CLM-2026-00100", "patient": "pat-049", "amount": 75000}', '192.168.1.102', '2026-03-28 14:00:00'),
+('audit-023', 'usr-006', 'update', 'shift_schedule', 'shift-017', '{"field": "status", "old": "scheduled", "new": "completed"}', '192.168.1.104', '2026-03-27 14:00:00'),
+('audit-024', 'usr-002', 'update', 'claim', 'clm-035', '{"field": "status", "old": "draft", "new": "submitted"}', '192.168.1.101', '2026-03-28 14:00:00'),
+('audit-025', 'usr-008', 'create', 'vitals', 'vit-490', '{"patient": "pat-044", "type": "temperature", "value": 98.4}', '192.168.1.108', '2026-03-27 06:45:00'),
+('audit-026', 'usr-001', 'create', 'policy', 'pol-001', '{"policy_number": "AB-DL-2025-00001", "patient": "pat-001", "scheme": "ayushman_bharat"}', '192.168.1.100', '2025-01-01 10:00:00'),
+('audit-027', 'usr-009', 'update', 'ticket', 'tkt-012', '{"field": "status", "old": "open", "new": "resolved"}', '192.168.1.103', '2026-03-25 10:00:00'),
+('audit-028', 'usr-003', 'create', 'medication', 'med-002', '{"drug": "Dapagliflozin", "patient": "pat-001", "dose": "10mg"}', '192.168.1.102', '2026-03-15 09:30:00'),
+('audit-029', 'usr-002', 'update', 'patient', 'pat-003', '{"field": "risk_score", "old": 0.70, "new": 0.82, "reason": "EF decline"}', '192.168.1.101', '2026-03-16 10:15:00'),
+('audit-030', 'usr-010', 'login', 'user', 'usr-010', '{"method": "password", "browser": "Firefox 124"}', '192.168.1.109', '2026-03-27 16:00:00'),
+('audit-031', 'usr-001', 'update', 'learning_enrollment', 'enr-002', '{"field": "progress_percent", "old": 80, "new": 85}', '192.168.1.100', '2026-03-26 15:00:00'),
+('audit-032', 'usr-009', 'create', 'fraud_alert', 'fraud-004', '{"claim": "clm-037", "type": "phantom_billing", "risk_score": 0.78}', '192.168.1.103', '2026-03-27 11:00:00'),
+('audit-033', 'usr-003', 'update', 'appointment', 'apt-035', '{"field": "status", "old": "scheduled", "new": "completed"}', '192.168.1.102', '2026-03-26 10:45:00'),
+('audit-034', 'usr-006', 'create', 'vitals', 'vit-495', '{"patient": "pat-001", "type": "blood_sugar", "value": 185}', '192.168.1.104', '2026-03-28 07:30:00'),
+('audit-035', 'usr-001', 'update', 'claim', 'clm-058', '{"field": "status", "old": "draft", "new": "submitted"}', '192.168.1.100', '2026-03-28 09:00:00'),
+('audit-036', 'usr-002', 'create', 'appointment', 'apt-049', '{"patient": "pat-046", "date": "2026-05-08", "department": "Cardiology"}', '192.168.1.101', '2026-03-28 10:00:00'),
+('audit-037', 'usr-009', 'update', 'ticket', 'tkt-013', '{"field": "status", "old": "open", "new": "resolved", "note": "NHA server maintenance"}', '192.168.1.103', '2026-03-24 18:30:00'),
+('audit-038', 'usr-003', 'create', 'chat_message', 'msg-102', '{"conversation": "conv-020", "role": "assistant", "patient_context": "pat-049"}', '192.168.1.102', '2026-03-28 09:02:00'),
+('audit-039', 'usr-007', 'update', 'shift_schedule', 'shift-018', '{"field": "status", "old": "scheduled", "new": "completed"}', '192.168.1.107', '2026-03-27 22:00:00'),
+('audit-040', 'usr-001', 'create', 'feedback', 'fb-030', '{"patient": "pat-041", "type": "post_visit", "rating": 4}', '192.168.1.100', '2026-03-21 12:00:00'),
+('audit-041', 'usr-004', 'update', 'appointment', 'apt-029', '{"field": "status", "old": "scheduled", "new": "completed"}', '192.168.1.106', '2026-03-20 14:45:00'),
+('audit-042', 'usr-003', 'update', 'medication', 'med-008', '{"field": "adherence_rate", "old": 0.70, "new": 0.75}', '192.168.1.102', '2026-03-17 11:15:00'),
+('audit-043', 'usr-009', 'update', 'ticket', 'tkt-006', '{"field": "status", "old": "open", "new": "resolved", "note": "Emergency procurement completed"}', '192.168.1.103', '2026-03-18 09:00:00'),
+('audit-044', 'usr-001', 'create', 'fraud_alert', 'fraud-005', '{"claim": "clm-046", "type": "upcoding", "risk_score": 0.65}', '192.168.1.100', '2026-03-28 14:00:00'),
+('audit-045', 'usr-005', 'create', 'appointment', 'apt-010', '{"patient": "pat-010", "date": "2025-12-05", "department": "Gynecology"}', '192.168.1.105', '2025-12-01 10:00:00'),
+('audit-046', 'usr-008', 'create', 'vitals', 'vit-492', '{"patient": "pat-040", "type": "bp_systolic", "value": 118}', '192.168.1.108', '2026-03-09 07:00:00'),
+('audit-047', 'usr-003', 'update', 'patient', 'pat-035', '{"field": "risk_score", "old": 0.88, "new": 0.92, "reason": "COPD Stage 4 with cor pulmonale progression"}', '192.168.1.102', '2026-03-27 09:30:00'),
+('audit-048', 'usr-009', 'create', 'ticket', 'tkt-019', '{"title": "Data backup verification needed", "priority": "high"}', '192.168.1.103', '2026-03-28 08:00:00'),
+('audit-049', 'usr-002', 'update', 'patient', 'pat-046', '{"field": "medications", "note": "Switched from Warfarin to Apixaban 5mg BD"}', '192.168.1.101', '2026-03-24 10:35:00'),
+('audit-050', 'usr-001', 'logout', 'user', 'usr-001', '{"session_duration_minutes": 185}', '192.168.1.100', '2026-03-28 13:05:00');
+
+-- ============================================================
+-- CLAIM DOCUMENTS (sample documents for key claims)
+-- ============================================================
+INSERT INTO claim_documents (id, claim_id, type, filename, content_text, ai_extraction, uploaded_at) VALUES
+('doc-001', 'clm-001', 'discharge_summary', 'discharge_summary_ramesh_kumar.pdf', 'Patient: Ramesh Kumar, Age: 58, Diagnosis: Type 2 DM E11.9. Admitted: 10/06/2025. Discharged: 12/06/2025. Treatment: Insulin initiation, diabetes education, foot care counseling.', '{"diagnosis": "E11.9", "procedures": ["99213","82947"], "los_days": 2}', '2025-06-12 14:00:00'),
+('doc-002', 'clm-001', 'lab_report', 'lab_reports_ramesh_kumar.pdf', 'HbA1c: 8.2%, FBS: 186 mg/dL, PPBS: 262 mg/dL, Creatinine: 1.1 mg/dL, eGFR: 72 mL/min', '{"hba1c": 8.2, "fbs": 186, "ppbs": 262, "creatinine": 1.1, "egfr": 72}', '2025-06-12 14:30:00'),
+('doc-003', 'clm-003', 'discharge_summary', 'discharge_summary_suresh_babu.pdf', 'Patient: Suresh Babu, Age: 62, Diagnosis: Chronic IHD I25.10, post-CABG. Echo: EF 45%, mild MR. Treatment: Medication optimization, cardiac rehab referral.', '{"diagnosis": "I25.10", "ef": 45, "procedures": ["93306","93000"], "los_days": 5}', '2025-08-21 10:00:00'),
+('doc-004', 'clm-009', 'operative_notes', 'operative_notes_vijay_patil.pdf', 'Procedure: Lumbar microdiscectomy L4-L5. Surgeon: Dr. Amit Verma. Duration: 2.5 hours. Findings: Large central disc herniation compressing thecal sac. Complete decompression achieved.', '{"procedure": "63030", "level": "L4-L5", "duration_hours": 2.5, "surgeon": "Dr. Amit Verma"}', '2025-11-21 10:00:00'),
+('doc-005', 'clm-015', 'discharge_summary', 'discharge_summary_dinesh_tiwari.pdf', 'Patient: Dinesh Tiwari, 63M. Diagnosis: ACS I24.9, IHD I25.10. Procedure: PCI with DES to LAD. Stent: Xience Sierra 3.0x28mm. Post-procedure: No complications, TIMI 3 flow.', '{"diagnosis": "I25.10", "procedure": "92928", "stent": "Xience Sierra 3.0x28mm", "los_days": 8}', '2026-02-03 10:00:00'),
+('doc-006', 'clm-018', 'operative_notes', 'operative_notes_rekha_choudhary.pdf', 'Procedure: Modified radical mastectomy right breast. Surgeon: Dr. S. Kulkarni. Specimen: Breast tissue with tumor 3.2cm, 14 lymph nodes dissected. Margins clear.', '{"procedure": "19301", "tumor_size_cm": 3.2, "lymph_nodes": 14, "margins": "clear"}', '2026-03-01 10:00:00'),
+('doc-007', 'clm-030', 'operative_notes', 'operative_notes_kamala_rani.pdf', 'Procedure: Total knee replacement bilateral. Surgeon: Dr. Amit Verma. Implant: Zimmer NexGen bilateral. Estimated blood loss: 400ml. Post-op: stable, pain managed with epidural.', '{"procedure": "27447", "implant": "Zimmer NexGen", "ebl_ml": 400, "anesthesia": "spinal_epidural"}', '2026-03-26 10:00:00'),
+('doc-008', 'clm-050', 'operative_notes', 'operative_notes_amit_thakur.pdf', 'Procedure: ORIF right femur shaft fracture with IM nail. Surgeon: Dr. Amit Verma. Implant: Expert R/AFN 11x380mm. Blood loss: 300ml. Alignment: satisfactory on post-op Xray.', '{"procedure": "27506", "implant": "Expert R/AFN 11x380mm", "ebl_ml": 300}', '2026-02-19 10:00:00'),
+('doc-009', 'clm-047', 'discharge_summary', 'discharge_summary_deepika_rathore.pdf', 'Patient: Deepika Rathore, 32F. Diagnosis: Ectopic pregnancy left tube O00.10. Procedure: Laparoscopic left salpingectomy. Post-op: uneventful recovery, beta-hCG trending down.', '{"diagnosis": "O00.10", "procedure": "59151", "method": "laparoscopic", "los_days": 3}', '2026-01-14 10:00:00'),
+('doc-010', 'clm-041', 'discharge_summary', 'discharge_summary_surinder_kaur.pdf', 'Patient: Surinder Kaur, 60F. Diagnosis: Rheumatic mitral valve disease I05.9. Procedure: Mitral valve replacement with mechanical prosthesis (St. Jude 27mm). Post-op: ICU 3 days, Warfarin initiated, target INR 2.5-3.5.', '{"diagnosis": "I05.9", "procedure": "33430", "prosthesis": "St. Jude 27mm", "los_days": 6}', '2026-03-22 10:00:00');

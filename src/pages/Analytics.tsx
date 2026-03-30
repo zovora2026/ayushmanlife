@@ -25,6 +25,10 @@ import {
   ShieldAlert,
   MapPin,
   CalendarX,
+  LayoutDashboard,
+  FileCheck,
+  Heart,
+  BarChart3,
 } from 'lucide-react'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
@@ -38,7 +42,9 @@ import type { PatientRiskData, OperationsData, SatisfactionData, RevenueData, Ch
 import { cn, formatCurrency, getRiskColor } from '../lib/utils'
 
 const analyticsTabs = [
+  { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="h-4 w-4" /> },
   { id: 'risk', label: 'Patient Risk', icon: <AlertTriangle className="h-4 w-4" /> },
+  { id: 'churn', label: 'Churn', icon: <UserX className="h-4 w-4" /> },
   { id: 'operations', label: 'Operations', icon: <Activity className="h-4 w-4" /> },
   { id: 'satisfaction', label: 'Satisfaction', icon: <Smile className="h-4 w-4" /> },
   { id: 'revenue', label: 'Revenue', icon: <IndianRupee className="h-4 w-4" /> },
@@ -106,7 +112,7 @@ const departmentRevenueTable = [
 ]
 
 export default function Analytics() {
-  const [activeTab, setActiveTab] = useState('risk')
+  const [activeTab, setActiveTab] = useState('overview')
 
   // ── API state ──
   const [riskData, setRiskData] = useState<PatientRiskData | null>(null)
@@ -170,7 +176,7 @@ export default function Analytics() {
       if (mounted) setLoading(false)
     }
 
-    if (activeTab === 'risk') loadRisk()
+    if (activeTab === 'risk' || activeTab === 'churn') loadRisk()
     else if (activeTab === 'operations') loadOperations()
     else if (activeTab === 'satisfaction') loadSatisfaction()
     else if (activeTab === 'revenue') loadRevenue()
@@ -263,6 +269,103 @@ export default function Analytics() {
 
       {/* Tab Navigation */}
       <Tabs tabs={analyticsTabs} activeTab={activeTab} onChange={setActiveTab} />
+
+      {/* ── Overview Tab ── */}
+      {activeTab === 'overview' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <Stat label="Total Patients" value="12,847" change={8.2} changeLabel="vs last month" icon={<Users className="h-5 w-5" />} />
+            <Stat label="Claims Processed" value="1,247" change={12.5} changeLabel="vs last month" icon={<FileCheck className="h-5 w-5" />} />
+            <Stat label="Satisfaction" value="94.2%" change={3.1} changeLabel="vs last month" icon={<Heart className="h-5 w-5" />} />
+            <Stat label="Revenue (MTD)" value={'\u20B92.4 Cr'} change={-2.3} changeLabel="vs last month" icon={<IndianRupee className="h-5 w-5" />} />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card header={<div className="flex items-center justify-between"><h3 className="font-display font-semibold text-text dark:text-text-dark">Patient Visits & Claims (7-Day)</h3><Badge variant="info" size="sm">Weekly</Badge></div>} padding="sm">
+              <Chart type="line" data={chartData.patientVisits} dataKeys={['visits', 'claims']} xAxisKey="name" height={260} />
+            </Card>
+            <Card header={<div className="flex items-center justify-between"><h3 className="font-display font-semibold text-text dark:text-text-dark">Revenue by Department</h3><Badge variant="info" size="sm">MTD</Badge></div>} padding="sm">
+              <Chart type="bar" data={chartData.departmentRevenue.slice(0, 6)} dataKeys={['revenue']} xAxisKey="name" height={260} />
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <Card>
+              <div className="flex items-center gap-2 mb-4">
+                <AlertTriangle className="h-5 w-5 text-error" />
+                <h3 className="font-display font-semibold text-text dark:text-text-dark">Risk Alerts</h3>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { name: 'Sunita Devi', score: 85, issue: 'Cardiovascular risk' },
+                  { name: 'Rajesh Kumar', score: 72, issue: 'Diabetes complication' },
+                  { name: 'Meera Iyer', score: 68, issue: 'COPD exacerbation' },
+                ].map(p => (
+                  <div key={p.name} className="flex items-center justify-between p-2.5 rounded-lg bg-error/5 dark:bg-error/10">
+                    <div>
+                      <p className="text-sm font-medium text-text dark:text-text-dark">{p.name}</p>
+                      <p className="text-xs text-muted">{p.issue}</p>
+                    </div>
+                    <span className={cn('text-sm font-bold', p.score >= 80 ? 'text-error' : 'text-warning')}>{p.score}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+            <Card>
+              <div className="flex items-center gap-2 mb-4">
+                <UserX className="h-5 w-5 text-warning" />
+                <h3 className="font-display font-semibold text-text dark:text-text-dark">Churn Risk</h3>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted">Patients at risk</span>
+                  <span className="text-lg font-bold text-warning">23</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted">Revenue at risk</span>
+                  <span className="text-lg font-bold text-error">{'\u20B9'}18.5L</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted">Churn rate (current)</span>
+                  <span className="text-lg font-bold text-warning">12.4%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted">Target churn rate</span>
+                  <span className="text-lg font-bold text-success">10%</span>
+                </div>
+              </div>
+            </Card>
+            <Card>
+              <div className="flex items-center gap-2 mb-4">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                <h3 className="font-display font-semibold text-text dark:text-text-dark">Operations</h3>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted">Bed Occupancy</span>
+                  <span className="text-lg font-bold text-primary">84%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted">Avg Wait Time</span>
+                  <span className="text-lg font-bold text-success">12 min</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted">Staff Utilization</span>
+                  <span className="text-lg font-bold text-primary">78%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted">NPS Score</span>
+                  <span className="text-lg font-bold text-success">78</span>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          <Card header={<div className="flex items-center justify-between"><h3 className="font-display font-semibold text-text dark:text-text-dark">Revenue by Payer Mix</h3><Badge variant="info" size="sm">MTD</Badge></div>} padding="sm">
+            <Chart type="bar" data={chartData.payerMix as Record<string, unknown>[]} dataKeys={['revenue']} xAxisKey="name" height={260} />
+          </Card>
+        </div>
+      )}
 
       {/* ── Patient Risk Tab ── */}
       {activeTab === 'risk' && (
@@ -481,121 +584,6 @@ export default function Analytics() {
             </div>
           </Card>
 
-          {/* Churn Prediction Summary */}
-          <Card className="border-2 border-warning/20 bg-gradient-to-r from-warning/5 via-white to-warning/5 dark:from-warning/10 dark:via-surface-dark dark:to-warning/10">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-warning/10">
-                <UserX className="h-6 w-6 text-warning" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="mb-1 flex items-center gap-2">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                    Churn Prediction Summary
-                  </h3>
-                  <Badge variant="warning" size="sm" dot>AI Forecast</Badge>
-                </div>
-                <p className="text-sm font-medium text-warning">
-                  AI predicts 23 patients at risk of leaving in the next 90 days. Estimated revenue impact: ₹18.5L
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {/* Reason 1 — Wait Time */}
-              <div className="rounded-lg border border-error/30 bg-error/5 p-4 dark:bg-error/10">
-                <div className="mb-2 flex items-center gap-2">
-                  <ClockAlert className="h-5 w-5 text-error" />
-                  <span className="text-sm font-bold text-gray-900 dark:text-gray-100">Wait Time Dissatisfaction</span>
-                </div>
-                <div className="mb-2 flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-error">8</span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">patients</span>
-                </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Avg wait time: <span className="font-semibold">45 min</span>
-                </p>
-              </div>
-
-              {/* Reason 2 — Insurance Claim Delays */}
-              <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 dark:bg-warning/10">
-                <div className="mb-2 flex items-center gap-2">
-                  <ShieldAlert className="h-5 w-5 text-warning" />
-                  <span className="text-sm font-bold text-gray-900 dark:text-gray-100">Insurance Claim Delays</span>
-                </div>
-                <div className="mb-2 flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-warning">6</span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">patients</span>
-                </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Avg resolution: <span className="font-semibold">12 days</span>
-                </p>
-              </div>
-
-              {/* Reason 3 — Follow-up Gap */}
-              <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 dark:bg-warning/10">
-                <div className="mb-2 flex items-center gap-2">
-                  <CalendarX className="h-5 w-5 text-warning" />
-                  <span className="text-sm font-bold text-gray-900 dark:text-gray-100">Follow-up Gap</span>
-                </div>
-                <div className="mb-2 flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-warning">5</span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">patients</span>
-                </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  No visit in <span className="font-semibold">60+ days</span>
-                </p>
-              </div>
-
-              {/* Reason 4 — Competitor Proximity */}
-              <div className="rounded-lg border border-border bg-gray-50/50 p-4 dark:border-border-dark dark:bg-white/[0.02]">
-                <div className="mb-2 flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                  <span className="text-sm font-bold text-gray-900 dark:text-gray-100">Competitor Proximity</span>
-                </div>
-                <div className="mb-2 flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-gray-700 dark:text-gray-300">4</span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">patients</span>
-                </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Nearby facility <span className="font-semibold">opened recently</span>
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          {/* Churn Prediction Chart */}
-          <Card
-            header={
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-primary" />
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                  Churn Prediction (AI Model)
-                </h3>
-              </div>
-            }
-          >
-            <p className="mb-4 text-xs text-gray-500 dark:text-gray-400">
-              Predicted patient churn rate declining with proactive interventions
-            </p>
-            <Chart
-              type="line"
-              data={chartData.churnData as Record<string, unknown>[]}
-              dataKeys={['rate']}
-              xAxisKey="name"
-              height={280}
-            />
-            {churnData && (
-              <div className="mt-4 flex gap-6 text-sm">
-                <span className="text-gray-500 dark:text-gray-400">
-                  Churn Rate: <span className="font-semibold text-error">{churnData.churn_rate}%</span>
-                </span>
-                <span className="text-gray-500 dark:text-gray-400">
-                  Retention Rate: <span className="font-semibold text-success">{churnData.retention_rate}%</span>
-                </span>
-              </div>
-            )}
-          </Card>
-
           {/* AI Recommendations */}
           <Card
             header={
@@ -639,6 +627,146 @@ export default function Analytics() {
                   <p className="text-xs font-medium text-primary">
                     Impact: {rec.impact}
                   </p>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+        )
+      )}
+
+      {/* ── Churn Tab ── */}
+      {activeTab === 'churn' && (
+        loading ? <LoadingSpinner /> : (
+        <div className="space-y-6">
+          {/* Churn KPIs */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <Stat label="Current Churn Rate" value={churnData ? `${churnData.churn_rate}%` : '12.4%'} change={-2.8} changeLabel="vs last quarter" icon={<UserX className="h-5 w-5" />} />
+            <Stat label="Retention Rate" value={churnData ? `${churnData.retention_rate}%` : '87.6%'} change={2.8} changeLabel="vs last quarter" icon={<Users className="h-5 w-5" />} />
+            <Stat label="Patients at Risk" value="23" change={-15} changeLabel="vs last month" icon={<AlertTriangle className="h-5 w-5" />} />
+            <Stat label="Revenue at Risk" value={'\u20B918.5L'} change={-8.5} changeLabel="vs last month" icon={<IndianRupee className="h-5 w-5" />} />
+          </div>
+
+          {/* Churn Prediction Summary */}
+          <Card className="border-2 border-warning/20 bg-gradient-to-r from-warning/5 via-white to-warning/5 dark:from-warning/10 dark:via-surface-dark dark:to-warning/10">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-warning/10">
+                <Brain className="h-6 w-6 text-warning" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="mb-1 flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">AI Churn Forecast</h3>
+                  <Badge variant="warning" size="sm" dot>Live</Badge>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  AI model predicts 23 patients at risk of leaving in the next 90 days. Proactive intervention can save an estimated <span className="font-semibold text-error">{'\u20B9'}18.5L</span> in annual revenue.
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Churn Reasons */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card className="border-l-4 border-l-error">
+              <div className="flex items-center gap-2 mb-2">
+                <ClockAlert className="h-5 w-5 text-error" />
+                <span className="text-sm font-bold text-text dark:text-text-dark">Wait Time</span>
+              </div>
+              <p className="text-2xl font-bold text-error">8</p>
+              <p className="text-xs text-muted mt-1">patients &middot; Avg 45 min wait</p>
+              <div className="mt-3 h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full"><div className="h-full bg-error rounded-full" style={{ width: '35%' }} /></div>
+            </Card>
+            <Card className="border-l-4 border-l-warning">
+              <div className="flex items-center gap-2 mb-2">
+                <ShieldAlert className="h-5 w-5 text-warning" />
+                <span className="text-sm font-bold text-text dark:text-text-dark">Insurance Delays</span>
+              </div>
+              <p className="text-2xl font-bold text-warning">6</p>
+              <p className="text-xs text-muted mt-1">patients &middot; 12-day avg resolution</p>
+              <div className="mt-3 h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full"><div className="h-full bg-warning rounded-full" style={{ width: '26%' }} /></div>
+            </Card>
+            <Card className="border-l-4 border-l-warning">
+              <div className="flex items-center gap-2 mb-2">
+                <CalendarX className="h-5 w-5 text-warning" />
+                <span className="text-sm font-bold text-text dark:text-text-dark">Follow-up Gap</span>
+              </div>
+              <p className="text-2xl font-bold text-warning">5</p>
+              <p className="text-xs text-muted mt-1">patients &middot; No visit in 60+ days</p>
+              <div className="mt-3 h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full"><div className="h-full bg-warning rounded-full" style={{ width: '22%' }} /></div>
+            </Card>
+            <Card className="border-l-4 border-l-gray-400">
+              <div className="flex items-center gap-2 mb-2">
+                <MapPin className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                <span className="text-sm font-bold text-text dark:text-text-dark">Competitor</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-700 dark:text-gray-300">4</p>
+              <p className="text-xs text-muted mt-1">patients &middot; New facility nearby</p>
+              <div className="mt-3 h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full"><div className="h-full bg-gray-400 rounded-full" style={{ width: '17%' }} /></div>
+            </Card>
+          </div>
+
+          {/* Churn Trend Chart */}
+          <Card header={<div className="flex items-center justify-between"><h3 className="font-display font-semibold text-text dark:text-text-dark">Churn Rate Trend (AI Prediction)</h3><Badge variant="info" size="sm">12 Months</Badge></div>} padding="sm">
+            <p className="mb-4 px-4 text-xs text-muted">Predicted churn rate declining with proactive AI interventions — target: 10%</p>
+            <Chart type="line" data={chartData.churnData as Record<string, unknown>[]} dataKeys={['rate']} xAxisKey="name" height={300} />
+            {churnData && (
+              <div className="mt-4 px-4 flex gap-6 text-sm">
+                <span className="text-muted">Churn Rate: <span className="font-semibold text-error">{churnData.churn_rate}%</span></span>
+                <span className="text-muted">Retention Rate: <span className="font-semibold text-success">{churnData.retention_rate}%</span></span>
+              </div>
+            )}
+          </Card>
+
+          {/* At-Risk Patient List */}
+          <Card header={<h3 className="font-display font-semibold text-text dark:text-text-dark">At-Risk Patients (Top 6)</h3>} padding="none">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-gray-50 dark:border-border-dark dark:bg-white/5">
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted">Patient</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted">Risk Factor</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted">Last Visit</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted">Churn Prob</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border dark:divide-border-dark">
+                  {[
+                    { name: 'Ramesh Gupta', factor: 'Wait Time', lastVisit: '12 Mar 2026', prob: 78 },
+                    { name: 'Priya Sharma', factor: 'Insurance Delay', lastVisit: '05 Mar 2026', prob: 72 },
+                    { name: 'Vikram Yadav', factor: 'Follow-up Gap', lastVisit: '18 Jan 2026', prob: 68 },
+                    { name: 'Meena Patel', factor: 'Wait Time', lastVisit: '22 Mar 2026', prob: 65 },
+                    { name: 'Suresh Iyer', factor: 'Competitor', lastVisit: '28 Feb 2026', prob: 61 },
+                    { name: 'Kavita Reddy', factor: 'Insurance Delay', lastVisit: '10 Mar 2026', prob: 58 },
+                  ].map(p => (
+                    <tr key={p.name} className="hover:bg-gray-50 dark:hover:bg-white/5">
+                      <td className="px-4 py-3 font-medium text-text dark:text-text-dark">{p.name}</td>
+                      <td className="px-4 py-3"><Badge size="sm" variant={p.factor === 'Wait Time' ? 'error' : p.factor === 'Competitor' ? 'neutral' : 'warning'}>{p.factor}</Badge></td>
+                      <td className="px-4 py-3 text-muted">{p.lastVisit}</td>
+                      <td className="px-4 py-3"><span className={cn('font-bold', p.prob >= 70 ? 'text-error' : 'text-warning')}>{p.prob}%</span></td>
+                      <td className="px-4 py-3"><Button size="sm" variant="outline">Intervene</Button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          {/* Intervention Recommendations */}
+          <Card header={<div className="flex items-center gap-2"><Lightbulb className="h-4 w-4 text-warning" /><h3 className="font-display font-semibold text-text dark:text-text-dark">AI Intervention Recommendations</h3></div>}>
+            <div className="grid md:grid-cols-3 gap-4">
+              {[
+                { title: 'Reduce OPD Wait Time', desc: 'Deploy AI-powered queue management in Orthopedics and Internal Medicine. Predicted impact: -35% wait time.', impact: '8 patients retained', priority: 'High' as const },
+                { title: 'Fast-Track Insurance Claims', desc: 'Enable auto-adjudication for Star Health and ICICI Lombard claims under ₹50,000. Predicted TAT: 2 days → 4 hours.', impact: '6 patients retained', priority: 'High' as const },
+                { title: 'Automated Follow-up Reminders', desc: 'Send AI-personalized WhatsApp reminders to patients with no visit in 30+ days. Include health tips and booking links.', impact: '5 patients retained', priority: 'Medium' as const },
+              ].map(r => (
+                <div key={r.title} className={cn('rounded-lg border p-4', r.priority === 'High' ? 'border-error/30 bg-error/5 dark:bg-error/10' : 'border-warning/30 bg-warning/5 dark:bg-warning/10')}>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-semibold text-text dark:text-text-dark">{r.title}</h4>
+                    <Badge size="sm" variant={r.priority === 'High' ? 'error' : 'warning'}>{r.priority}</Badge>
+                  </div>
+                  <p className="text-xs text-muted mb-2">{r.desc}</p>
+                  <p className="text-xs font-medium text-primary">Impact: {r.impact}</p>
                 </div>
               ))}
             </div>

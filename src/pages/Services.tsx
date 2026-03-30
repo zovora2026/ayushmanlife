@@ -11,6 +11,14 @@ import {
   Eye,
   FileText,
   Loader2,
+  ShieldCheck,
+  Activity,
+  Server,
+  Link2,
+  Zap,
+  HeartPulse,
+  CircleDot,
+  RefreshCw,
 } from 'lucide-react'
 import { cn, formatDate } from '../lib/utils'
 import { tickets as ticketsAPI } from '../lib/api'
@@ -145,6 +153,7 @@ const TABS = [
   { id: 'tickets', label: 'Ticket List', icon: <ListTodo className="h-4 w-4" /> },
   { id: 'sla', label: 'SLA Dashboard', icon: <BarChart3 className="h-4 w-4" /> },
   { id: 'kb', label: 'Knowledge Base', icon: <BookOpen className="h-4 w-4" /> },
+  { id: 'insurance-ops', label: 'Insurance Operations', icon: <ShieldCheck className="h-4 w-4" /> },
 ]
 
 const FILTER_OPTIONS: TicketFilter[] = ['All', 'Open', 'In Progress', 'Resolved', 'Closed']
@@ -194,6 +203,125 @@ const KB_ARTICLES = [
   { id: 8, title: 'New Employee IT Onboarding Checklist', category: 'General', description: 'Complete checklist for IT account provisioning, access setup, and device issuance.', updated: '2026-03-08', views: 589 },
 ]
 
+// ── Insurance Operations Data ─────────────────────────────────────────────────
+
+interface InsuranceTicket {
+  ticketId: string
+  type: string
+  payer: string
+  priority: 'Critical' | 'High' | 'Medium' | 'Low'
+  slaStatus: 'On Track' | 'At Risk' | 'Breached'
+  assignedTo: string
+  status: 'Open' | 'In Progress' | 'Escalated' | 'Resolved'
+}
+
+const INSURANCE_TICKETS: InsuranceTicket[] = [
+  {
+    ticketId: 'INS-2401',
+    type: 'Claim Rejection Review',
+    payer: 'Star Health',
+    priority: 'Critical',
+    slaStatus: 'Breached',
+    assignedTo: 'Dr. Meena Iyer',
+    status: 'Escalated',
+  },
+  {
+    ticketId: 'INS-2402',
+    type: 'Pre-Auth Escalation',
+    payer: 'ICICI Lombard',
+    priority: 'High',
+    slaStatus: 'At Risk',
+    assignedTo: 'Rajesh Nair',
+    status: 'In Progress',
+  },
+  {
+    ticketId: 'INS-2403',
+    type: 'Policy System Error',
+    payer: 'HDFC ERGO',
+    priority: 'Critical',
+    slaStatus: 'On Track',
+    assignedTo: 'Amit Verma',
+    status: 'Open',
+  },
+  {
+    ticketId: 'INS-2404',
+    type: 'Payer Integration Alert',
+    payer: 'Bajaj Allianz',
+    priority: 'High',
+    slaStatus: 'On Track',
+    assignedTo: 'Priya Sharma',
+    status: 'In Progress',
+  },
+  {
+    ticketId: 'INS-2405',
+    type: 'TPA Reconciliation',
+    payer: 'Medi Assist',
+    priority: 'Medium',
+    slaStatus: 'On Track',
+    assignedTo: 'Suresh Kumar',
+    status: 'Open',
+  },
+  {
+    ticketId: 'INS-2406',
+    type: 'IRDAI Compliance Issue',
+    payer: 'National Insurance',
+    priority: 'High',
+    slaStatus: 'At Risk',
+    assignedTo: 'Kavita Nair',
+    status: 'In Progress',
+  },
+  {
+    ticketId: 'INS-2407',
+    type: 'Fraud Alert Triage',
+    payer: 'New India Assurance',
+    priority: 'Critical',
+    slaStatus: 'On Track',
+    assignedTo: 'Deepak Chauhan',
+    status: 'Open',
+  },
+  {
+    ticketId: 'INS-2408',
+    type: 'Cashless Authorization',
+    payer: 'Care Health',
+    priority: 'Low',
+    slaStatus: 'On Track',
+    assignedTo: 'Neha Singh',
+    status: 'Resolved',
+  },
+]
+
+interface SystemHealth {
+  name: string
+  status: 'Healthy' | 'Degraded' | 'Down'
+  uptime: string
+  lastChecked: string
+  note?: string
+}
+
+const INSURANCE_SYSTEMS: SystemHealth[] = [
+  { name: 'Core Policy Admin System', status: 'Healthy', uptime: '99.98%', lastChecked: '2026-03-30T14:55:00' },
+  { name: 'Claims Adjudication Engine', status: 'Healthy', uptime: '99.95%', lastChecked: '2026-03-30T14:54:00' },
+  { name: 'Pre-Authorization Module', status: 'Degraded', uptime: '98.70%', lastChecked: '2026-03-30T14:53:00', note: 'High latency detected' },
+  { name: 'IRDAI Reporting System', status: 'Healthy', uptime: '99.99%', lastChecked: '2026-03-30T14:52:00' },
+  { name: 'Fraud Detection Engine', status: 'Healthy', uptime: '99.92%', lastChecked: '2026-03-30T14:51:00' },
+  { name: 'Payer Gateway', status: 'Healthy', uptime: '99.90%', lastChecked: '2026-03-30T14:50:00' },
+]
+
+interface AutomatedWorkflow {
+  name: string
+  triggeredToday: number
+  lastRun: string
+  status: 'Active'
+}
+
+const INSURANCE_WORKFLOWS: AutomatedWorkflow[] = [
+  { name: 'Auto-Acknowledge Claim Submissions', triggeredToday: 2847, lastRun: '2026-03-30T14:48:00', status: 'Active' },
+  { name: 'SLA Breach Escalation for Pre-Auth', triggeredToday: 12, lastRun: '2026-03-30T14:32:00', status: 'Active' },
+  { name: 'Duplicate Claim Detection Alert', triggeredToday: 34, lastRun: '2026-03-30T14:15:00', status: 'Active' },
+  { name: 'IRDAI Monthly Report Generation', triggeredToday: 1, lastRun: '2026-03-30T06:00:00', status: 'Active' },
+  { name: 'Payer Reconciliation Batch', triggeredToday: 6, lastRun: '2026-03-30T13:00:00', status: 'Active' },
+]
+
 // ── Helpers ─────────────────────────────────────────────────────────────────────
 
 function getPriorityVariant(priority: string): 'error' | 'warning' | 'info' | 'neutral' {
@@ -223,6 +351,48 @@ function getSlaTimer(deadline: string): { text: string; overdue: boolean } {
   const hours = Math.floor(diff / 3600000)
   const minutes = Math.floor((diff % 3600000) / 60000)
   return { text: `${hours}h ${minutes}m`, overdue: false }
+}
+
+function getInsSlaVariant(sla: string): 'success' | 'warning' | 'error' {
+  switch (sla) {
+    case 'On Track': return 'success'
+    case 'At Risk': return 'warning'
+    case 'Breached': return 'error'
+    default: return 'success'
+  }
+}
+
+function getInsStatusVariant(status: string): 'error' | 'warning' | 'success' | 'info' {
+  switch (status) {
+    case 'Open': return 'info'
+    case 'In Progress': return 'warning'
+    case 'Escalated': return 'error'
+    case 'Resolved': return 'success'
+    default: return 'info'
+  }
+}
+
+function getSystemStatusColor(status: string): string {
+  switch (status) {
+    case 'Healthy': return 'bg-success'
+    case 'Degraded': return 'bg-warning'
+    case 'Down': return 'bg-error'
+    default: return 'bg-gray-400'
+  }
+}
+
+function getSystemStatusTextColor(status: string): string {
+  switch (status) {
+    case 'Healthy': return 'text-success'
+    case 'Degraded': return 'text-warning'
+    case 'Down': return 'text-error'
+    default: return 'text-gray-500'
+  }
+}
+
+function formatTime(dateStr: string): string {
+  const d = new Date(dateStr)
+  return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -557,6 +727,187 @@ export default function Services() {
                       <Eye className="h-3 w-3" />
                       {article.views}
                     </span>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Insurance Operations ───────────────────────────────────── */}
+      {activeTab === 'insurance-ops' && (
+        <div className="space-y-6">
+          {/* Overview Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="rounded-xl border border-border bg-white p-5 dark:border-border-dark dark:bg-surface-dark">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Active Policy Systems</p>
+                  <p className="mt-1.5 text-2xl font-bold text-gray-900 dark:text-gray-100">12</p>
+                </div>
+                <div className="ml-4 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary dark:bg-primary/20">
+                  <Server className="h-5 w-5" />
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-success font-medium">99.8% uptime</p>
+            </div>
+            <div className="rounded-xl border border-border bg-white p-5 dark:border-border-dark dark:bg-surface-dark">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Claims Queue Monitored</p>
+                  <p className="mt-1.5 text-2xl font-bold text-gray-900 dark:text-gray-100">2,847</p>
+                </div>
+                <div className="ml-4 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary dark:bg-primary/20">
+                  <Activity className="h-5 w-5" />
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-accent font-medium">Real-time</p>
+            </div>
+            <div className="rounded-xl border border-border bg-white p-5 dark:border-border-dark dark:bg-surface-dark">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Insurance Tickets</p>
+                  <p className="mt-1.5 text-2xl font-bold text-gray-900 dark:text-gray-100">89 open</p>
+                </div>
+                <div className="ml-4 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary dark:bg-primary/20">
+                  <ListTodo className="h-5 w-5" />
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-warning font-medium">Avg TAT 2.1 hrs</p>
+            </div>
+            <div className="rounded-xl border border-border bg-white p-5 dark:border-border-dark dark:bg-surface-dark">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Payer Integrations</p>
+                  <p className="mt-1.5 text-2xl font-bold text-gray-900 dark:text-gray-100">18</p>
+                </div>
+                <div className="ml-4 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary dark:bg-primary/20">
+                  <Link2 className="h-5 w-5" />
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-success font-medium">All connected</p>
+            </div>
+          </div>
+
+          {/* Insurance ITSM Ticket Queue */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              Insurance ITSM Ticket Queue
+            </h3>
+            <Table
+              columns={[
+                { key: 'ticketId', label: 'Ticket ID' },
+                {
+                  key: 'type',
+                  label: 'Type',
+                  render: (item: Record<string, unknown>) => (
+                    <span className="max-w-[180px] truncate block font-medium text-gray-900 dark:text-gray-100">
+                      {item.type as string}
+                    </span>
+                  ),
+                },
+                { key: 'payer', label: 'Payer' },
+                {
+                  key: 'priority',
+                  label: 'Priority',
+                  render: (item: Record<string, unknown>) => (
+                    <Badge variant={getPriorityVariant(item.priority as string)} dot>
+                      {item.priority as string}
+                    </Badge>
+                  ),
+                },
+                {
+                  key: 'slaStatus',
+                  label: 'SLA Status',
+                  render: (item: Record<string, unknown>) => (
+                    <Badge variant={getInsSlaVariant(item.slaStatus as string)} dot>
+                      {item.slaStatus as string}
+                    </Badge>
+                  ),
+                },
+                { key: 'assignedTo', label: 'Assigned To' },
+                {
+                  key: 'status',
+                  label: 'Status',
+                  render: (item: Record<string, unknown>) => (
+                    <Badge variant={getInsStatusVariant(item.status as string)} dot>
+                      {item.status as string}
+                    </Badge>
+                  ),
+                },
+              ]}
+              data={INSURANCE_TICKETS as unknown as Record<string, unknown>[]}
+            />
+          </div>
+
+          {/* Insurance System Health Monitor */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              Insurance System Health Monitor
+            </h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {INSURANCE_SYSTEMS.map((system) => (
+                <Card key={system.name}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <span className={cn('h-3 w-3 rounded-full', getSystemStatusColor(system.status))} />
+                      <div>
+                        <p className="font-semibold text-gray-900 dark:text-gray-100">{system.name}</p>
+                        <p className={cn('text-sm font-medium', getSystemStatusTextColor(system.status))}>
+                          {system.status}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary dark:bg-primary/20">
+                      <HeartPulse className="h-4 w-4" />
+                    </div>
+                  </div>
+                  {system.note && (
+                    <p className="mt-2 text-xs text-warning font-medium flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" />
+                      {system.note}
+                    </p>
+                  )}
+                  <div className="mt-3 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                    <span>Uptime: <span className="font-semibold text-gray-700 dark:text-gray-300">{system.uptime}</span></span>
+                    <span>Last checked: {formatTime(system.lastChecked)}</span>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          {/* Automated Workflows */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              Automated Workflows
+            </h3>
+            <div className="space-y-3">
+              {INSURANCE_WORKFLOWS.map((workflow) => (
+                <Card key={workflow.name} padding="sm">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary dark:bg-primary/20">
+                        <Zap className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-900 dark:text-gray-100 truncate">{workflow.name}</p>
+                        <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          <span className="flex items-center gap-1">
+                            <CircleDot className="h-3 w-3" />
+                            {workflow.triggeredToday.toLocaleString()} triggered today
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <RefreshCw className="h-3 w-3" />
+                            Last run: {formatTime(workflow.lastRun)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <Badge variant="success" dot>
+                      {workflow.status}
+                    </Badge>
                   </div>
                 </Card>
               ))}
