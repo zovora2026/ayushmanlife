@@ -282,6 +282,39 @@ CREATE TABLE IF NOT EXISTS audit_log (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Projects & Assignments (SkillMarket)
+CREATE TABLE IF NOT EXISTS projects (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  client_hospital TEXT NOT NULL,
+  location TEXT,
+  city TEXT,
+  state TEXT,
+  project_type TEXT DEFAULT 'emr_implementation',
+  description TEXT,
+  start_date DATE,
+  end_date DATE,
+  status TEXT DEFAULT 'active',
+  budget REAL,
+  skills_required TEXT,
+  team_size INTEGER DEFAULT 1,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS project_assignments (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL REFERENCES projects(id),
+  consultant_id TEXT NOT NULL REFERENCES users(id),
+  role TEXT NOT NULL,
+  start_date DATE,
+  end_date DATE,
+  rate_per_day REAL,
+  status TEXT DEFAULT 'active',
+  utilization_pct REAL DEFAULT 100,
+  notes TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
@@ -305,3 +338,6 @@ CREATE INDEX IF NOT EXISTS idx_enrollments_user ON learning_enrollments(user_id)
 CREATE INDEX IF NOT EXISTS idx_feedback_patient ON feedback(patient_id);
 CREATE INDEX IF NOT EXISTS idx_audit_user ON audit_log(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_log(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
+CREATE INDEX IF NOT EXISTS idx_assignments_project ON project_assignments(project_id);
+CREATE INDEX IF NOT EXISTS idx_assignments_consultant ON project_assignments(consultant_id);

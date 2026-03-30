@@ -143,6 +143,16 @@ export const workforce = {
   createShift: (data: Partial<ShiftSchedule>) =>
     fetchAPI<{ schedule: ShiftSchedule }>('/workforce/schedule', { method: 'POST', body: JSON.stringify(data) }),
   certifications: () => fetchAPI<{ certifications: Certification[] }>('/workforce/certifications'),
+  projects: (params?: Record<string, string>) =>
+    fetchAPI<{ projects: Project[]; total: number }>(`/workforce/projects?${new URLSearchParams(params || {})}`),
+  createProject: (data: Partial<Project>) =>
+    fetchAPI<{ project: Project }>('/workforce/projects', { method: 'POST', body: JSON.stringify(data) }),
+  assignments: (params?: Record<string, string>) =>
+    fetchAPI<{ assignments: ProjectAssignment[]; total: number }>(`/workforce/assignments?${new URLSearchParams(params || {})}`),
+  createAssignment: (data: Partial<ProjectAssignment>) =>
+    fetchAPI<{ assignment: ProjectAssignment }>('/workforce/assignments', { method: 'POST', body: JSON.stringify(data) }),
+  match: (params?: Record<string, string>) =>
+    fetchAPI<{ matches: ConsultantMatch[]; total: number }>(`/workforce/match?${new URLSearchParams(params || {})}`),
 };
 
 // Academy
@@ -469,4 +479,55 @@ export interface Enrollment {
   started_at: string;
   completed_at?: string;
   status: string;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  client_hospital: string;
+  location?: string;
+  city?: string;
+  state?: string;
+  project_type?: string;
+  description?: string;
+  start_date?: string;
+  end_date?: string;
+  status: string;
+  budget?: number;
+  skills_required?: string;
+  team_size?: number;
+  assigned_count?: number;
+  created_at?: string;
+}
+
+export interface ProjectAssignment {
+  id: string;
+  project_id: string;
+  consultant_id: string;
+  role: string;
+  start_date?: string;
+  end_date?: string;
+  rate_per_day?: number;
+  status: string;
+  utilization_pct?: number;
+  notes?: string;
+  consultant_name?: string;
+  consultant_department?: string;
+  project_name?: string;
+  client_hospital?: string;
+  project_city?: string;
+}
+
+export interface ConsultantMatch {
+  id: string;
+  name: string;
+  role: string;
+  department: string;
+  skills: string;
+  skill_categories: string;
+  max_proficiency: number;
+  current_utilization: number;
+  match_score: number;
+  match_pct: number;
+  available_capacity: number;
 }

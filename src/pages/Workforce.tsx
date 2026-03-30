@@ -25,10 +25,10 @@ import {
   Star,
   FileText,
 } from 'lucide-react'
-import { cn, getInitials, formatDate } from '../lib/utils'
+import { cn, getInitials, formatDate, formatCurrency } from '../lib/utils'
 import { demoStaff } from '../lib/mock-data'
 import { workforce } from '../lib/api'
-import type { StaffMember, ShiftSchedule } from '../lib/api'
+import type { StaffMember, ShiftSchedule, Project, ProjectAssignment } from '../lib/api'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { Stat } from '../components/ui/Stat'
@@ -39,8 +39,8 @@ import type { Staff, Certification } from '../types'
 
 const TABS = [
   { id: 'talent', label: 'Talent Dashboard', icon: <Users className="h-4 w-4" /> },
-  { id: 'talent-solutions', label: 'Insurance Talent Solutions', icon: <Shield className="h-4 w-4" /> },
-  { id: 'staff-augmentation', label: 'Staff Augmentation & Placement', icon: <Building2 className="h-4 w-4" /> },
+  { id: 'projects', label: 'Projects', icon: <Building2 className="h-4 w-4" /> },
+  { id: 'assignments', label: 'Assignments & Utilization', icon: <Briefcase className="h-4 w-4" /> },
   { id: 'skills', label: 'Skill Matrix', icon: <Grid3X3 className="h-4 w-4" /> },
   { id: 'scheduler', label: 'Staff Scheduler', icon: <Calendar className="h-4 w-4" /> },
   { id: 'credentials', label: 'Credential Tracker', icon: <Award className="h-4 w-4" /> },
@@ -243,47 +243,32 @@ export default function Workforce() {
   const [departmentFilter, setDepartmentFilter] = useState('')
   const [staffList, setStaffList] = useState<Staff[]>(demoStaff)
   const [scheduleData, setScheduleData] = useState<ShiftSchedule[]>([])
+  const [projectsList, setProjectsList] = useState<Project[]>([])
+  const [assignmentsList, setAssignmentsList] = useState<ProjectAssignment[]>([])
   const [loading, setLoading] = useState(true)
-
-  // D1-derived insurance talent metrics
-  const [d1StaffCount, setD1StaffCount] = useState(0)
-  const [d1InsuranceSpecialists, setD1InsuranceSpecialists] = useState(0)
-  const [d1PlacementSuccessRate, setD1PlacementSuccessRate] = useState(87)
-  const [d1AvgTimeToFill, setD1AvgTimeToFill] = useState('12 days')
 
   useEffect(() => {
     let mounted = true
     async function load() {
       try {
-        const [staffRes, scheduleRes] = await Promise.all([
+        const [staffRes, scheduleRes, projRes, asgnRes] = await Promise.all([
           workforce.staff(),
           workforce.schedule(),
+          workforce.projects(),
+          workforce.assignments(),
         ])
         if (mounted && staffRes.staff) {
           const mapped = staffRes.staff.map(mapAPIStaffToLocal)
           setStaffList(mapped)
-          setD1StaffCount(mapped.length)
-
-          // Compute Insurance Domain Specialists: staff with insurance-related skills/roles
-          const insuranceKeywords = ['insurance', 'claims', 'underwriting', 'actuar', 'policy', 'tpa', 'fraud', 'adjudication', 'payer', 'irdai', 'compliance']
-          const specialists = mapped.filter((s) => {
-            const roleMatch = insuranceKeywords.some(kw => s.role.toLowerCase().includes(kw) || s.department.toLowerCase().includes(kw))
-            const skillMatch = s.skills.some(sk => insuranceKeywords.some(kw => sk.skill.toLowerCase().includes(kw)))
-            const certMatch = s.certifications.some(c => insuranceKeywords.some(kw => c.name.toLowerCase().includes(kw)))
-            return roleMatch || skillMatch || certMatch
-          })
-          setD1InsuranceSpecialists(specialists.length > 0 ? specialists.length : Math.max(3, Math.floor(mapped.length * 0.2)))
-
-          // Placement success rate from active staff ratio
-          const activeRatio = mapped.filter(s => s.status === 'Active').length / Math.max(mapped.length, 1)
-          setD1PlacementSuccessRate(Math.round(activeRatio * 100))
-
-          // Avg time to fill derived from staff count (more staff = faster fill)
-          const avgDays = Math.max(8, Math.round(18 - (mapped.length * 0.5)))
-          setD1AvgTimeToFill(`${avgDays} days`)
         }
         if (mounted && scheduleRes.schedules) {
           setScheduleData(scheduleRes.schedules)
+        }
+        if (mounted && projRes.projects) {
+          setProjectsList(projRes.projects)
+        }
+        if (mounted && asgnRes.assignments) {
+          setAssignmentsList(asgnRes.assignments)
         }
       } catch {
         // keep demoStaff defaults on failure
@@ -452,583 +437,208 @@ export default function Workforce() {
         </div>
       )}
 
-      {/* ── Insurance Talent Solutions ─────────────────────────────── */}
-      {activeTab === 'talent-solutions' && (
+      {/* ── Projects ─────────────────────────────────────────────── */}
+      {activeTab === 'projects' && (
         <div className="space-y-6">
-          {/* D1-Derived Insurance Talent Metrics */}
-          <Card className="border-primary/20 bg-primary/5">
-            <div className="flex items-center gap-2 mb-3">
-              <Shield className="h-4 w-4 text-primary" />
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Insurance Talent Intelligence (D1 Data)</h3>
-              {d1StaffCount > 0 && (
-                <Badge variant="success" size="sm">Live from D1</Badge>
-              )}
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="rounded-lg bg-white dark:bg-surface-dark border border-border dark:border-border-dark px-3 py-2.5 text-center">
-                <p className="font-display font-bold text-xl text-primary">{d1StaffCount > 0 ? d1StaffCount : staffList.length}</p>
-                <p className="text-[10px] font-medium text-text dark:text-text-dark">Total Staff (D1)</p>
-                <p className="text-[9px] text-muted">from /api/workforce/staff</p>
-              </div>
-              <div className="rounded-lg bg-white dark:bg-surface-dark border border-border dark:border-border-dark px-3 py-2.5 text-center">
-                <p className="font-display font-bold text-xl text-violet-600 dark:text-violet-400">{d1InsuranceSpecialists}</p>
-                <p className="text-[10px] font-medium text-text dark:text-text-dark">Insurance Domain Specialists</p>
-                <p className="text-[9px] text-muted">Skills-derived from D1</p>
-              </div>
-              <div className="rounded-lg bg-white dark:bg-surface-dark border border-border dark:border-border-dark px-3 py-2.5 text-center">
-                <p className="font-display font-bold text-xl text-success">{d1PlacementSuccessRate}%</p>
-                <p className="text-[10px] font-medium text-text dark:text-text-dark">Placement Success Rate</p>
-                <p className="text-[9px] text-muted">Active/total ratio</p>
-              </div>
-              <div className="rounded-lg bg-white dark:bg-surface-dark border border-border dark:border-border-dark px-3 py-2.5 text-center">
-                <p className="font-display font-bold text-xl text-amber-600 dark:text-amber-400">{d1AvgTimeToFill}</p>
-                <p className="text-[10px] font-medium text-text dark:text-text-dark">Avg Time to Fill</p>
-                <p className="text-[9px] text-muted">Computed from pool size</p>
-              </div>
-            </div>
-          </Card>
-
-          {/* Talent Pool Stats Strip */}
+          {/* Project KPIs */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {TALENT_POOL_STATS.map((stat) => (
-              <Stat
-                key={stat.label}
-                label={stat.label}
-                value={stat.value}
-                icon={stat.icon}
-                change={stat.change}
-                changeLabel="vs last month"
-              />
-            ))}
+            <Stat label="Total Projects" value={projectsList.length} icon={<Building2 className="h-5 w-5" />} />
+            <Stat label="Active" value={projectsList.filter(p => p.status === 'active').length} icon={<Zap className="h-5 w-5" />} />
+            <Stat label="Completed" value={projectsList.filter(p => p.status === 'completed').length} icon={<CheckCircle className="h-5 w-5" />} />
+            <Stat label="Total Budget" value={formatCurrency(projectsList.reduce((s, p) => s + (p.budget || 0), 0))} icon={<DollarSign className="h-5 w-5" />} />
           </div>
 
-          {/* Active Placement Pipeline Table */}
-          <Card padding="none">
-            <div className="border-b border-border px-5 py-4 dark:border-border-dark">
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                  Active Placement Pipeline
-                </h3>
-                <Badge variant="info" size="sm">
-                  {ACTIVE_PLACEMENT_PIPELINE.length} candidates
-                </Badge>
-              </div>
+          {/* Projects Table */}
+          <Card padding="none" header={
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Hospital IT Projects</h3>
+              <Badge variant="info" size="sm">{projectsList.length} projects</Badge>
             </div>
+          }>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-border bg-gray-50 dark:border-border-dark dark:bg-white/5">
-                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                      Candidate
-                    </th>
-                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                      Role
-                    </th>
-                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                      Client
-                    </th>
-                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                      Stage
-                    </th>
-                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                      Match Score
-                    </th>
+                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Project</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Client</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">City</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Type</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Status</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Budget</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Team</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Timeline</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border dark:divide-border-dark">
-                  {ACTIVE_PLACEMENT_PIPELINE.map((row) => (
-                    <tr
-                      key={row.candidateName}
-                      className="transition-colors hover:bg-gray-50 dark:hover:bg-white/5"
-                    >
-                      <td className="whitespace-nowrap px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-white">
-                            {getInitials(row.candidateName)}
-                          </div>
-                          <span className="font-medium text-gray-900 dark:text-gray-100">
-                            {row.candidateName}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-gray-600 dark:text-gray-300">
-                        {row.role}
+                  {projectsList.map((proj) => (
+                    <tr key={proj.id} className="transition-colors hover:bg-gray-50 dark:hover:bg-white/5">
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-gray-900 dark:text-gray-100">{proj.name}</p>
+                        {proj.description && <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 max-w-xs truncate">{proj.description}</p>}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-gray-600 dark:text-gray-300">
                         <div className="flex items-center gap-1.5">
-                          <Building2 className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
-                          {row.client}
+                          <Building2 className="h-3.5 w-3.5 text-gray-400" />
+                          {proj.client_hospital}
                         </div>
                       </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-gray-600 dark:text-gray-300">{proj.city || '—'}</td>
                       <td className="whitespace-nowrap px-4 py-3">
-                        <Badge variant={getPlacementStageBadge(row.stage)} dot size="sm">
-                          {row.stage}
+                        <Badge variant="neutral" size="sm">{(proj.project_type || '').replace(/_/g, ' ')}</Badge>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <Badge
+                          variant={proj.status === 'active' ? 'success' : proj.status === 'completed' ? 'info' : 'warning'}
+                          dot size="sm"
+                        >
+                          {proj.status}
+                        </Badge>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
+                        {proj.budget ? formatCurrency(proj.budget) : '—'}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-gray-600 dark:text-gray-300">
+                        {proj.assigned_count ?? 0}/{proj.team_size ?? 0}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+                        {proj.start_date ? formatDate(proj.start_date) : '—'} — {proj.end_date ? formatDate(proj.end_date) : 'Ongoing'}
+                      </td>
+                    </tr>
+                  ))}
+                  {projectsList.length === 0 && (
+                    <tr><td colSpan={8} className="px-4 py-8 text-center text-muted">No projects found</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          {/* Skills Required by Projects */}
+          <Card header={
+            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Skills Required Across Projects</h3>
+          }>
+            <div className="flex flex-wrap gap-2">
+              {Array.from(new Set(projectsList.flatMap(p => (p.skills_required || '').split(',').map(s => s.trim()).filter(Boolean)))).map(skill => (
+                <Badge key={skill} variant="neutral" size="sm">{skill}</Badge>
+              ))}
+              {projectsList.length === 0 && <span className="text-sm text-muted">No projects loaded</span>}
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* ── Assignments & Utilization ──────────────────────────────── */}
+      {activeTab === 'assignments' && (
+        <div className="space-y-6">
+          {/* Assignment KPIs */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Stat label="Total Assignments" value={assignmentsList.length} icon={<Briefcase className="h-5 w-5" />} />
+            <Stat label="Active" value={assignmentsList.filter(a => a.status === 'active').length} icon={<Zap className="h-5 w-5" />} />
+            <Stat label="Completed" value={assignmentsList.filter(a => a.status === 'completed').length} icon={<CheckCircle className="h-5 w-5" />} />
+            <Stat label="Consultants Deployed" value={new Set(assignmentsList.filter(a => a.status === 'active').map(a => a.consultant_id)).size} icon={<Users className="h-5 w-5" />} />
+          </div>
+
+          {/* Assignments Table */}
+          <Card padding="none" header={
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">All Assignments</h3>
+              <Badge variant="info" size="sm">{assignmentsList.length} assignments</Badge>
+            </div>
+          }>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-gray-50 dark:border-border-dark dark:bg-white/5">
+                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Consultant</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Project</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Role</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Status</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Utilization</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Rate/Day</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Timeline</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border dark:divide-border-dark">
+                  {assignmentsList.map((asgn) => (
+                    <tr key={asgn.id} className="transition-colors hover:bg-gray-50 dark:hover:bg-white/5">
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-white">
+                            {getInitials(asgn.consultant_name || '')}
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900 dark:text-gray-100">{asgn.consultant_name}</p>
+                            <p className="text-xs text-gray-500">{asgn.consultant_department}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-gray-900 dark:text-gray-100">{asgn.project_name}</p>
+                        <p className="text-xs text-gray-500">{asgn.client_hospital}</p>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-gray-600 dark:text-gray-300">{asgn.role}</td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <Badge
+                          variant={asgn.status === 'active' ? 'success' : asgn.status === 'completed' ? 'info' : 'warning'}
+                          dot size="sm"
+                        >
+                          {asgn.status}
                         </Badge>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3">
                         <div className="flex items-center gap-2">
                           <div className="h-2 w-16 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
                             <div
-                              className={cn(
-                                'h-full rounded-full',
-                                row.matchScore >= 90 ? 'bg-emerald-500' : row.matchScore >= 80 ? 'bg-amber-400' : 'bg-red-400'
-                              )}
-                              style={{ width: `${row.matchScore}%` }}
+                              className={cn('h-full rounded-full', (asgn.utilization_pct || 0) >= 80 ? 'bg-emerald-500' : (asgn.utilization_pct || 0) >= 50 ? 'bg-amber-400' : 'bg-red-400')}
+                              style={{ width: `${asgn.utilization_pct || 0}%` }}
                             />
                           </div>
-                          <span className={cn(
-                            'text-xs font-bold',
-                            row.matchScore >= 90 ? 'text-emerald-600 dark:text-emerald-400' : row.matchScore >= 80 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600 dark:text-red-400'
-                          )}>
-                            {row.matchScore}%
-                          </span>
+                          <span className="text-xs font-bold text-gray-600 dark:text-gray-400">{asgn.utilization_pct || 0}%</span>
                         </div>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
+                        {asgn.rate_per_day ? `₹${(asgn.rate_per_day).toLocaleString('en-IN')}` : '—'}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+                        {asgn.start_date ? formatDate(asgn.start_date) : '—'} — {asgn.end_date ? formatDate(asgn.end_date) : 'Ongoing'}
                       </td>
                     </tr>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-
-          {/* Two-column layout: Talent Pool + Specializations */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {/* Left column - Healthcare IT Talent Pool */}
-            <Card padding="none">
-              <div className="border-b border-border px-5 py-4 dark:border-border-dark">
-                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                  Healthcare IT Talent Pool
-                </h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-border bg-gray-50 dark:border-border-dark dark:bg-white/5">
-                      <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                        Name
-                      </th>
-                      <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                        Specialization
-                      </th>
-                      <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                        Exp
-                      </th>
-                      <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                        Certifications
-                      </th>
-                      <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                        Availability
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border dark:divide-border-dark">
-                    {TALENT_POOL.map((person) => (
-                      <tr
-                        key={person.name}
-                        className="transition-colors hover:bg-gray-50 dark:hover:bg-white/5"
-                      >
-                        <td className="whitespace-nowrap px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-white">
-                              {getInitials(person.name)}
-                            </div>
-                            <span className="font-medium text-gray-900 dark:text-gray-100">
-                              {person.name}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-gray-600 dark:text-gray-300">
-                          {person.specialization}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-gray-600 dark:text-gray-300">
-                          {person.experience}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-wrap gap-1">
-                            {person.certifications.split(', ').map((cert) => (
-                              <Badge key={cert} variant="info" size="sm">
-                                {cert}
-                              </Badge>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3">
-                          <Badge
-                            variant={person.availability === 'Available' ? 'success' : 'warning'}
-                            dot
-                            size="sm"
-                          >
-                            {person.availability}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-
-            {/* Right column - Insurance Talent Specializations */}
-            <Card>
-              <h3 className="mb-4 text-base font-semibold text-gray-900 dark:text-gray-100">
-                Insurance Talent Specializations
-              </h3>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {SPECIALIZATIONS.map((spec) => (
-                  <div
-                    key={spec.label}
-                    className="flex items-center gap-3 rounded-lg border border-border p-3 transition-shadow hover:shadow-md dark:border-border-dark"
-                  >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary dark:bg-primary/20">
-                      {spec.icon}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {spec.label}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {spec.count} available
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </div>
-
-          {/* Hot Roles - In-Demand Positions */}
-          <Card>
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                Hot Roles - In-Demand Positions
-              </h3>
-              <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                <Zap className="h-3.5 w-3.5 text-amber-500" />
-                Updated in real-time
-              </div>
-            </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              {HOT_ROLES.map((role) => (
-                <div
-                  key={role.title}
-                  className="rounded-lg border border-border p-4 transition-shadow hover:shadow-md dark:border-border-dark"
-                >
-                  <div className="mb-2 flex items-start justify-between">
-                    <Badge variant={getUrgencyVariant(role.urgency)} size="sm" dot>
-                      {role.urgency}
-                    </Badge>
-                    <span className="text-xs font-medium text-gray-400 dark:text-gray-500">
-                      {role.openPositions} open
-                    </span>
-                  </div>
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                    {role.title}
-                  </h4>
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    {role.client}
-                  </p>
-                  <div className="mt-3 flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 dark:bg-emerald-900/20">
-                    <DollarSign className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-                    <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-                      {role.salaryRange}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* Direct Placement Pipeline */}
-          <Card>
-            <h3 className="mb-6 text-base font-semibold text-gray-900 dark:text-gray-100">
-              Direct Placement Pipeline
-            </h3>
-            <div className="flex items-center justify-between gap-2 overflow-x-auto">
-              {PIPELINE_STAGES.map((stage, idx) => (
-                <div key={stage.label} className="flex items-center gap-2">
-                  <div className="flex flex-col items-center gap-1.5">
-                    <div
-                      className={cn(
-                        'flex h-14 w-14 items-center justify-center rounded-full text-lg font-bold text-white',
-                        idx === 0 && 'bg-blue-500',
-                        idx === 1 && 'bg-indigo-500',
-                        idx === 2 && 'bg-violet-500',
-                        idx === 3 && 'bg-amber-500',
-                        idx === 4 && 'bg-emerald-500'
-                      )}
-                    >
-                      {stage.count}
-                    </div>
-                    <span className="whitespace-nowrap text-xs font-medium text-gray-700 dark:text-gray-300">
-                      {stage.label}
-                    </span>
-                  </div>
-                  {idx < PIPELINE_STAGES.length - 1 && (
-                    <ArrowRight className="h-5 w-5 shrink-0 text-gray-300 dark:text-gray-600" />
+                  {assignmentsList.length === 0 && (
+                    <tr><td colSpan={7} className="px-4 py-8 text-center text-muted">No assignments found</td></tr>
                   )}
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* ── Staff Augmentation & Placement ────────────────────────── */}
-      {activeTab === 'staff-augmentation' && (
-        <div className="space-y-6">
-          {/* Contract Workforce Dashboard Stats */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {AUGMENTATION_STATS.map((stat) => (
-              <Stat
-                key={stat.label}
-                label={stat.label}
-                value={stat.value}
-                icon={stat.icon}
-                change={stat.change}
-                changeLabel="vs last month"
-              />
-            ))}
-          </div>
-
-          {/* Client-wise Staffing Breakdown */}
-          <Card padding="none">
-            <div className="border-b border-border px-5 py-4 dark:border-border-dark">
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                  Client-wise Staffing Breakdown
-                </h3>
-                <Badge variant="info" size="sm">
-                  {CLIENT_STAFFING_BREAKDOWN.reduce((sum, c) => sum + c.headcount, 0)} total staff
-                </Badge>
-              </div>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-gray-50 dark:border-border-dark dark:bg-white/5">
-                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                      Client
-                    </th>
-                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                      Headcount
-                    </th>
-                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                      Contract Type
-                    </th>
-                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                      Utilization
-                    </th>
-                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                      End Date
-                    </th>
-                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border dark:divide-border-dark">
-                  {CLIENT_STAFFING_BREAKDOWN.map((row) => (
-                    <tr
-                      key={row.client}
-                      className="transition-colors hover:bg-gray-50 dark:hover:bg-white/5"
-                    >
-                      <td className="whitespace-nowrap px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400">
-                            <Building2 className="h-4 w-4" />
-                          </div>
-                          <span className="font-medium text-gray-900 dark:text-gray-100">
-                            {row.client}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3">
-                        <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                          {row.headcount}
-                        </span>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3">
-                        <Badge variant="neutral" size="sm">
-                          <FileText className="mr-1 h-3 w-3" />
-                          {row.contractType}
-                        </Badge>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="h-2 w-20 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-                            <div
-                              className={cn(
-                                'h-full rounded-full',
-                                row.utilization >= 90 ? 'bg-emerald-500' : row.utilization >= 80 ? 'bg-amber-400' : 'bg-red-400'
-                              )}
-                              style={{ width: `${row.utilization}%` }}
-                            />
-                          </div>
-                          <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                            {row.utilization}%
-                          </span>
-                        </div>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-gray-600 dark:text-gray-300">
-                        {formatDate(row.endDate)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3">
-                        <Badge variant={getClientStatusVariant(row.status)} dot size="sm">
-                          {row.status}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
                 </tbody>
               </table>
             </div>
           </Card>
 
-          {/* Skill Gap Analysis */}
-          <Card>
-            <div className="mb-5 flex items-center justify-between">
-              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
-                Skill Gap Analysis - Supply vs Demand
-              </h3>
-              <div className="flex items-center gap-4">
-                <span className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
-                  <span className="inline-block h-3 w-3 rounded bg-blue-500" /> Supply
-                </span>
-                <span className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
-                  <span className="inline-block h-3 w-3 rounded bg-rose-500" /> Demand
-                </span>
-              </div>
-            </div>
-            <div className="space-y-5">
-              {SKILL_GAP_ANALYSIS.map((item) => {
-                const maxVal = Math.max(item.supply, item.demand)
-                const gap = item.demand - item.supply
-                return (
-                  <div key={item.skill}>
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {item.skill}
-                      </span>
-                      <span className={cn(
-                        'text-xs font-semibold',
-                        gap > 20 ? 'text-red-600 dark:text-red-400' : gap > 10 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'
-                      )}>
-                        {gap > 0 ? `${gap} gap` : 'Balanced'}
-                      </span>
-                    </div>
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-3">
-                        <span className="w-14 text-right text-xs text-gray-500 dark:text-gray-400">Supply</span>
-                        <div className="h-3 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
-                          <div
-                            className="h-full rounded-full bg-blue-500 transition-all duration-500"
-                            style={{ width: `${(item.supply / maxVal) * 100}%` }}
-                          />
-                        </div>
-                        <span className="w-8 text-xs font-semibold text-gray-700 dark:text-gray-300">{item.supply}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="w-14 text-right text-xs text-gray-500 dark:text-gray-400">Demand</span>
-                        <div className="h-3 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
-                          <div
-                            className="h-full rounded-full bg-rose-500 transition-all duration-500"
-                            style={{ width: `${(item.demand / maxVal) * 100}%` }}
-                          />
-                        </div>
-                        <span className="w-8 text-xs font-semibold text-gray-700 dark:text-gray-300">{item.demand}</span>
-                      </div>
-                    </div>
+          {/* Consultant Utilization Summary */}
+          <Card header={<h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Consultant Utilization</h3>}>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from(
+                assignmentsList
+                  .filter(a => a.status === 'active')
+                  .reduce((map, a) => {
+                    const key = a.consultant_id
+                    if (!map.has(key)) map.set(key, { name: a.consultant_name || '', dept: a.consultant_department || '', totalUtil: 0, projects: [] as string[] })
+                    const entry = map.get(key)!
+                    entry.totalUtil += (a.utilization_pct || 0)
+                    entry.projects.push(a.project_name || '')
+                    return map
+                  }, new Map<string, { name: string; dept: string; totalUtil: number; projects: string[] }>())
+                  .values()
+              ).map(c => (
+                <div key={c.name} className={cn('rounded-lg border p-3', c.totalUtil > 100 ? 'border-error/30 bg-error/5' : c.totalUtil >= 80 ? 'border-success/30 bg-success/5' : 'border-warning/30 bg-warning/5')}>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="font-medium text-sm text-gray-900 dark:text-gray-100">{c.name}</p>
+                    <span className={cn('text-sm font-bold', c.totalUtil > 100 ? 'text-error' : c.totalUtil >= 80 ? 'text-success' : 'text-warning')}>{c.totalUtil}%</span>
                   </div>
-                )
-              })}
+                  <p className="text-xs text-gray-500">{c.dept}</p>
+                  <p className="text-xs text-gray-400 mt-1">{c.projects.join(', ')}</p>
+                </div>
+              ))}
             </div>
           </Card>
-
-          {/* Bottom row: Augmentation Pipeline + Quick Actions */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {/* Contract Renewal Timeline */}
-            <Card>
-              <h3 className="mb-4 text-base font-semibold text-gray-900 dark:text-gray-100">
-                Contract Renewal Timeline
-              </h3>
-              <div className="space-y-3">
-                {CLIENT_STAFFING_BREAKDOWN.map((row) => {
-                  const endDate = new Date(row.endDate)
-                  const now = new Date()
-                  const daysLeft = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-                  return (
-                    <div
-                      key={row.client}
-                      className="flex items-center gap-3 rounded-lg border border-border p-3 dark:border-border-dark"
-                    >
-                      <div className={cn(
-                        'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
-                        daysLeft < 60 ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
-                          : daysLeft < 180 ? 'bg-amber-50 text-amber-600 dark:bg-amber-900/20 dark:text-amber-400'
-                          : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400'
-                      )}>
-                        <Calendar className="h-5 w-5" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                          {row.client}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {row.headcount} staff &middot; {row.contractType}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className={cn(
-                          'text-sm font-bold',
-                          daysLeft < 60 ? 'text-red-600 dark:text-red-400'
-                            : daysLeft < 180 ? 'text-amber-600 dark:text-amber-400'
-                            : 'text-emerald-600 dark:text-emerald-400'
-                        )}>
-                          {daysLeft}d
-                        </p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500">remaining</p>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </Card>
-
-            {/* Workforce Composition */}
-            <Card>
-              <h3 className="mb-4 text-base font-semibold text-gray-900 dark:text-gray-100">
-                Workforce Composition
-              </h3>
-              <div className="space-y-4">
-                {[
-                  { label: 'Claims & Adjudication', count: 68, color: 'bg-blue-500', percent: 31 },
-                  { label: 'Technology & Development', count: 52, color: 'bg-violet-500', percent: 24 },
-                  { label: 'Underwriting Operations', count: 38, color: 'bg-emerald-500', percent: 17 },
-                  { label: 'Analytics & Reporting', count: 34, color: 'bg-amber-500', percent: 16 },
-                  { label: 'Compliance & Audit', count: 26, color: 'bg-rose-500', percent: 12 },
-                ].map((segment) => (
-                  <div key={segment.label}>
-                    <div className="mb-1.5 flex items-center justify-between">
-                      <span className="text-sm text-gray-700 dark:text-gray-300">{segment.label}</span>
-                      <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                        {segment.count} <span className="text-xs font-normal text-gray-400 dark:text-gray-500">({segment.percent}%)</span>
-                      </span>
-                    </div>
-                    <div className="h-2.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
-                      <div
-                        className={cn('h-full rounded-full transition-all duration-500', segment.color)}
-                        style={{ width: `${segment.percent}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-5 flex items-center justify-between rounded-lg bg-gray-50 px-4 py-3 dark:bg-white/5">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Augmented Workforce</span>
-                <span className="text-lg font-bold text-primary">218</span>
-              </div>
-            </Card>
-          </div>
         </div>
       )}
 
