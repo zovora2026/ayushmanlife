@@ -41,7 +41,7 @@ export function Dropdown({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className={cn(
-            'w-full appearance-none rounded-lg border border-border bg-white px-3.5 py-2.5 pr-10 text-sm text-gray-900 transition-all duration-200',
+            'w-full appearance-none rounded-lg border border-border bg-white dark:bg-surface-dark px-3.5 py-2.5 pr-10 text-sm text-gray-900 dark:text-gray-100 transition-all duration-200',
             'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20',
             'dark:border-border-dark dark:bg-surface-dark dark:text-gray-100 dark:focus:border-primary dark:focus:ring-primary/30',
             !value && 'text-gray-400 dark:text-gray-500'

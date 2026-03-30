@@ -33,7 +33,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             className={cn(
-              'w-full rounded-lg border border-border bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 transition-all duration-200',
+              'w-full rounded-lg border border-border bg-white dark:bg-surface-dark px-3.5 py-2.5 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-all duration-200',
               'focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20',
               'dark:border-border-dark dark:bg-surface-dark dark:text-gray-100 dark:placeholder:text-gray-500 dark:focus:border-primary dark:focus:ring-primary/30',
               icon && 'pl-10',

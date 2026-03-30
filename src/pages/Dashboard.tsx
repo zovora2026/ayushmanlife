@@ -32,7 +32,7 @@ const activityDotColors: Record<string, string> = {
   claim: 'bg-accent',
   patient: 'bg-success',
   appointment: 'bg-primary',
-  system: 'bg-gray-400',
+  system: 'bg-gray-400 dark:bg-gray-500',
   alert: 'bg-error',
 }
 
@@ -275,7 +275,7 @@ export default function Dashboard() {
                 <span
                   className={cn(
                     'mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full',
-                    activityDotColors[activity.type] ?? 'bg-gray-400'
+                    activityDotColors[activity.type] ?? 'bg-gray-400 dark:bg-gray-500'
                   )}
                 />
                 <div className="min-w-0 flex-1">

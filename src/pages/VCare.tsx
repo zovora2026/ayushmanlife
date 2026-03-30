@@ -223,9 +223,9 @@ function TypingIndicator() {
       </div>
       <div className="rounded-2xl rounded-tl-md bg-gray-100 px-4 py-3 dark:bg-gray-800">
         <div className="flex items-center gap-1">
-          <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:0ms]" />
-          <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:150ms]" />
-          <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:300ms]" />
+          <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400 dark:bg-gray-500 [animation-delay:0ms]" />
+          <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400 dark:bg-gray-500 [animation-delay:150ms]" />
+          <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400 dark:bg-gray-500 [animation-delay:300ms]" />
         </div>
       </div>
     </div>
@@ -1090,7 +1090,7 @@ export default function VCare() {
                           )}>
                             {status === 'taken' && <CheckCircle className="h-2.5 w-2.5 text-green-600 dark:text-green-400" />}
                             {status === 'missed' && <XCircle className="h-2.5 w-2.5 text-red-500 dark:text-red-400" />}
-                            {status === 'upcoming' && <Clock className="h-2.5 w-2.5 text-gray-400" />}
+                            {status === 'upcoming' && <Clock className="h-2.5 w-2.5 text-gray-400 dark:text-gray-500" />}
                           </div>
                         </div>
                       )
@@ -1273,7 +1273,7 @@ export default function VCare() {
                 )}
               </div>
               <textarea value={feedbackText} onChange={e => setFeedbackText(e.target.value)} placeholder="Share your experience..." rows={2} className="w-full px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-background dark:bg-background-dark text-text dark:text-text-dark text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
-              <button onClick={() => { if (feedbackRating > 0) setFeedbackSent(true) }} disabled={feedbackRating === 0} className={cn('w-full py-2 rounded-lg text-xs font-medium transition-colors', feedbackRating > 0 ? 'bg-primary text-white hover:bg-primary/90' : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800')}>
+              <button onClick={() => { if (feedbackRating > 0) setFeedbackSent(true) }} disabled={feedbackRating === 0} className={cn('w-full py-2 rounded-lg text-xs font-medium transition-colors', feedbackRating > 0 ? 'bg-primary text-white hover:bg-primary/90' : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed')}>
                 Submit Feedback
               </button>
             </div>

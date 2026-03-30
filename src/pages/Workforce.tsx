@@ -497,7 +497,7 @@ export default function Workforce() {
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-gray-600 dark:text-gray-300">
                         <div className="flex items-center gap-1.5">
-                          <Building2 className="h-3.5 w-3.5 text-gray-400" />
+                          <Building2 className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
                           {row.client}
                         </div>
                       </td>
@@ -952,7 +952,7 @@ export default function Workforce() {
                     <div className="mb-1.5 flex items-center justify-between">
                       <span className="text-sm text-gray-700 dark:text-gray-300">{segment.label}</span>
                       <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                        {segment.count} <span className="text-xs font-normal text-gray-400">({segment.percent}%)</span>
+                        {segment.count} <span className="text-xs font-normal text-gray-400 dark:text-gray-500">({segment.percent}%)</span>
                       </span>
                     </div>
                     <div className="h-2.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">

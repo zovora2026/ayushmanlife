@@ -174,7 +174,7 @@ const PRIORITY_DISTRIBUTION = [
   { label: 'Critical', count: 2, color: 'bg-error', textColor: 'text-error' },
   { label: 'High', count: 5, color: 'bg-warning', textColor: 'text-warning' },
   { label: 'Medium', count: 3, color: 'bg-accent', textColor: 'text-accent' },
-  { label: 'Low', count: 2, color: 'bg-gray-400', textColor: 'text-gray-500' },
+  { label: 'Low', count: 2, color: 'bg-gray-400 dark:bg-gray-500', textColor: 'text-gray-500 dark:text-gray-400' },
 ]
 
 const BREACHED_TICKETS = [
@@ -575,7 +575,7 @@ function getSystemStatusColor(status: string): string {
     case 'Healthy': return 'bg-success'
     case 'Degraded': return 'bg-warning'
     case 'Down': return 'bg-error'
-    default: return 'bg-gray-400'
+    default: return 'bg-gray-400 dark:bg-gray-500'
   }
 }
 
@@ -584,7 +584,7 @@ function getSystemStatusTextColor(status: string): string {
     case 'Healthy': return 'text-success'
     case 'Degraded': return 'text-warning'
     case 'Down': return 'text-error'
-    default: return 'text-gray-500'
+    default: return 'text-gray-500 dark:text-gray-400'
   }
 }
 
@@ -615,7 +615,9 @@ export default function Services() {
             status: t.status as TicketData['status'],
             assignee: t.assigned_to ?? '',
             createdDate: t.created_at ?? '',
-            slaDeadline: t.created_at ?? '',
+            slaDeadline: t.created_at && t.sla_hours
+              ? new Date(new Date(t.created_at).getTime() + (t.sla_hours * 3600000)).toISOString()
+              : t.created_at ?? '',
             category: t.category,
           })))
         }
@@ -734,7 +736,7 @@ export default function Services() {
       )}
 
       {/* ── Ticket List ───────────────────────────────────────────── */}
-      {activeTab === 'tickets' && (
+      {!loading && activeTab === 'tickets' && (
         <div className="space-y-4">
           {/* AI Triage Status Banner */}
           <Card className="border-success/30 bg-success/5">

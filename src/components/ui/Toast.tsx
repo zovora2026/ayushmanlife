@@ -48,7 +48,7 @@ export function Toast({ message, type = 'info', onClose }: ToastProps) {
   return (
     <div
       className={cn(
-        'flex items-start gap-3 rounded-lg border border-border bg-white px-4 py-3 shadow-lg',
+        'flex items-start gap-3 rounded-lg border border-border bg-white dark:bg-surface-dark px-4 py-3 shadow-lg',
         'border-l-4 dark:border-border-dark dark:bg-surface-dark',
         config.borderColor
       )}

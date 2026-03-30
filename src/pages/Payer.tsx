@@ -558,7 +558,7 @@ export default function Payer() {
               ].map((s, i) => (
                 <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg bg-gray-50 dark:bg-slate-800">
                   <span className={cn('w-2 h-2 rounded-full shrink-0',
-                    s.status === 'Migrated' ? 'bg-success' : s.status === 'In Progress' ? 'bg-warning' : 'bg-gray-300'
+                    s.status === 'Migrated' ? 'bg-success' : s.status === 'In Progress' ? 'bg-warning' : 'bg-gray-300 dark:bg-gray-600'
                   )} />
                   <p className="flex-1 text-xs font-medium text-text dark:text-text-dark">{s.system}</p>
                   <span className="text-[10px] text-muted">{s.cloud}</span>
@@ -593,7 +593,7 @@ export default function Payer() {
             ))}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Filter className="h-4 w-4 text-gray-400" />
+            <Filter className="h-4 w-4 text-gray-400 dark:text-gray-500" />
             {SCHEME_FILTERS.map((f) => (
               <button
                 key={f}

@@ -37,7 +37,7 @@ export function Table<T extends Record<string, unknown>>({
   function renderSortIcon(col: Column<T>) {
     if (!col.sortable) return null
     if (sortKey !== col.key) {
-      return <ChevronsUpDown className="ml-1 inline h-3.5 w-3.5 text-gray-400" />
+      return <ChevronsUpDown className="ml-1 inline h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
     }
     return sortDirection === 'asc' ? (
       <ChevronUp className="ml-1 inline h-3.5 w-3.5 text-primary" />

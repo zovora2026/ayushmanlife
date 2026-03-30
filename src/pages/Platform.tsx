@@ -90,7 +90,7 @@ export default function Platform() {
                 <p className="text-white/70 mb-6">
                   Designed to handle enterprise-scale healthcare operations with AI-native intelligence.
                 </p>
-                <Link to="/contact" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-primary font-semibold hover:bg-gray-100 transition-colors">
+                <Link to="/contact" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white dark:bg-surface-dark text-primary font-semibold hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
                   Request Technical Deep-Dive <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>

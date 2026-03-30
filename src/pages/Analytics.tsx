@@ -493,7 +493,7 @@ export default function Analytics() {
                 <div>
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">High Risk</p>
                   <p className="mt-1 text-3xl font-bold text-error">{highRisk}</p>
-                  <p className="mt-1 text-xs text-gray-400">Score &ge; 70</p>
+                  <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">Score &ge; 70</p>
                 </div>
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-error/10">
                   <AlertTriangle className="h-6 w-6 text-error" />
@@ -505,7 +505,7 @@ export default function Analytics() {
                 <div>
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Medium Risk</p>
                   <p className="mt-1 text-3xl font-bold text-warning">{mediumRisk}</p>
-                  <p className="mt-1 text-xs text-gray-400">Score 40-69</p>
+                  <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">Score 40-69</p>
                 </div>
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-warning/10">
                   <Activity className="h-6 w-6 text-warning" />
@@ -517,7 +517,7 @@ export default function Analytics() {
                 <div>
                   <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Low Risk</p>
                   <p className="mt-1 text-3xl font-bold text-success">{lowRisk}</p>
-                  <p className="mt-1 text-xs text-gray-400">Score &lt; 40</p>
+                  <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">Score &lt; 40</p>
                 </div>
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-success/10">
                   <ThumbsUp className="h-6 w-6 text-success" />
@@ -575,7 +575,7 @@ export default function Analytics() {
                                   {c}
                                 </Badge>
                               ))
-                            : <span className="text-xs text-gray-400">None</span>
+                            : <span className="text-xs text-gray-400 dark:text-gray-500">None</span>
                           }
                           {patient.conditions.length > 2 && (
                             <Badge size="sm" variant="neutral">
@@ -942,7 +942,7 @@ export default function Analytics() {
                 </div>
                 <div className="mt-4 flex items-center gap-2">
                   <Badge variant="success" size="md">{npsLabel}</Badge>
-                  <span className="text-xs text-gray-400">Industry avg: 42</span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500">Industry avg: 42</span>
                 </div>
               </div>
             </Card>
@@ -1057,7 +1057,7 @@ export default function Analytics() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge variant="neutral" size="sm">{item.department}</Badge>
-                      <span className="text-xs text-gray-400">{item.date}</span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500">{item.date}</span>
                     </div>
                   </div>
                   <p className="text-sm text-gray-700 dark:text-gray-300">

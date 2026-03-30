@@ -49,7 +49,7 @@ const cohorts = [
 
 function DiffBadge({ d }: { d: string }) {
   const colors = { Beginner: 'bg-success/10 text-success', Intermediate: 'bg-warning/10 text-warning', Advanced: 'bg-error/10 text-error' }
-  return <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', colors[d as keyof typeof colors] || 'bg-gray-100 text-gray-600')}>{d}</span>
+  return <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', colors[d as keyof typeof colors] || 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400')}>{d}</span>
 }
 
 export default function Academy() {

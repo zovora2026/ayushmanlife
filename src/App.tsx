@@ -1,6 +1,7 @@
 import React, { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { useAppStore } from './store/appStore'
+import { useAuthStore } from './store/authStore'
 import DashboardLayout from './components/layout/DashboardLayout'
 
 const Landing = lazy(() => import('./pages/Landing'))
@@ -95,6 +96,11 @@ function ScrollToTop() {
 
 export default function App() {
   const { theme } = useAppStore()
+  const { checkSession } = useAuthStore()
+
+  useEffect(() => {
+    checkSession()
+  }, [])
 
   useEffect(() => {
     if (theme === 'dark') {

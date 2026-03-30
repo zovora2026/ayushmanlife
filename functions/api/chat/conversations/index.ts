@@ -106,7 +106,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       );
     }
 
-    const userId = (context.data as any)?.currentUser?.id || 'anonymous';
+    const userId = (context.data as any)?.currentUser?.id || null;
 
     await db
       .prepare(
