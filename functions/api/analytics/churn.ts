@@ -154,7 +154,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       });
     }
 
-    const [churnResult, atRiskResult] =
+    const [churnResult, atRiskResult, reasonsResult, trendResult] =
       await Promise.all([
         db
           .prepare(
@@ -176,18 +176,66 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
              LIMIT 20`
           )
           .all(),
+        // Derive churn reasons from patient data signals
+        db
+          .prepare(
+            `SELECT
+              CASE
+                WHEN last_visit IS NOT NULL AND julianday('now') - julianday(last_visit) > 90 THEN 'Missed Follow-ups'
+                WHEN satisfaction_score IS NOT NULL AND satisfaction_score < 3 THEN 'Low Satisfaction'
+                WHEN satisfaction_score IS NOT NULL AND satisfaction_score < 4 THEN 'Moderate Dissatisfaction'
+                ELSE 'Other Risk Factors'
+              END as reason,
+              COUNT(*) as patient_count
+             FROM patients
+             WHERE churn_risk IN ('medium', 'high')
+             GROUP BY reason
+             ORDER BY patient_count DESC`
+          )
+          .all(),
+        // Monthly active patient trend from claims activity
+        db
+          .prepare(
+            `SELECT
+              strftime('%Y-%m', created_at) as month,
+              COUNT(DISTINCT patient_id) as active_patients,
+              COUNT(*) as claims_count
+             FROM claims
+             GROUP BY strftime('%Y-%m', created_at)
+             ORDER BY month ASC
+             LIMIT 12`
+          )
+          .all(),
       ]);
 
     const churnRate = churnResult?.churn_rate || 0;
+    const totalActive = churnResult?.total_active || 0;
+
+    // Calculate percentages for reasons
+    const atRiskTotal = (atRiskResult.results || []).length;
+    const reasonRows = (reasonsResult.results || []) as Array<Record<string, unknown>>;
+    const reasonTotal = reasonRows.reduce((sum, row) => sum + (row.patient_count as number), 0);
+    const churnByReason = reasonRows.map((row) => ({
+      reason: row.reason as string,
+      patient_count: row.patient_count as number,
+      percentage: reasonTotal > 0 ? Math.round((row.patient_count as number) * 1000 / reasonTotal) / 10 : 0,
+    }));
+
+    // Format monthly trend
+    const monthlyTrend = ((trendResult.results || []) as Array<Record<string, unknown>>).map((row) => ({
+      month: row.month as string,
+      active_patients: row.active_patients as number,
+      claims_count: row.claims_count as number,
+    }));
 
     return json({
       churn_rate: churnRate,
       retention_rate: Math.round((100 - churnRate) * 10) / 10,
-      at_risk_count: atRiskResult.results?.length || 0,
-      total_active_patients: churnResult?.total_active || 0,
+      at_risk_count: atRiskTotal,
+      total_active_patients: totalActive,
       at_risk_patients: atRiskResult.results || [],
-      churn_by_reason: [],
-      monthly_trend: [],
+      churn_by_reason: churnByReason,
+      monthly_trend: monthlyTrend,
     });
   } catch (error) {
     console.error('Error fetching churn analytics:', error);

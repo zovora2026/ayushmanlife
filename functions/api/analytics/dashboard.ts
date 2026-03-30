@@ -53,7 +53,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         .first<{ count: number }>(),
       db
         .prepare(
-          `SELECT COALESCE(SUM(approved_amount), 0) as total FROM claims WHERE strftime('%Y-%m', submitted_at) = strftime('%Y-%m', 'now') AND status = 'approved'`
+          `SELECT COALESCE(SUM(approved_amount), 0) as total FROM claims WHERE strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now') AND status IN ('approved', 'paid')`
         )
         .first<{ total: number }>(),
       db

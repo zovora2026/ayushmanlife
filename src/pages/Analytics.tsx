@@ -133,8 +133,14 @@ export default function Analytics() {
     async function loadOverview() {
       setLoading(true)
       try {
-        const dash = await analytics.dashboard()
-        if (mounted) setDashboardData(dash)
+        const [dash, churn] = await Promise.all([
+          analytics.dashboard(),
+          analytics.churn(),
+        ])
+        if (mounted) {
+          setDashboardData(dash)
+          setChurnData(churn)
+        }
       } catch {
         // API unavailable — keep mock fallback
       }
@@ -226,16 +232,31 @@ export default function Analytics() {
   const lowRisk = riskData ? riskData.total_low : demoPatients.filter((p) => p.riskScore < 40).length
 
   // ── Operations display data ──
-  const opsAvgWait = opsData ? `${opsData.avg_turnaround_days} min` : '12 min'
-  const opsBedOccupancy = opsData ? `${opsData.bed_occupancy_pct}%` : '84%'
-  const opsStaffUtil = opsData ? `${opsData.staff_utilization_pct}%` : '78%'
-  const opsTurnaround = opsData ? `${opsData.avg_turnaround_days} days` : '45 min'
+  const opsClaimsPerDay = opsData ? `${opsData.claims_per_day}` : '0'
+  const opsApptsPerDay = opsData ? `${opsData.appointments_per_day}` : '0'
+  const opsTurnaround = opsData ? `${opsData.avg_turnaround_days} days` : '0 days'
+  const opsLOS = opsData?.avg_length_of_stay_days ? `${opsData.avg_length_of_stay_days} days` : 'N/A'
+  const opsDeptData = opsData?.by_department
+    ? opsData.by_department.map((d) => ({
+        name: d.department,
+        appointments: d.appointments,
+        uniquePatients: d.unique_patients,
+        avgSatisfaction: d.avg_satisfaction,
+        feedbackCount: d.feedback_count,
+      }))
+    : departmentMetrics.map((d) => ({
+        name: d.name,
+        appointments: d.patientsPerDay * 30,
+        uniquePatients: d.patientsPerDay * 20,
+        avgSatisfaction: 0,
+        feedbackCount: 0,
+      }))
 
   // ── Satisfaction display data ──
   const npsScore = satData ? satData.nps_score : 78
   const npsLabel = npsScore >= 70 ? 'Excellent' : npsScore >= 50 ? 'Good' : 'Needs Work'
   const satDeptChart = satData?.by_department
-    ? satData.by_department.map((d) => ({ name: d.department, score: d.score ?? (d as Record<string, unknown>).avg_rating ?? 0 }))
+    ? satData.by_department.map((d) => ({ name: d.department, score: d.avg_rating ?? d.score ?? 0 }))
     : (chartData.departmentSatisfaction as Record<string, unknown>[])
   const satFeedback = satData?.recent_feedback
     ? satData.recent_feedback.map((f, i) => ({ id: i + 1, rating: f.rating, comment: f.comment, department: f.department, date: f.date }))
@@ -247,16 +268,18 @@ export default function Analytics() {
   const revDeptTable = revData?.by_department
     ? revData.by_department.map((d) => ({
         name: d.department,
-        revenue: d.amount ?? (d as Record<string, unknown>).revenue ?? 0,
-        target: d.amount ?? (d as Record<string, unknown>).revenue ?? 0, // API doesn't provide target — use amount as target (100%)
+        revenue: d.revenue ?? d.amount ?? 0,
+        target: d.revenue ?? d.amount ?? 0,
         growth: 0,
+        percentage: d.percentage ?? 0,
+        avgTicket: d.avg_ticket_size ?? 0,
       }))
-    : departmentRevenueTable
+    : departmentRevenueTable.map((d) => ({ ...d, percentage: 0, avgTicket: 0 }))
   const revByPayer = revData?.by_payer
-    ? revData.by_payer.map((p) => ({ name: p.payer, revenue: p.amount ?? (p as Record<string, unknown>).revenue ?? 0 }))
+    ? revData.by_payer.map((p) => ({ name: p.payer, revenue: p.revenue ?? p.amount ?? 0, percentage: p.percentage ?? 0 }))
     : (chartData.payerMix as Record<string, unknown>[])
   const revByMonth = revData?.monthly
-    ? revData.monthly.map((m) => ({ name: m.month, revenue: m.revenue, target: m.revenue }))
+    ? revData.monthly.map((m) => ({ name: m.month, revenue: m.revenue, claims: m.claims_settled ?? m.claims ?? 0 }))
     : (chartData.revenueByMonth as Record<string, unknown>[])
 
   // ── Loading spinner helper ──
@@ -336,19 +359,19 @@ export default function Analytics() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted">Patients at risk</span>
-                  <span className="text-lg font-bold text-warning">23</span>
+                  <span className="text-lg font-bold text-warning">{churnData?.at_risk_count ?? '—'}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted">Revenue at risk</span>
-                  <span className="text-lg font-bold text-error">{'\u20B9'}18.5L</span>
+                  <span className="text-sm text-muted">Total active patients</span>
+                  <span className="text-lg font-bold text-primary">{churnData?.total_active_patients ?? '—'}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted">Churn rate (current)</span>
-                  <span className="text-lg font-bold text-warning">12.4%</span>
+                  <span className="text-lg font-bold text-warning">{churnData?.churn_rate != null ? `${churnData.churn_rate}%` : '—'}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted">Target churn rate</span>
-                  <span className="text-lg font-bold text-success">10%</span>
+                  <span className="text-sm text-muted">Retention rate</span>
+                  <span className="text-lg font-bold text-success">{churnData?.retention_rate != null ? `${churnData.retention_rate}%` : '—'}</span>
                 </div>
               </div>
             </Card>
@@ -671,10 +694,10 @@ export default function Analytics() {
         <div className="space-y-6">
           {/* Churn KPIs */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <Stat label="Current Churn Rate" value={churnData ? `${churnData.churn_rate}%` : '12.4%'} change={-2.8} changeLabel="vs last quarter" icon={<UserX className="h-5 w-5" />} />
-            <Stat label="Retention Rate" value={churnData ? `${churnData.retention_rate}%` : '87.6%'} change={2.8} changeLabel="vs last quarter" icon={<Users className="h-5 w-5" />} />
-            <Stat label="Patients at Risk" value="23" change={-15} changeLabel="vs last month" icon={<AlertTriangle className="h-5 w-5" />} />
-            <Stat label="Revenue at Risk" value={'\u20B918.5L'} change={-8.5} changeLabel="vs last month" icon={<IndianRupee className="h-5 w-5" />} />
+            <Stat label="Current Churn Rate" value={churnData ? `${churnData.churn_rate}%` : '—'} icon={<UserX className="h-5 w-5" />} />
+            <Stat label="Retention Rate" value={churnData ? `${churnData.retention_rate}%` : '—'} icon={<Users className="h-5 w-5" />} />
+            <Stat label="Patients at Risk" value={churnData ? `${churnData.at_risk_count}` : '—'} icon={<AlertTriangle className="h-5 w-5" />} />
+            <Stat label="Total Active Patients" value={churnData ? `${churnData.total_active_patients}` : '—'} icon={<Users className="h-5 w-5" />} />
           </div>
 
           {/* AI Model Performance + 30-Day Forecast */}
@@ -756,45 +779,26 @@ export default function Analytics() {
             </div>
           </Card>
 
-          {/* Churn Reasons */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card className="border-l-4 border-l-error">
-              <div className="flex items-center gap-2 mb-2">
-                <ClockAlert className="h-5 w-5 text-error" />
-                <span className="text-sm font-bold text-text dark:text-text-dark">Wait Time</span>
-              </div>
-              <p className="text-2xl font-bold text-error">8</p>
-              <p className="text-xs text-muted mt-1">patients &middot; Avg 45 min wait</p>
-              <div className="mt-3 h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full"><div className="h-full bg-error rounded-full" style={{ width: '35%' }} /></div>
-            </Card>
-            <Card className="border-l-4 border-l-warning">
-              <div className="flex items-center gap-2 mb-2">
-                <ShieldAlert className="h-5 w-5 text-warning" />
-                <span className="text-sm font-bold text-text dark:text-text-dark">Insurance Delays</span>
-              </div>
-              <p className="text-2xl font-bold text-warning">6</p>
-              <p className="text-xs text-muted mt-1">patients &middot; 12-day avg resolution</p>
-              <div className="mt-3 h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full"><div className="h-full bg-warning rounded-full" style={{ width: '26%' }} /></div>
-            </Card>
-            <Card className="border-l-4 border-l-warning">
-              <div className="flex items-center gap-2 mb-2">
-                <CalendarX className="h-5 w-5 text-warning" />
-                <span className="text-sm font-bold text-text dark:text-text-dark">Follow-up Gap</span>
-              </div>
-              <p className="text-2xl font-bold text-warning">5</p>
-              <p className="text-xs text-muted mt-1">patients &middot; No visit in 60+ days</p>
-              <div className="mt-3 h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full"><div className="h-full bg-warning rounded-full" style={{ width: '22%' }} /></div>
-            </Card>
-            <Card className="border-l-4 border-l-gray-400">
-              <div className="flex items-center gap-2 mb-2">
-                <MapPin className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                <span className="text-sm font-bold text-text dark:text-text-dark">Competitor</span>
-              </div>
-              <p className="text-2xl font-bold text-gray-700 dark:text-gray-300">4</p>
-              <p className="text-xs text-muted mt-1">patients &middot; New facility nearby</p>
-              <div className="mt-3 h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full"><div className="h-full bg-gray-400 rounded-full" style={{ width: '17%' }} /></div>
-            </Card>
-          </div>
+          {/* Churn Reasons from D1 */}
+          {churnData?.churn_by_reason && churnData.churn_by_reason.length > 0 && (
+          <Card header={<h3 className="font-display font-semibold text-text dark:text-text-dark">Churn Reasons (from patient data)</h3>}>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {churnData.churn_by_reason.map((r, idx) => (
+                <div key={r.reason} className={cn('rounded-lg border p-4', idx === 0 ? 'border-error/30 bg-error/5' : 'border-warning/30 bg-warning/5')}>
+                  <div className="flex items-center gap-2 mb-2">
+                    {idx === 0 ? <ClockAlert className="h-5 w-5 text-error" /> : <AlertTriangle className="h-5 w-5 text-warning" />}
+                    <span className="text-sm font-bold text-text dark:text-text-dark">{r.reason}</span>
+                  </div>
+                  <p className={cn('text-2xl font-bold', idx === 0 ? 'text-error' : 'text-warning')}>{r.patient_count}</p>
+                  <p className="text-xs text-muted mt-1">{r.percentage}% of at-risk patients</p>
+                  <div className="mt-3 h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full">
+                    <div className={cn('h-full rounded-full', idx === 0 ? 'bg-error' : 'bg-warning')} style={{ width: `${r.percentage}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+          )}
 
           {/* Churn Trend Chart */}
           <Card header={<div className="flex items-center justify-between"><h3 className="font-display font-semibold text-text dark:text-text-dark">Churn Rate Trend (AI Prediction)</h3><Badge variant="info" size="sm">12 Months</Badge></div>} padding="sm">
@@ -808,42 +812,48 @@ export default function Analytics() {
             )}
           </Card>
 
-          {/* At-Risk Patient List */}
-          <Card header={<h3 className="font-display font-semibold text-text dark:text-text-dark">At-Risk Patients (Top 6)</h3>} padding="none">
+          {/* At-Risk Patient List from D1 */}
+          <Card header={<h3 className="font-display font-semibold text-text dark:text-text-dark">At-Risk Patients{churnData ? ` (${churnData.at_risk_count})` : ''}</h3>} padding="none">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-border bg-gray-50 dark:border-border-dark dark:bg-white/5">
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted">Patient</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted">Risk Factor</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted">Age</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted">Risk Level</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted">Last Visit</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted">Churn Prob</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted">Confidence</th>
-                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted">Action</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted">Days Since</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted">Satisfaction</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border dark:divide-border-dark">
-                  {[
-                    { name: 'Ramesh Gupta', factor: 'Wait Time', lastVisit: '12 Mar 2026', prob: 78, confidence: 'High' as const },
-                    { name: 'Priya Sharma', factor: 'Insurance Delay', lastVisit: '05 Mar 2026', prob: 72, confidence: 'High' as const },
-                    { name: 'Vikram Yadav', factor: 'Follow-up Gap', lastVisit: '18 Jan 2026', prob: 68, confidence: 'Medium' as const },
-                    { name: 'Meena Patel', factor: 'Wait Time', lastVisit: '22 Mar 2026', prob: 65, confidence: 'Medium' as const },
-                    { name: 'Suresh Iyer', factor: 'Competitor', lastVisit: '28 Feb 2026', prob: 61, confidence: 'Low' as const },
-                    { name: 'Kavita Reddy', factor: 'Insurance Delay', lastVisit: '10 Mar 2026', prob: 58, confidence: 'Low' as const },
-                  ].map(p => (
-                    <tr key={p.name} className="hover:bg-gray-50 dark:hover:bg-white/5">
+                  {(churnData?.at_risk_patients || []).slice(0, 10).map((p) => (
+                    <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-white/5">
                       <td className="px-4 py-3 font-medium text-text dark:text-text-dark">{p.name}</td>
-                      <td className="px-4 py-3"><Badge size="sm" variant={p.factor === 'Wait Time' ? 'error' : p.factor === 'Competitor' ? 'neutral' : 'warning'}>{p.factor}</Badge></td>
-                      <td className="px-4 py-3 text-muted">{p.lastVisit}</td>
-                      <td className="px-4 py-3"><span className={cn('font-bold', p.prob >= 70 ? 'text-error' : 'text-warning')}>{p.prob}%</span></td>
+                      <td className="px-4 py-3 text-muted">{p.age ?? '—'}</td>
                       <td className="px-4 py-3">
-                        <Badge size="sm" variant={p.confidence === 'High' ? 'error' : p.confidence === 'Medium' ? 'warning' : 'neutral'} dot>
-                          {p.confidence}
+                        <Badge size="sm" variant={p.churn_risk === 'high' ? 'error' : 'warning'}>
+                          {p.churn_risk ?? 'unknown'}
                         </Badge>
                       </td>
-                      <td className="px-4 py-3"><Button size="sm" variant="outline">Intervene</Button></td>
+                      <td className="px-4 py-3 text-muted">{p.last_visit ?? '—'}</td>
+                      <td className="px-4 py-3">
+                        <span className={cn('font-bold', (p.days_since_visit ?? 0) > 60 ? 'text-error' : 'text-warning')}>
+                          {p.days_since_visit ?? '—'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {p.satisfaction_score ? (
+                          <span className={cn('font-medium', p.satisfaction_score >= 4 ? 'text-success' : p.satisfaction_score >= 3 ? 'text-warning' : 'text-error')}>
+                            {p.satisfaction_score}/5
+                          </span>
+                        ) : <span className="text-gray-400">—</span>}
+                      </td>
                     </tr>
                   ))}
+                  {(!churnData?.at_risk_patients || churnData.at_risk_patients.length === 0) && (
+                    <tr><td colSpan={6} className="px-4 py-8 text-center text-muted">No at-risk patients found</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -879,32 +889,24 @@ export default function Analytics() {
           {/* Operations KPIs */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Stat
-              label="Avg Wait Time"
-              value={opsAvgWait}
-              change={-6.2}
-              changeLabel="vs last week"
+              label="Claims / Day"
+              value={opsClaimsPerDay}
+              icon={<FileCheck className="h-5 w-5" />}
+            />
+            <Stat
+              label="Appointments / Day"
+              value={opsApptsPerDay}
+              icon={<CalendarClock className="h-5 w-5" />}
+            />
+            <Stat
+              label="Avg Claim Turnaround"
+              value={opsTurnaround}
               icon={<Clock className="h-5 w-5" />}
             />
             <Stat
-              label="Bed Occupancy"
-              value={opsBedOccupancy}
-              change={2.1}
-              changeLabel="vs last week"
+              label="Avg Length of Stay"
+              value={opsLOS}
               icon={<BedDouble className="h-5 w-5" />}
-            />
-            <Stat
-              label="Staff Utilization"
-              value={opsStaffUtil}
-              change={4.5}
-              changeLabel="vs last week"
-              icon={<Users className="h-5 w-5" />}
-            />
-            <Stat
-              label="Avg Turnaround"
-              value={opsTurnaround}
-              change={-3.8}
-              changeLabel="faster"
-              icon={<Activity className="h-5 w-5" />}
             />
           </div>
 
@@ -922,13 +924,13 @@ export default function Analytics() {
                 <thead>
                   <tr className="border-b border-border bg-gray-50 dark:border-border-dark dark:bg-white/5">
                     <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Department</th>
-                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Patients/Day</th>
-                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Avg Wait (min)</th>
-                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Revenue</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Appointments</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Unique Patients</th>
+                    <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Avg Satisfaction</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border dark:divide-border-dark">
-                  {departmentMetrics.map((dept, idx) => (
+                  {opsDeptData.map((dept, idx) => (
                     <tr
                       key={dept.name}
                       className={cn(
@@ -940,18 +942,22 @@ export default function Analytics() {
                         {dept.name}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-gray-700 dark:text-gray-300">
-                        {dept.patientsPerDay}
+                        {dept.appointments}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-gray-700 dark:text-gray-300">
+                        {dept.uniquePatients}
                       </td>
                       <td className="whitespace-nowrap px-4 py-3">
-                        <span className={cn(
-                          'font-medium',
-                          dept.avgWait > 15 ? 'text-error' : dept.avgWait > 10 ? 'text-warning' : 'text-success'
-                        )}>
-                          {dept.avgWait} min
-                        </span>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 font-medium text-gray-900 dark:text-gray-100">
-                        {formatCurrency(dept.revenue)}
+                        {dept.avgSatisfaction > 0 ? (
+                          <span className={cn(
+                            'font-medium',
+                            dept.avgSatisfaction >= 4 ? 'text-success' : dept.avgSatisfaction >= 3 ? 'text-warning' : 'text-error'
+                          )}>
+                            {dept.avgSatisfaction}/5
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 dark:text-gray-500">N/A</span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -1196,7 +1202,7 @@ export default function Analytics() {
             <Chart
               type="area"
               data={revByMonth as Record<string, unknown>[]}
-              dataKeys={['revenue', 'target']}
+              dataKeys={['revenue']}
               xAxisKey="name"
               height={320}
             />

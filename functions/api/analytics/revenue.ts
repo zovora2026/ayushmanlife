@@ -112,42 +112,69 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       });
     }
 
-    const [monthlyResult, payerResult, totalResult] =
+    const [monthlyResult, payerResult, totalResult, deptResult] =
       await Promise.all([
         db
           .prepare(
-            `SELECT strftime('%Y-%m', submitted_at) as month, COALESCE(SUM(approved_amount), 0) as revenue, COUNT(*) as claims_settled
+            `SELECT strftime('%Y-%m', created_at) as month,
+                    COALESCE(SUM(approved_amount), 0) as revenue,
+                    COUNT(*) as claims_settled
              FROM claims
-             WHERE status = 'approved' AND submitted_at >= date('now', '-6 months')
-             GROUP BY strftime('%Y-%m', submitted_at)
+             WHERE status IN ('approved', 'paid')
+             GROUP BY strftime('%Y-%m', created_at)
              ORDER BY month ASC`
           )
           .all(),
         db
           .prepare(
-            `SELECT payer_name as payer, COALESCE(SUM(approved_amount), 0) as revenue,
-                    ROUND(COALESCE(SUM(approved_amount), 0) * 100.0 / NULLIF((SELECT SUM(approved_amount) FROM claims WHERE status = 'approved' AND submitted_at >= date('now', '-30 days')), 0), 1) as percentage,
+            `SELECT payer_scheme as payer,
+                    COALESCE(SUM(approved_amount), 0) as revenue,
                     COUNT(*) as claims_count
              FROM claims
-             WHERE status = 'approved' AND submitted_at >= date('now', '-30 days')
-             GROUP BY payer_name
+             WHERE status IN ('approved', 'paid')
+             GROUP BY payer_scheme
              ORDER BY revenue DESC`
           )
           .all(),
         db
           .prepare(
-            `SELECT COALESCE(SUM(approved_amount), 0) as total FROM claims WHERE status = 'approved' AND submitted_at >= date('now', '-30 days')`
+            `SELECT COALESCE(SUM(approved_amount), 0) as total
+             FROM claims WHERE status IN ('approved', 'paid')`
           )
           .first<{ total: number }>(),
+        db
+          .prepare(
+            `SELECT a.department,
+                    COALESCE(SUM(c.approved_amount), 0) as revenue,
+                    COUNT(*) as claims_count,
+                    ROUND(AVG(c.approved_amount), 0) as avg_ticket_size
+             FROM claims c
+             LEFT JOIN appointments a ON c.patient_id = a.patient_id
+             WHERE c.status IN ('approved', 'paid') AND a.department IS NOT NULL
+             GROUP BY a.department
+             ORDER BY revenue DESC`
+          )
+          .all(),
       ]);
 
+    // Calculate percentages for payer and department
+    const totalRevenue = totalResult?.total || 0;
+    const payerWithPct = ((payerResult.results || []) as Array<Record<string, unknown>>).map((row) => ({
+      ...row,
+      percentage: totalRevenue > 0 ? Math.round((row.revenue as number) * 1000 / totalRevenue) / 10 : 0,
+    }));
+    const deptWithPct = ((deptResult.results || []) as Array<Record<string, unknown>>).map((row) => ({
+      ...row,
+      percentage: totalRevenue > 0 ? Math.round((row.revenue as number) * 1000 / totalRevenue) / 10 : 0,
+    }));
+
     return json({
-      total_revenue: totalResult?.total || 0,
+      total_revenue: totalRevenue,
       growth_rate: 0,
       currency: 'INR',
       monthly: monthlyResult.results || [],
-      by_payer: payerResult.results || [],
-      by_department: [],
+      by_payer: payerWithPct,
+      by_department: deptWithPct,
     });
   } catch (error) {
     console.error('Error fetching revenue analytics:', error);

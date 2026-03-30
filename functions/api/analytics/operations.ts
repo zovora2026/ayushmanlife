@@ -86,44 +86,88 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       turnaroundResult,
       claimsPerDayResult,
       losResult,
-      staffOnShiftResult,
+      appointmentsPerDayResult,
+      deptResult,
+      feedbackByDeptResult,
     ] = await Promise.all([
       db
         .prepare(
           `SELECT ROUND(AVG(julianday(resolved_at) - julianday(submitted_at)), 1) as avg_days
            FROM claims
-           WHERE resolved_at IS NOT NULL AND submitted_at >= date('now', '-30 days')`
+           WHERE resolved_at IS NOT NULL AND submitted_at IS NOT NULL`
         )
         .first<{ avg_days: number }>(),
       db
         .prepare(
           `SELECT ROUND(CAST(COUNT(*) AS REAL) / 30, 0) as per_day
-           FROM claims WHERE submitted_at >= date('now', '-30 days')`
+           FROM claims WHERE created_at >= date('now', '-30 days')`
         )
         .first<{ per_day: number }>(),
       db
         .prepare(
           `SELECT ROUND(AVG(julianday(discharge_date) - julianday(admission_date)), 1) as avg_los
            FROM claims
-           WHERE discharge_date IS NOT NULL AND admission_date IS NOT NULL AND admission_date >= date('now', '-30 days')`
+           WHERE discharge_date IS NOT NULL AND admission_date IS NOT NULL`
         )
         .first<{ avg_los: number }>(),
       db
         .prepare(
-          `SELECT COUNT(*) as count FROM shift_schedules WHERE date = date('now') AND status = 'scheduled'`
+          `SELECT ROUND(CAST(COUNT(*) AS REAL) / 30, 0) as per_day
+           FROM appointments WHERE date >= date('now', '-30 days')`
         )
-        .first<{ count: number }>(),
+        .first<{ per_day: number }>(),
+      db
+        .prepare(
+          `SELECT department, COUNT(*) as appointments_count,
+                  COUNT(DISTINCT patient_id) as unique_patients
+           FROM appointments
+           WHERE department IS NOT NULL
+           GROUP BY department
+           ORDER BY appointments_count DESC`
+        )
+        .all(),
+      db
+        .prepare(
+          `SELECT department, ROUND(AVG(rating), 1) as avg_rating, COUNT(*) as feedback_count
+           FROM feedback
+           WHERE department IS NOT NULL
+           GROUP BY department
+           ORDER BY avg_rating DESC`
+        )
+        .all(),
     ]);
+
+    // Merge department data from appointments and feedback
+    const deptMap: Record<string, { appointments: number; patients: number; avg_rating: number; feedback_count: number }> = {};
+    for (const row of (deptResult.results || []) as Array<Record<string, unknown>>) {
+      const dept = row.department as string;
+      deptMap[dept] = {
+        appointments: row.appointments_count as number,
+        patients: row.unique_patients as number,
+        avg_rating: 0,
+        feedback_count: 0,
+      };
+    }
+    for (const row of (feedbackByDeptResult.results || []) as Array<Record<string, unknown>>) {
+      const dept = row.department as string;
+      if (!deptMap[dept]) deptMap[dept] = { appointments: 0, patients: 0, avg_rating: 0, feedback_count: 0 };
+      deptMap[dept].avg_rating = row.avg_rating as number;
+      deptMap[dept].feedback_count = row.feedback_count as number;
+    }
+    const byDepartment = Object.entries(deptMap).map(([dept, data]) => ({
+      department: dept,
+      appointments: data.appointments,
+      unique_patients: data.patients,
+      avg_satisfaction: data.avg_rating,
+      feedback_count: data.feedback_count,
+    }));
 
     return json({
       avg_turnaround_days: turnaroundResult?.avg_days || 0,
-      bed_occupancy_pct: 0,
-      staff_utilization_pct: 0,
       claims_per_day: claimsPerDayResult?.per_day || 0,
-      appointments_per_day: 0,
+      appointments_per_day: appointmentsPerDayResult?.per_day || 0,
       avg_length_of_stay_days: losResult?.avg_los || 0,
-      staff_on_shift_today: staffOnShiftResult?.count || 0,
-      by_department: [],
+      by_department: byDepartment,
     });
   } catch (error) {
     console.error('Error fetching operations analytics:', error);

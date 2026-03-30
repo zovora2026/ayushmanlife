@@ -306,18 +306,21 @@ export interface DashboardKPIs {
 }
 
 export interface RevenueData {
-  monthly: { month: string; revenue: number; claims: number }[];
-  by_payer: { payer: string; amount: number; count: number }[];
-  by_department: { department: string; amount: number }[];
+  monthly: { month: string; revenue: number; claims_settled?: number; claims?: number }[];
+  by_payer: { payer: string; revenue: number; percentage?: number; claims_count?: number; amount?: number; count?: number }[];
+  by_department: { department: string; revenue: number; percentage?: number; avg_ticket_size?: number; amount?: number }[];
   total_revenue: number;
   growth_rate: number;
+  currency?: string;
 }
 
 export interface SatisfactionData {
   nps_score: number;
   avg_rating: number;
-  by_department: { department: string; score: number }[];
-  recent_feedback: { comment: string; rating: number; department: string; date: string }[];
+  total_responses?: number;
+  by_department: { department: string; avg_rating: number; responses?: number; score?: number }[];
+  recent_feedback: { id?: string; patient_name?: string; comment: string; rating: number; department: string; date: string; sentiment?: string }[];
+  rating_distribution?: { rating: number; count: number }[] | Record<string, number>;
 }
 
 export interface PatientRiskData {
@@ -331,16 +334,28 @@ export interface PatientRiskData {
 
 export interface OperationsData {
   avg_turnaround_days: number;
-  bed_occupancy_pct: number;
-  staff_utilization_pct: number;
+  bed_occupancy_pct?: number;
+  staff_utilization_pct?: number;
   claims_per_day: number;
   appointments_per_day: number;
+  avg_length_of_stay_days?: number;
+  by_department?: {
+    department: string;
+    appointments: number;
+    unique_patients: number;
+    avg_satisfaction: number;
+    feedback_count: number;
+  }[];
 }
 
 export interface ChurnData {
-  at_risk_patients: Patient[];
+  at_risk_patients: (Patient & { days_since_visit?: number })[];
   churn_rate: number;
   retention_rate: number;
+  at_risk_count: number;
+  total_active_patients: number;
+  churn_by_reason?: { reason: string; patient_count: number; percentage: number }[];
+  monthly_trend?: { month: string; active_patients: number; claims_count: number }[];
 }
 
 export interface Vital {
