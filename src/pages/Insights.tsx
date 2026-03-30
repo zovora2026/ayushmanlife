@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { Calendar, Clock, User, ArrowLeft, Tag, BookOpen, FileText, Download } from 'lucide-react'
+import { Calendar, Clock, User, ArrowLeft, Tag, BookOpen, FileText, Download, Video, Play, Eye } from 'lucide-react'
 import Navbar from '../components/layout/Navbar'
 import Footer from '../components/layout/Footer'
 import { cn } from '../lib/utils'
@@ -125,6 +125,57 @@ const whitepapers = [
   { title: 'AI-Native vs AI-Enabled: The Healthcare IT Paradigm Shift', pages: 28, downloads: 2100 },
 ]
 
+const featuredWebinar = {
+  title: 'Live Webinar: AI-Native Healthcare IT — Lessons from $560M in Acquisitions',
+  date: '15 Apr 2026 · 3:00 PM IST',
+  speaker: 'Dr. Arjun Mehta, Chief Strategy Officer',
+}
+
+const videos = [
+  {
+    title: 'Platform Demo: SmartClaims AI in Action',
+    duration: '12:34',
+    views: 3847,
+    date: '2026-03-20',
+    category: 'Product Demo',
+  },
+  {
+    title: 'V-Care AI Assistant: Complete Walkthrough',
+    duration: '18:22',
+    views: 2519,
+    date: '2026-03-15',
+    category: 'Product Demo',
+  },
+  {
+    title: 'Cloud Migration for Healthcare: AWS vs Azure',
+    duration: '24:15',
+    views: 1892,
+    date: '2026-03-10',
+    category: 'Technical',
+  },
+  {
+    title: 'ABDM Integration: Step-by-Step Guide',
+    duration: '31:08',
+    views: 4231,
+    date: '2026-03-05',
+    category: 'Technical',
+  },
+  {
+    title: 'Reducing Patient Churn with Predictive Analytics',
+    duration: '16:45',
+    views: 2067,
+    date: '2026-02-28',
+    category: 'Case Study',
+  },
+  {
+    title: 'Cybersecurity for Indian Hospitals: 2026 Threat Landscape',
+    duration: '22:10',
+    views: 1456,
+    date: '2026-02-20',
+    category: 'Industry',
+  },
+]
+
 function ArticleDetail({ slug }: { slug: string }) {
   const post = blogPosts.find(p => p.slug === slug) || caseStudies.find(c => c.slug === slug)
   if (!post) return <div className="text-center py-20 text-muted">Article not found</div>
@@ -195,7 +246,7 @@ function ArticleDetail({ slug }: { slug: string }) {
 }
 
 function InsightsListing() {
-  const [activeTab, setActiveTab] = useState<'blog' | 'cases' | 'whitepapers'>('blog')
+  const [activeTab, setActiveTab] = useState<'blog' | 'cases' | 'whitepapers' | 'videos'>('blog')
 
   return (
     <div>
@@ -207,7 +258,7 @@ function InsightsListing() {
         </div>
 
         <div className="flex justify-center gap-2 mb-10">
-          {([['blog', 'Blog', BookOpen], ['cases', 'Case Studies', FileText], ['whitepapers', 'Whitepapers', Download]] as const).map(([id, label, Icon]) => (
+          {([['blog', 'Blog', BookOpen], ['cases', 'Case Studies', FileText], ['whitepapers', 'Whitepapers', Download], ['videos', 'Videos', Video]] as const).map(([id, label, Icon]) => (
             <button key={id} onClick={() => setActiveTab(id)} className={cn(
               'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors',
               activeTab === id ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-slate-800 text-muted hover:bg-gray-200 dark:hover:bg-slate-700'
@@ -279,6 +330,62 @@ function InsightsListing() {
                 </button>
               </div>
             ))}
+          </div>
+        )}
+
+        {activeTab === 'videos' && (
+          <div className="space-y-8">
+            {/* Featured Webinar Banner */}
+            <div className="relative overflow-hidden rounded-2xl gradient-primary p-8 md:p-10">
+              <div className="absolute top-4 right-4">
+                <span className="px-3 py-1 rounded-full bg-secondary text-white text-xs font-bold uppercase tracking-wide">Upcoming</span>
+              </div>
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+                <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center flex-shrink-0">
+                  <Video className="w-8 h-8 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h2 className="font-display font-bold text-xl md:text-2xl text-white mb-2">{featuredWebinar.title}</h2>
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-white/70">
+                    <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" />{featuredWebinar.date}</span>
+                    <span className="flex items-center gap-1.5"><User className="w-4 h-4" />{featuredWebinar.speaker}</span>
+                  </div>
+                </div>
+                <button className="px-6 py-3 rounded-xl bg-secondary text-white font-semibold text-sm hover:bg-secondary-dark transition-colors flex-shrink-0">
+                  Register Now
+                </button>
+              </div>
+            </div>
+
+            {/* Video Grid */}
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {videos.map(video => (
+                <div key={video.title} className="group bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark overflow-hidden hover:shadow-lg transition-all cursor-pointer">
+                  <div className="relative h-44 gradient-primary flex items-center justify-center">
+                    <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                      <Play className="w-7 h-7 text-white ml-1" />
+                    </div>
+                    <span className="absolute bottom-3 right-3 px-2 py-0.5 rounded bg-black/70 text-white text-xs font-medium">{video.duration}</span>
+                  </div>
+                  <div className="p-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className={cn(
+                        'px-2 py-0.5 rounded-full text-xs font-medium',
+                        video.category === 'Product Demo' && 'bg-primary/10 text-primary',
+                        video.category === 'Technical' && 'bg-accent/10 text-accent',
+                        video.category === 'Case Study' && 'bg-secondary/10 text-secondary',
+                        video.category === 'Industry' && 'bg-warning/10 text-warning',
+                      )}>{video.category}</span>
+                    </div>
+                    <h3 className="font-display font-semibold text-text dark:text-text-dark mb-3 group-hover:text-primary transition-colors line-clamp-2">{video.title}</h3>
+                    <div className="flex items-center gap-4 text-xs text-muted pt-3 border-t border-border dark:border-border-dark">
+                      <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" />{video.views.toLocaleString()} views</span>
+                      <span className="flex items-center gap-1 ml-auto"><Calendar className="w-3.5 h-3.5" />{new Date(video.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

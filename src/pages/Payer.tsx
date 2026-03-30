@@ -657,6 +657,46 @@ export default function Payer() {
               )
             })}
           </div>
+
+          {/* Auto-Adjudication Rules Engine */}
+          <Card header={<h3 className="font-display font-semibold text-text dark:text-text-dark">Auto-Adjudication Rules Engine</h3>}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="p-3 rounded-lg bg-success/5 border border-success/20 dark:bg-success/10">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-semibold text-text dark:text-text-dark">Auto-Approved Today</span>
+                  <span className="text-lg font-bold text-success">847</span>
+                </div>
+                <p className="text-xs text-muted">72% of total claims auto-adjudicated without manual intervention</p>
+              </div>
+              <div className="p-3 rounded-lg bg-warning/5 border border-warning/20 dark:bg-warning/10">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-semibold text-text dark:text-text-dark">Flagged for Review</span>
+                  <span className="text-lg font-bold text-warning">127</span>
+                </div>
+                <p className="text-xs text-muted">Claims requiring manual adjudication due to rule exceptions</p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {[
+                { rule: 'Standard outpatient claim < ₹25,000', action: 'Auto-approve', confidence: 95, triggered: 412 },
+                { rule: 'Ayushman Bharat package rate match', action: 'Auto-approve', confidence: 92, triggered: 189 },
+                { rule: 'Duplicate claim detection (same patient, 7 days)', action: 'Flag & hold', confidence: 88, triggered: 23 },
+                { rule: 'Amount exceeds 2x package rate', action: 'Escalate to reviewer', confidence: 85, triggered: 34 },
+                { rule: 'Pre-auth expired or missing', action: 'Auto-deny with reason', confidence: 97, triggered: 71 },
+              ].map((r, i) => (
+                <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-text dark:text-text-dark">{r.rule}</p>
+                    <p className="text-xs text-muted mt-0.5">Action: <span className={cn('font-medium', r.action.includes('approve') ? 'text-success' : r.action.includes('deny') ? 'text-error' : 'text-warning')}>{r.action}</span></p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-xs font-medium text-primary">{r.confidence}% confidence</p>
+                    <p className="text-xs text-muted">{r.triggered} today</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
         </div>
       )}
 

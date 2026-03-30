@@ -14,6 +14,9 @@ import {
   Clock,
   Calendar,
   Loader2,
+  FolderKanban,
+  CheckCircle,
+  Circle,
 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { Card } from '../components/ui/Card'
@@ -360,6 +363,57 @@ export default function Dashboard() {
           </div>
         </Card>
       </div>
+
+      {/* Client Portal — Project Visibility */}
+      <Card
+        header={
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FolderKanban className="h-4 w-4 text-primary" />
+              <h3 className="font-display font-semibold text-text dark:text-text-dark">
+                Active Projects
+              </h3>
+            </div>
+            <Badge variant="info" size="sm">Client Portal</Badge>
+          </div>
+        }
+        padding="none"
+      >
+        <div className="divide-y divide-border dark:divide-border-dark">
+          {[
+            { name: 'Epic EMR Implementation — Max Hospital Delhi', phase: 'Go-Live', progress: 92, status: 'On Track', milestones: '14/15 complete', team: 8, dueDate: '05 Apr 2026' },
+            { name: 'Cloud Migration — Apollo Hospitals Chennai', phase: 'Migration', progress: 65, status: 'On Track', milestones: '8/12 complete', team: 6, dueDate: '15 May 2026' },
+            { name: 'ServiceNow ITSM — Fortis Gurugram', phase: 'Configuration', progress: 40, status: 'At Risk', milestones: '5/13 complete', team: 4, dueDate: '01 Jun 2026' },
+            { name: 'ABDM Integration — AIIMS Rishikesh', phase: 'Testing', progress: 78, status: 'On Track', milestones: '10/13 complete', team: 5, dueDate: '10 May 2026' },
+          ].map(project => (
+            <div key={project.name} className="px-5 py-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-text dark:text-text-dark truncate">{project.name}</p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-muted">
+                    <Badge size="sm" variant={project.phase === 'Go-Live' ? 'success' : project.phase === 'Testing' ? 'info' : 'neutral'}>{project.phase}</Badge>
+                    <span>{project.milestones}</span>
+                    <span>&middot;</span>
+                    <span>{project.team} team members</span>
+                    <span>&middot;</span>
+                    <span>Due: {project.dueDate}</span>
+                  </div>
+                </div>
+                <Badge size="sm" variant={project.status === 'On Track' ? 'success' : 'warning'}>{project.status}</Badge>
+              </div>
+              <div className="mt-2.5 flex items-center gap-3">
+                <div className="flex-1 h-2 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                  <div
+                    className={cn('h-full rounded-full transition-all', project.progress >= 80 ? 'bg-success' : project.progress >= 50 ? 'bg-primary' : 'bg-warning')}
+                    style={{ width: `${project.progress}%` }}
+                  />
+                </div>
+                <span className="text-xs font-semibold text-text dark:text-text-dark w-10 text-right">{project.progress}%</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
     </div>
   )
 }

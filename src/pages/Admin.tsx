@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { Settings, Building2, Users, Shield, Link2, CheckCircle, XCircle, AlertTriangle, ExternalLink, Fingerprint, ShieldCheck, UserCheck, BadgeCheck, Clock, Activity, Camera, Loader2, Search, Wifi, RefreshCw } from 'lucide-react'
+import { Settings, Building2, Users, Shield, Link2, CheckCircle, XCircle, AlertTriangle, ExternalLink, Fingerprint, ShieldCheck, UserCheck, BadgeCheck, Clock, Activity, Camera, Loader2, Search, Wifi, RefreshCw, Lock, Eye, Bug, Key, MonitorSmartphone, FileWarning, Globe, ServerCrash } from 'lucide-react'
 import { cn } from '../lib/utils'
 
-const tabs = ['Hospital Setup', 'User Management', 'Identity & Verification', 'Compliance', 'Integrations']
+const tabs = ['Hospital Setup', 'User Management', 'Identity & Verification', 'Compliance', 'Integrations', 'Security Center']
 
 // Identity & Verification demo data
 const verificationLog = [
@@ -313,6 +313,178 @@ function IdentityVerificationTab() {
   )
 }
 
+// Security Center demo data
+const securityStats = [
+  { label: 'Threat Score', value: '12/100', sub: 'Low', icon: Shield, color: 'text-success', bg: 'bg-success/10' },
+  { label: 'Active Alerts', value: '3', icon: AlertTriangle, color: 'text-warning', bg: 'bg-warning/10' },
+  { label: 'Endpoints Protected', value: '847', icon: MonitorSmartphone, color: 'text-primary', bg: 'bg-primary/10' },
+  { label: 'Last Scan', value: '12 min ago', icon: Eye, color: 'text-success', bg: 'bg-success/10' },
+]
+
+const securityMonitors = [
+  { name: 'Firewall', status: 'Active', icon: Globe, detail1Label: 'Traffic', detail1: '2.4M packets/day', detail2Label: 'Blocked', detail2: '847 threats blocked' },
+  { name: 'Intrusion Detection', status: 'Active', icon: Eye, detail1Label: 'Intrusions', detail1: '0 detected', detail2Label: 'Last Check', detail2: '5 min ago' },
+  { name: 'Endpoint Protection', status: 'Active', icon: MonitorSmartphone, detail1Label: 'Devices', detail1: '847 / 852 protected', detail2Label: 'Updates', detail2: '5 pending updates' },
+  { name: 'Data Encryption', status: 'Active', icon: Lock, detail1Label: 'Standard', detail1: 'AES-256', detail2Label: 'Coverage', detail2: 'All PHI encrypted' },
+  { name: 'Access Control', status: 'Active', icon: Key, detail1Label: 'MFA', detail1: 'Enabled for 98% users', detail2Label: 'Policy', detail2: 'Zero-trust enforced' },
+  { name: 'Vulnerability Scanner', status: 'Active', icon: Bug, detail1Label: 'Last Scan', detail1: '2 hrs ago', detail2Label: 'Findings', detail2: '3 medium findings' },
+]
+
+const securityEvents = [
+  { timestamp: '2026-03-30 09:42', type: 'Failed Login Attempt', source: '192.168.1.45', severity: 'Medium', status: 'Resolved', action: 'Account locked after 5 attempts' },
+  { timestamp: '2026-03-30 08:17', type: 'Port Scan Detected', source: '10.0.0.88', severity: 'High', status: 'Blocked', action: 'IP blacklisted automatically' },
+  { timestamp: '2026-03-30 07:55', type: 'Suspicious File Upload', source: 'Upload Portal', severity: 'High', status: 'Investigating', action: 'File quarantined for review' },
+  { timestamp: '2026-03-29 22:30', type: 'Certificate Renewal', source: 'SSL Manager', severity: 'Low', status: 'Resolved', action: 'Auto-renewed successfully' },
+  { timestamp: '2026-03-29 18:05', type: 'Malware Blocked', source: 'Workstation-12', severity: 'Critical', status: 'Blocked', action: 'Trojan isolated & removed' },
+  { timestamp: '2026-03-29 15:22', type: 'Unauthorized API Call', source: 'API Gateway', severity: 'Medium', status: 'Resolved', action: 'Token revoked, user notified' },
+]
+
+const complianceAuditItems = [
+  { label: 'HIPAA Alignment', value: 91, type: 'progress' as const },
+  { label: 'DPDP Act 2023', value: 88, type: 'progress' as const },
+  { label: 'SOC 2 Type II', value: 'Certified', type: 'badge' as const, badgeColor: 'success' as const },
+  { label: 'ISO 27001', value: 'In Progress', type: 'badge' as const, badgeColor: 'warning' as const },
+]
+
+function SecurityCenterTab() {
+  return (
+    <div className="space-y-6">
+      {/* Security Overview Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {securityStats.map(s => (
+          <div key={s.label} className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-4">
+            <div className="flex items-center gap-3">
+              <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center', s.bg)}>
+                <s.icon className={cn('w-5 h-5', s.color)} />
+              </div>
+              <div>
+                <p className={cn('font-display font-bold text-xl', s.color)}>{s.value}</p>
+                {s.sub && <span className="text-xs text-muted">({s.sub})</span>}
+              </div>
+            </div>
+            <p className="text-xs text-muted mt-2">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Security Monitoring Dashboard */}
+      <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-6">
+        <h2 className="font-display font-semibold text-lg text-text dark:text-text-dark mb-4 flex items-center gap-2">
+          <ShieldCheck className="w-5 h-5 text-primary" /> Security Monitoring Dashboard
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {securityMonitors.map(m => (
+            <div key={m.name} className="rounded-xl border border-border dark:border-border-dark p-4 bg-gray-50 dark:bg-slate-800">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <m.icon className="w-5 h-5 text-primary" />
+                  <span className="font-display font-semibold text-sm text-text dark:text-text-dark">{m.name}</span>
+                </div>
+                <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-success/10 text-success text-xs font-semibold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                  {m.status}
+                </span>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted">{m.detail1Label}</span>
+                  <span className="font-medium text-text dark:text-text-dark">{m.detail1}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted">{m.detail2Label}</span>
+                  <span className="font-medium text-text dark:text-text-dark">{m.detail2}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Recent Security Events Table */}
+      <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark overflow-hidden">
+        <div className="p-4 border-b border-border dark:border-border-dark flex items-center justify-between">
+          <h2 className="font-display font-semibold text-text dark:text-text-dark flex items-center gap-2">
+            <FileWarning className="w-5 h-5 text-primary" /> Recent Security Events
+          </h2>
+          <span className="text-sm text-muted">{securityEvents.length} events</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 dark:bg-slate-800">
+                {['Timestamp', 'Event Type', 'Source', 'Severity', 'Status', 'Action'].map(h => (
+                  <th key={h} className="text-left px-4 py-3 font-semibold text-muted text-xs uppercase tracking-wider whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {securityEvents.map((evt, i) => (
+                <tr key={i} className="border-b border-border dark:border-border-dark last:border-0 hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                  <td className="px-4 py-3 text-muted whitespace-nowrap font-mono text-xs">{evt.timestamp}</td>
+                  <td className="px-4 py-3 font-medium text-text dark:text-text-dark whitespace-nowrap">{evt.type}</td>
+                  <td className="px-4 py-3 text-muted font-mono text-xs whitespace-nowrap">{evt.source}</td>
+                  <td className="px-4 py-3">
+                    <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium',
+                      evt.severity === 'Low' ? 'bg-success/10 text-success' :
+                      evt.severity === 'Medium' ? 'bg-warning/10 text-warning' :
+                      evt.severity === 'High' ? 'bg-orange-500/10 text-orange-500' :
+                      'bg-error/10 text-error'
+                    )}>{evt.severity}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium',
+                      evt.status === 'Resolved' ? 'bg-success/10 text-success' :
+                      evt.status === 'Investigating' ? 'bg-warning/10 text-warning' :
+                      'bg-accent/10 text-accent'
+                    )}>{evt.status}</span>
+                  </td>
+                  <td className="px-4 py-3 text-muted text-xs">{evt.action}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Compliance & Audit Section */}
+      <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-6">
+        <h2 className="font-display font-semibold text-lg text-text dark:text-text-dark mb-4 flex items-center gap-2">
+          <Shield className="w-5 h-5 text-primary" /> Compliance & Audit
+        </h2>
+        <div className="space-y-4">
+          {complianceAuditItems.map(item => (
+            <div key={item.label} className="flex items-center gap-4">
+              <span className="text-sm font-medium text-text dark:text-text-dark w-40 shrink-0">{item.label}</span>
+              {item.type === 'progress' ? (
+                <div className="flex-1 flex items-center gap-3">
+                  <div className="flex-1 h-2.5 rounded-full bg-gray-200 dark:bg-slate-700 overflow-hidden">
+                    <div
+                      className={cn('h-full rounded-full transition-all', item.value >= 90 ? 'bg-success' : item.value >= 80 ? 'bg-warning' : 'bg-error')}
+                      style={{ width: `${item.value}%` }}
+                    />
+                  </div>
+                  <span className={cn('text-sm font-semibold w-12 text-right', item.value >= 90 ? 'text-success' : item.value >= 80 ? 'text-warning' : 'text-error')}>{item.value}%</span>
+                </div>
+              ) : (
+                <span className={cn('px-2.5 py-0.5 rounded-full text-xs font-semibold',
+                  item.badgeColor === 'success' ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'
+                )}>{item.value}</span>
+              )}
+            </div>
+          ))}
+          <div className="mt-4 pt-4 border-t border-border dark:border-border-dark flex items-center gap-2 text-sm">
+            <ServerCrash className="w-4 h-4 text-muted" />
+            <span className="text-muted">Last Penetration Test:</span>
+            <span className="font-medium text-text dark:text-text-dark">15 Mar 2026</span>
+            <span className="text-muted">-</span>
+            <span className="px-2 py-0.5 rounded-full bg-success/10 text-success text-xs font-semibold">No critical findings</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Admin() {
   const [activeTab, setActiveTab] = useState('Hospital Setup')
 
@@ -481,6 +653,10 @@ export default function Admin() {
             ))}
           </div>
         </div>
+      )}
+
+      {activeTab === 'Security Center' && (
+        <SecurityCenterTab />
       )}
     </div>
   )
