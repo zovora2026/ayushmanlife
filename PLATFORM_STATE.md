@@ -11,8 +11,8 @@
 
 ```
 Frontend: React 19 + TypeScript 5.9 + Vite 8 + Tailwind CSS 4
-Backend:  Cloudflare Pages Functions (54 API routes)
-Database: Cloudflare D1 (ayushmanlife-db) — 38 tables, ~5000 rows, APAC region
+Backend:  Cloudflare Pages Functions (59 API routes)
+Database: Cloudflare D1 (ayushmanlife-db) — 42 tables, ~5100 rows, APAC region
 Auth:     Cookie-based D1 sessions + SHA-256 password hashing
 AI:       Claude API integration in Claims analysis (ICD-10/CPT coding)
 Deploy:   Cloudflare Pages (wrangler pages deploy)
@@ -342,11 +342,40 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 - WORKING: Script status update (inline dropdown → D1), defect status update, create new scripts/defects
 - WORKING: Suite-wise progress tracking with stacked progress bars, open defect counts per suite
 - NOT YET: Multi-project support, test execution history, screenshot/file attachments, bulk operations, Excel/PDF export, test plan versioning, requirements traceability matrix
-### Build 12: Cloud & Security Dashboard (APP 8) — NOT STARTED
+### Build 12: Cloud & Security Dashboard (APP 8) — COMPLETE ✅
+
+**Definition of done**: Admins see infrastructure health, security incidents, compliance status, and cloud cost tracking.
+
+**E2E Test Results** (verified via API calls on ayushmanlife-516.pages.dev):
+1. Dashboard GET: 15 incidents (3 open, 3 investigating, 9 resolved), 70% compliance score, 99.84% avg uptime, ₹1.23L monthly cloud spend ✅
+2. Incidents GET: 15 incidents sorted by severity (4 critical, 7 high, 4 medium), filterable by status ✅
+3. Compliance GET: 20 controls across 4 frameworks — HIPAA 63%, DISHA 75%, NABH 100%, SOC2 60% ✅
+4. Infrastructure GET: 15 services across 4 providers (Cloudflare 6, AWS 6, On-Premise 2, GitHub 1), 1 degraded ✅
+5. Costs GET: 6-month trend (Oct 2025 - Mar 2026), cost rising from ₹1.11L to ₹1.23L, 6 over-budget items in Mar ✅
+6. Incident POST: Created high-severity incident → sec-XXXXX, status=open ✅
+7. Incident PUT: Updated to resolved with resolution text, resolved_at auto-set ✅
+8. Compliance filter by framework: HIPAA returns 8 checks, DISHA returns 4 checks ✅
+9. Cost by provider: AWS ₹98.8K (80%), Cloudflare ₹4.1K (3%), On-Premise ₹20K (16%) ✅
+10. DR Readiness Score: 75% (computed from Business Continuity + Incident Response compliance checks) ✅
+11. Frontend: 5-tab page (Overview, Incidents, Compliance, Infrastructure, FinOps) with all D1 data ✅
+
+**Honest Assessment Questions**:
+1. Can a real user complete the primary workflow? **YES** — Admin can view security dashboard with KPIs, drill into incidents by severity, check compliance status across HIPAA/DISHA/SOC2/NABH, monitor infrastructure health with CPU/memory bars, and track cloud costs vs budget with trend analysis.
+2. Does data persist correctly? **YES** — Security incidents save to D1 with severity, status transitions, and resolution. Compliance checks from D1 with framework and control ID. Infrastructure services with uptime and resource usage. Cloud costs with 6-month historical trend.
+3. Is the UI professional enough for a hospital environment? **YES** — Clean overview with critical alert banner, compliance stacked progress bars per framework, infrastructure table with CPU/memory utilization bars, FinOps trend chart with over-budget highlighting.
+4. Would someone pay ₹1,000/month for this specific app? **MAYBE** — The compliance tracking across 4 Indian healthcare frameworks (HIPAA, DISHA, NABH, SOC2) is genuinely useful. FinOps cost tracking with budget variance alerts is practical. Missing: real-time monitoring integration, automated vulnerability scanning, alert notifications, compliance report export.
+5. What's the most embarrassing thing about it? Infrastructure health data is static (seeded, not from real monitoring). CPU/memory values don't update in real-time. Cloud costs are seeded, not from actual AWS/Cloudflare billing APIs. No automated vulnerability scanning — incidents are manually created. Compliance checks are manually maintained, not auto-assessed.
+
+**What's actually working vs what's fake**:
+- WORKING: Security incident CRUD with severity/status lifecycle, compliance control tracking across 4 frameworks, infrastructure service catalog, cloud cost tracking with 6-month trend, over-budget alerts
+- WORKING: Dashboard aggregation (incident counts, compliance score, avg uptime, cost variance, DR readiness)
+- WORKING: Incident creation/resolution with timestamps, compliance filtering by framework
+- NOT YET: Real-time monitoring integration (Grafana/CloudWatch), automated vulnerability scanning, billing API integration, alert notifications, compliance report PDF export, automated remediation
+- PARTIALLY FAKE: Infrastructure CPU/memory values are static, cloud costs are seeded not from billing APIs
 ### Build 13: Insurance Core Platform (APP 9) — NOT STARTED
 ### Build 14: EMR Enhancement Governance (APP 3) — NOT STARTED
 ### Build 15: EMR Change Management (APP 4) — NOT STARTED
 
 ---
 
-## Progress: 11/15 apps complete
+## Progress: 12/15 apps complete

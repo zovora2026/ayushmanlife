@@ -567,3 +567,70 @@ CREATE INDEX IF NOT EXISTS idx_defects_script ON test_defects(script_id);
 CREATE INDEX IF NOT EXISTS idx_defects_suite ON test_defects(suite_id);
 CREATE INDEX IF NOT EXISTS idx_documents_project ON project_documents(project_id);
 CREATE INDEX IF NOT EXISTS idx_messages_project ON project_messages(project_id);
+
+-- Cloud & Security Dashboard
+CREATE TABLE IF NOT EXISTS security_incidents (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  severity TEXT DEFAULT 'medium',
+  category TEXT NOT NULL,
+  source TEXT,
+  affected_system TEXT,
+  status TEXT DEFAULT 'open',
+  assigned_to TEXT REFERENCES users(id),
+  resolution TEXT,
+  detected_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  resolved_at DATETIME,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS compliance_checks (
+  id TEXT PRIMARY KEY,
+  framework TEXT NOT NULL,
+  control_id TEXT NOT NULL,
+  control_name TEXT NOT NULL,
+  description TEXT,
+  category TEXT NOT NULL,
+  status TEXT DEFAULT 'compliant',
+  evidence TEXT,
+  last_checked DATETIME DEFAULT CURRENT_TIMESTAMP,
+  next_review DATE,
+  owner TEXT,
+  notes TEXT
+);
+
+CREATE TABLE IF NOT EXISTS infra_services (
+  id TEXT PRIMARY KEY,
+  service_name TEXT NOT NULL,
+  provider TEXT NOT NULL,
+  region TEXT,
+  service_type TEXT NOT NULL,
+  status TEXT DEFAULT 'healthy',
+  uptime_pct REAL DEFAULT 99.9,
+  cpu_usage REAL,
+  memory_usage REAL,
+  last_health_check DATETIME DEFAULT CURRENT_TIMESTAMP,
+  monthly_cost REAL DEFAULT 0,
+  environment TEXT DEFAULT 'production',
+  notes TEXT
+);
+
+CREATE TABLE IF NOT EXISTS cloud_costs (
+  id TEXT PRIMARY KEY,
+  month TEXT NOT NULL,
+  provider TEXT NOT NULL,
+  service_category TEXT NOT NULL,
+  service_name TEXT,
+  cost_amount REAL NOT NULL DEFAULT 0,
+  budget_amount REAL,
+  currency TEXT DEFAULT 'INR',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_incidents_status ON security_incidents(status);
+CREATE INDEX IF NOT EXISTS idx_incidents_severity ON security_incidents(severity);
+CREATE INDEX IF NOT EXISTS idx_compliance_framework ON compliance_checks(framework);
+CREATE INDEX IF NOT EXISTS idx_infra_status ON infra_services(status);
+CREATE INDEX IF NOT EXISTS idx_costs_month ON cloud_costs(month);
+CREATE INDEX IF NOT EXISTS idx_costs_provider ON cloud_costs(provider);

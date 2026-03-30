@@ -24,6 +24,7 @@ const DataGovernance = lazy(() => import('./pages/DataGovernance'))
 const Admin = lazy(() => import('./pages/Admin'))
 const ClientPortal = lazy(() => import('./pages/ClientPortal'))
 const TestManagement = lazy(() => import('./pages/TestManagement'))
+const SecurityDashboard = lazy(() => import('./pages/SecurityDashboard'))
 
 function LoadingSpinner() {
   return (
@@ -141,6 +142,7 @@ export default function App() {
               <Route path="/admin" element={<Admin />} />
               <Route path="/client-portal" element={<ClientPortal />} />
               <Route path="/test-management" element={<TestManagement />} />
+              <Route path="/security" element={<SecurityDashboard />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

@@ -237,6 +237,22 @@ export const testing = {
     fetchAPI<{ defect: TestDefect }>('/testing/defects', { method: 'PUT', body: JSON.stringify(data) }),
 };
 
+// Security
+export const security = {
+  dashboard: () => fetchAPI<SecurityDashboard>('/security/dashboard'),
+  incidents: (params?: Record<string, string>) =>
+    fetchAPI<{ incidents: SecurityIncident[]; total: number }>(`/security/incidents?${new URLSearchParams(params || {})}`),
+  createIncident: (data: Partial<SecurityIncident>) =>
+    fetchAPI<{ incident: SecurityIncident }>('/security/incidents', { method: 'POST', body: JSON.stringify(data) }),
+  updateIncident: (data: { id: string; status?: string; severity?: string; resolution?: string; assigned_to?: string }) =>
+    fetchAPI<{ incident: SecurityIncident }>('/security/incidents', { method: 'PUT', body: JSON.stringify(data) }),
+  compliance: (framework?: string) =>
+    fetchAPI<{ checks: ComplianceCheck[]; total: number; summary: Record<string, { total: number; compliant: number; partial: number; non_compliant: number; score: number }> }>(`/security/compliance${framework ? `?framework=${framework}` : ''}`),
+  infrastructure: () =>
+    fetchAPI<{ services: InfraService[]; total: number; summary: { by_provider: Record<string, number>; by_status: Record<string, number>; total_monthly_cost: number } }>('/security/infrastructure'),
+  costs: () => fetchAPI<CloudCosts>('/security/costs'),
+};
+
 // Academy
 export const academy = {
   paths: () => fetchAPI<{ paths: LearningPath[] }>('/academy/paths'),
@@ -1090,4 +1106,89 @@ export interface TestDashboard {
   defect_severity: Record<string, number>;
   defect_status: Record<string, number>;
   suites: TestSuite[];
+}
+
+// Cloud & Security
+export interface SecurityIncident {
+  id: string;
+  title: string;
+  description?: string;
+  severity: string;
+  category: string;
+  source?: string;
+  affected_system?: string;
+  status: string;
+  assigned_to?: string;
+  assigned_to_name?: string;
+  resolution?: string;
+  detected_at: string;
+  resolved_at?: string;
+  created_at: string;
+}
+
+export interface ComplianceCheck {
+  id: string;
+  framework: string;
+  control_id: string;
+  control_name: string;
+  description?: string;
+  category: string;
+  status: string;
+  evidence?: string;
+  last_checked: string;
+  next_review?: string;
+  owner?: string;
+  notes?: string;
+}
+
+export interface InfraService {
+  id: string;
+  service_name: string;
+  provider: string;
+  region?: string;
+  service_type: string;
+  status: string;
+  uptime_pct: number;
+  cpu_usage?: number;
+  memory_usage?: number;
+  last_health_check: string;
+  monthly_cost: number;
+  environment: string;
+}
+
+export interface CloudCosts {
+  trend: Array<{ month: string; total_cost: number; total_budget: number }>;
+  by_provider: Array<{ provider: string; total_cost: number; total_budget: number }>;
+  by_category: Array<{ service_category: string; total_cost: number; total_budget: number }>;
+  current_month: Array<{ id: string; month: string; provider: string; service_category: string; service_name: string; cost_amount: number; budget_amount: number }>;
+  over_budget: Array<{ service_name: string; cost_amount: number; budget_amount: number }>;
+  currency: string;
+}
+
+export interface SecurityDashboard {
+  incidents: {
+    total: number;
+    by_status: Record<string, number>;
+    by_severity: Record<string, number>;
+    open_critical: number;
+  };
+  compliance: {
+    score: number;
+    total_checks: number;
+    compliant: number;
+    by_framework: Record<string, Record<string, number>>;
+  };
+  infrastructure: {
+    total_services: number;
+    by_status: Record<string, number>;
+    avg_uptime: number;
+  };
+  costs: {
+    current_month: number;
+    budget: number;
+    variance: number;
+    trend_pct: number;
+    currency: string;
+  };
+  dr_readiness_score: number;
 }
