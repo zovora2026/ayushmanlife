@@ -44,6 +44,7 @@ const navGroups: NavGroup[] = [
       { label: 'Client Portal', href: '/client-portal', icon: 'Briefcase' },
       { label: 'Test Management', href: '/test-management', icon: 'ClipboardCheck' },
       { label: 'Enhancements', href: '/enhancement-governance', icon: 'GitPullRequest' },
+      { label: 'Changes', href: '/change-management', icon: 'FileText' },
     ],
   },
   {

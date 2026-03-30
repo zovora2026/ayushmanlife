@@ -1385,3 +1385,102 @@ export interface GovernanceReview {
   meeting_date?: string;
   created_at: string;
 }
+
+// Change Management
+export const changes = {
+  getDashboard: () => fetchAPI<ChangeDashboard>('/changes/dashboard'),
+  getRequests: (params?: { status?: string; risk_level?: string; change_type?: string }) => {
+    const sp = new URLSearchParams();
+    if (params?.status) sp.set('status', params.status);
+    if (params?.risk_level) sp.set('risk_level', params.risk_level);
+    if (params?.change_type) sp.set('change_type', params.change_type);
+    const qs = sp.toString();
+    return fetchAPI<{ changes: ChangeRequest[]; total: number }>(`/changes/requests${qs ? `?${qs}` : ''}`);
+  },
+  createRequest: (data: { title: string; description?: string; change_type?: string; category?: string; emr_system?: string; environment?: string; risk_level?: string; impact_assessment?: string; rollback_plan?: string; testing_plan?: string; requested_by?: string; requester_name?: string; scheduled_date?: string; cab_required?: number }) =>
+    fetchAPI<{ change: ChangeRequest }>('/changes/requests', { method: 'POST', body: JSON.stringify(data) }),
+  updateRequest: (data: { id: string; status?: string; assigned_to?: string; assignee_name?: string; scheduled_date?: string; implementation_notes?: string; risk_level?: string; cab_meeting_id?: string }) =>
+    fetchAPI<{ change: ChangeRequest }>('/changes/requests', { method: 'PUT', body: JSON.stringify(data) }),
+  getCab: (meetingId?: string) => {
+    const qs = meetingId ? `?meeting_id=${meetingId}` : '';
+    return fetchAPI<{ meetings?: CabMeeting[]; meeting?: CabMeeting; decisions?: CabDecision[]; total?: number }>(`/changes/cab${qs}`);
+  },
+  createMeeting: (data: { meeting_date: string; meeting_type?: string; chair_name?: string; agenda?: string; attendees?: string }) =>
+    fetchAPI<{ meeting: CabMeeting }>('/changes/cab', { method: 'POST', body: JSON.stringify({ type: 'meeting', ...data }) }),
+  createDecision: (data: { meeting_id: string; change_id: string; decision: string; conditions?: string; risk_accepted?: number; voter_summary?: string }) =>
+    fetchAPI<{ decision: CabDecision }>('/changes/cab', { method: 'POST', body: JSON.stringify({ type: 'decision', ...data }) }),
+}
+
+export interface ChangeDashboard {
+  total: number;
+  implemented: number;
+  emergency_count: number;
+  incident_count: number;
+  success_rate: number;
+  by_status: Record<string, number>;
+  by_risk: Record<string, number>;
+  by_type: Record<string, number>;
+  by_category: Record<string, number>;
+  upcoming: { id: string; title: string; risk_level: string; risk_score: number; scheduled_date: string; change_type: string; status: string }[];
+  cab_summary: Record<string, number>;
+  recent_implementations: { id: string; title: string; risk_level: string; implemented_at: string; implementation_notes: string }[];
+}
+
+export interface ChangeRequest {
+  id: string;
+  title: string;
+  description?: string;
+  change_type: string;
+  category?: string;
+  emr_system?: string;
+  environment: string;
+  risk_level: string;
+  risk_score: number;
+  impact_assessment?: string;
+  rollback_plan?: string;
+  testing_plan?: string;
+  requested_by?: string;
+  requester_name?: string;
+  assigned_to?: string;
+  assignee_name?: string;
+  status: string;
+  scheduled_date?: string;
+  implemented_at?: string;
+  implementation_notes?: string;
+  cab_required: number;
+  cab_meeting_id?: string;
+  created_at: string;
+  updated_at: string;
+  cab_review_count?: number;
+  cab_decision?: string;
+}
+
+export interface CabMeeting {
+  id: string;
+  meeting_date: string;
+  meeting_type: string;
+  chair_id?: string;
+  chair_name?: string;
+  status: string;
+  agenda?: string;
+  minutes?: string;
+  attendees?: string;
+  created_at: string;
+  decision_count?: number;
+  approved_count?: number;
+}
+
+export interface CabDecision {
+  id: string;
+  meeting_id: string;
+  change_id: string;
+  change_title?: string;
+  risk_level?: string;
+  risk_score?: number;
+  change_type?: string;
+  decision: string;
+  conditions?: string;
+  risk_accepted: number;
+  voter_summary?: string;
+  created_at: string;
+}

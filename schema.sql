@@ -740,3 +740,62 @@ CREATE INDEX IF NOT EXISTS idx_enhancement_dept ON enhancement_requests(departme
 CREATE INDEX IF NOT EXISTS idx_enhancement_type ON enhancement_requests(request_type);
 CREATE INDEX IF NOT EXISTS idx_governance_request ON governance_reviews(request_id);
 CREATE INDEX IF NOT EXISTS idx_governance_committee ON governance_reviews(committee);
+
+-- Change Management (Build 15)
+CREATE TABLE IF NOT EXISTS change_requests (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  change_type TEXT NOT NULL DEFAULT 'normal',
+  category TEXT,
+  emr_system TEXT,
+  environment TEXT DEFAULT 'production',
+  risk_level TEXT DEFAULT 'medium',
+  risk_score INTEGER DEFAULT 0,
+  impact_assessment TEXT,
+  rollback_plan TEXT,
+  testing_plan TEXT,
+  requested_by TEXT REFERENCES users(id),
+  requester_name TEXT,
+  assigned_to TEXT REFERENCES users(id),
+  assignee_name TEXT,
+  status TEXT NOT NULL DEFAULT 'draft',
+  scheduled_date TEXT,
+  implemented_at DATETIME,
+  implementation_notes TEXT,
+  cab_required INTEGER DEFAULT 1,
+  cab_meeting_id TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS cab_meetings (
+  id TEXT PRIMARY KEY,
+  meeting_date TEXT NOT NULL,
+  meeting_type TEXT DEFAULT 'regular',
+  chair_id TEXT REFERENCES users(id),
+  chair_name TEXT,
+  status TEXT DEFAULT 'scheduled',
+  agenda TEXT,
+  minutes TEXT,
+  attendees TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS cab_decisions (
+  id TEXT PRIMARY KEY,
+  meeting_id TEXT NOT NULL REFERENCES cab_meetings(id),
+  change_id TEXT NOT NULL REFERENCES change_requests(id),
+  decision TEXT NOT NULL DEFAULT 'pending',
+  conditions TEXT,
+  risk_accepted INTEGER DEFAULT 0,
+  voter_summary TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_changes_status ON change_requests(status);
+CREATE INDEX IF NOT EXISTS idx_changes_risk ON change_requests(risk_level);
+CREATE INDEX IF NOT EXISTS idx_changes_type ON change_requests(change_type);
+CREATE INDEX IF NOT EXISTS idx_cab_meetings_date ON cab_meetings(meeting_date);
+CREATE INDEX IF NOT EXISTS idx_cab_decisions_meeting ON cab_decisions(meeting_id);
+CREATE INDEX IF NOT EXISTS idx_cab_decisions_change ON cab_decisions(change_id);
