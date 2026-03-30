@@ -338,8 +338,23 @@ export default function Services() {
           Managed Services
         </h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          IT service management, SLAs, and knowledge resources
+          IT service management, SLAs, and knowledge resources for healthcare & insurance organizations
         </p>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label: 'Healthcare Clients', value: '45+', sub: 'Hospitals & clinics' },
+          { label: 'Insurance Clients', value: '18+', sub: 'Payers, TPAs & insurers' },
+          { label: 'SLA Compliance', value: '99.1%', sub: 'Across all clients' },
+          { label: 'Avg Resolution', value: '3.8 hrs', sub: 'P1 incidents' },
+        ].map(s => (
+          <div key={s.label} className="rounded-lg bg-white dark:bg-surface-dark border border-border dark:border-border-dark px-3 py-2.5">
+            <p className="font-display font-bold text-lg text-primary">{s.value}</p>
+            <p className="text-xs font-medium text-text dark:text-text-dark">{s.label}</p>
+            <p className="text-[10px] text-muted">{s.sub}</p>
+          </div>
+        ))}
       </div>
 
       <Tabs tabs={TABS} activeTab={activeTab} onChange={setActiveTab} />
@@ -389,6 +404,9 @@ export default function Services() {
       {/* ── SLA Dashboard ─────────────────────────────────────────── */}
       {activeTab === 'sla' && (
         <div className="space-y-6">
+          <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 text-sm text-primary flex items-center gap-2">
+            <span className="font-semibold">Industry Coverage:</span> Healthcare IT (EMR, PACS, LIS) • Insurance Systems (Claims, Underwriting, Policy Admin) • Cloud Infrastructure (AWS/Azure)
+          </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Stat
               label="SLA Compliance"
