@@ -124,6 +124,96 @@ export default function Platform() {
               ))}
             </div>
           </div>
+
+          {/* Cloud Migration Roadmap */}
+          <div className="mt-20">
+            <h2 className="font-display font-bold text-2xl text-text dark:text-text-dark text-center mb-4">
+              Cloud Migration for Healthcare &amp; Insurance
+            </h2>
+            <p className="text-muted text-center mb-10 max-w-2xl mx-auto">
+              Proven migration methodology for moving healthcare and insurance workloads to AWS, Azure, or hybrid cloud with zero downtime.
+            </p>
+
+            {/* Migration phases */}
+            <div className="grid md:grid-cols-4 gap-6 mb-12">
+              {[
+                {
+                  step: 1,
+                  title: 'Assess',
+                  description: 'Evaluate current on-premise infrastructure, application dependencies, PHI data flows, and compliance requirements.',
+                  color: 'border-blue-500',
+                },
+                {
+                  step: 2,
+                  title: 'Plan',
+                  description: 'Design target cloud architecture with HIPAA/DPDP compliance, data residency, DR strategy, and cost optimization.',
+                  color: 'border-violet-500',
+                },
+                {
+                  step: 3,
+                  title: 'Migrate',
+                  description: 'Execute phased migration with zero-downtime cutover, data validation, and parallel run testing.',
+                  color: 'border-teal-500',
+                },
+                {
+                  step: 4,
+                  title: 'Optimize',
+                  description: 'Continuous optimization with FinOps, auto-scaling, monitoring, and managed services.',
+                  color: 'border-amber-500',
+                },
+              ].map(phase => (
+                <div
+                  key={phase.title}
+                  className={`p-6 rounded-xl bg-white dark:bg-surface-dark border border-border dark:border-border-dark border-t-4 ${phase.color}`}
+                >
+                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm mb-3">
+                    {phase.step}
+                  </span>
+                  <h3 className="font-display font-semibold text-text dark:text-text-dark mb-2">{phase.title}</h3>
+                  <p className="text-sm text-muted">{phase.description}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Migration stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+              {[
+                { value: '40+', label: 'Migrations Completed' },
+                { value: '99.9%', label: 'Uptime During Migration' },
+                { value: '35%', label: 'Avg Cost Reduction' },
+                { value: 'Certified', label: 'India Data Residency' },
+              ].map(stat => (
+                <div
+                  key={stat.label}
+                  className="p-5 rounded-xl bg-white dark:bg-surface-dark border border-border dark:border-border-dark text-center"
+                >
+                  <p className="font-display font-bold text-2xl text-primary mb-1">{stat.value}</p>
+                  <p className="text-sm text-muted">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Healthcare Cloud Partners */}
+            <h3 className="font-display font-semibold text-lg text-text dark:text-text-dark text-center mb-6">
+              Healthcare Cloud Partners
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { name: 'AWS' },
+                { name: 'Azure' },
+                { name: 'GCP' },
+                { name: 'Oracle Cloud' },
+              ].map(partner => (
+                <div
+                  key={partner.name}
+                  className="p-5 rounded-xl bg-white dark:bg-surface-dark border border-border dark:border-border-dark flex flex-col items-center gap-2"
+                >
+                  <Cloud className="w-8 h-8 text-primary" />
+                  <span className="text-sm font-medium text-text dark:text-text-dark">{partner.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
       <Footer />

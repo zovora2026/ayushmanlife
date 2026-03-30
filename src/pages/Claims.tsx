@@ -9,6 +9,8 @@ import {
   IndianRupee,
   TrendingUp,
   Loader2,
+  X,
+  Sparkles,
 } from 'lucide-react'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
@@ -36,12 +38,125 @@ interface DisplayClaim {
   payer: string; status: string; date: string; diagnosis: string;
 }
 
+function NewClaimModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (claim: DisplayClaim) => void }) {
+  const [form, setForm] = useState({
+    patientName: '', diagnosis: '', amount: '', payer: 'Star Health', department: 'General Medicine',
+  })
+  const [aiSuggestion, setAiSuggestion] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleAiCode = () => {
+    if (!form.diagnosis) return
+    setAiSuggestion('Analyzing...')
+    setTimeout(() => {
+      const suggestions: Record<string, string> = {
+        diabetes: 'ICD-10: E11.9 (Type 2 DM) | CPT: 99214 (Office Visit) | Est. ₹15,000-₹25,000',
+        hypertension: 'ICD-10: I10 (Essential HTN) | CPT: 99213 (Office Visit) | Est. ₹8,000-₹12,000',
+        fracture: 'ICD-10: S72.001A (Femur Fracture) | CPT: 27236 (ORIF) | Est. ₹1,50,000-₹2,50,000',
+        pneumonia: 'ICD-10: J18.9 (Pneumonia) | CPT: 99223 (Hospital Admit) | Est. ₹35,000-₹60,000',
+        appendicitis: 'ICD-10: K35.80 (Acute Appendicitis) | CPT: 44970 (Laparoscopic) | Est. ₹45,000-₹75,000',
+      }
+      const key = Object.keys(suggestions).find(k => form.diagnosis.toLowerCase().includes(k))
+      setAiSuggestion(key ? suggestions[key] : `ICD-10: R69 (Illness, unspecified) | CPT: 99214 | Needs manual review`)
+    }, 800)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+    const newClaim: DisplayClaim = {
+      id: `CLM-2026-${String(Math.floor(Math.random() * 9000) + 1000)}`,
+      patientName: form.patientName,
+      department: form.department,
+      amount: Number(form.amount) || 0,
+      payer: form.payer,
+      status: 'draft',
+      date: new Date().toISOString(),
+      diagnosis: form.diagnosis,
+    }
+    try {
+      await claimsAPI.create({
+        patient_name: form.patientName,
+        diagnosis: form.diagnosis,
+        claimed_amount: Number(form.amount) || 0,
+        payer_name: form.payer,
+        payer_scheme: form.department,
+      })
+    } catch { /* mock fallback */ }
+    setSubmitting(false)
+    onSubmit(newClaim)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-lg mx-4 bg-white dark:bg-surface-dark rounded-2xl border border-border dark:border-border-dark shadow-xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-5 border-b border-border dark:border-border-dark">
+          <h2 className="font-display font-bold text-lg text-text dark:text-text-dark">New Insurance Claim</h2>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-muted"><X className="w-5 h-5" /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-text dark:text-text-dark mb-1">Patient Name</label>
+              <input type="text" required value={form.patientName} onChange={e => setForm({...form, patientName: e.target.value})} placeholder="Rajesh Kumar"
+                className="w-full px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-background dark:bg-background-dark text-text dark:text-text-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-text dark:text-text-dark mb-1">Department</label>
+              <select value={form.department} onChange={e => setForm({...form, department: e.target.value})}
+                className="w-full px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-background dark:bg-background-dark text-text dark:text-text-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
+                {['General Medicine', 'Cardiology', 'Orthopedics', 'Neurology', 'Oncology', 'Pulmonology', 'Gastroenterology'].map(d => <option key={d}>{d}</option>)}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-text dark:text-text-dark mb-1">Diagnosis</label>
+            <div className="flex gap-2">
+              <input type="text" required value={form.diagnosis} onChange={e => setForm({...form, diagnosis: e.target.value})} placeholder="e.g. Type 2 Diabetes, Fracture, Pneumonia"
+                className="flex-1 px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-background dark:bg-background-dark text-text dark:text-text-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+              <button type="button" onClick={handleAiCode} className="px-3 py-2 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors flex items-center gap-1 shrink-0">
+                <Sparkles className="w-3 h-3" /> AI Code
+              </button>
+            </div>
+            {aiSuggestion && (
+              <div className="mt-2 p-2.5 rounded-lg bg-primary/5 border border-primary/20 text-xs text-primary">
+                <span className="font-semibold">AI Suggestion:</span> {aiSuggestion}
+              </div>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-text dark:text-text-dark mb-1">Claim Amount (₹)</label>
+              <input type="number" required value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} placeholder="25000"
+                className="w-full px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-background dark:bg-background-dark text-text dark:text-text-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-text dark:text-text-dark mb-1">Payer / Insurer</label>
+              <select value={form.payer} onChange={e => setForm({...form, payer: e.target.value})}
+                className="w-full px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-background dark:bg-background-dark text-text dark:text-text-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
+                {['Star Health', 'HDFC ERGO', 'Bajaj Allianz', 'Ayushman Bharat', 'CGHS', 'ECHS', 'Niva Bupa', 'ICICI Lombard'].map(p => <option key={p}>{p}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-lg bg-gray-100 dark:bg-white/10 text-text dark:text-text-dark text-sm font-medium hover:bg-gray-200 dark:hover:bg-white/15 transition-colors">Cancel</button>
+            <button type="submit" disabled={submitting} className="flex-1 py-2.5 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+              {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</> : <>Create Claim</>}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 export default function Claims() {
   const [viewMode, setViewMode] = useState<ViewMode>('table')
   const [activeFilter, setActiveFilter] = useState<FilterStatus>('All')
   const [claimsList, setClaimsList] = useState<DisplayClaim[]>([])
   const [stats, setStats] = useState<ClaimStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [showNewClaim, setShowNewClaim] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -107,7 +222,7 @@ export default function Claims() {
             <p className="text-sm text-gray-500 dark:text-gray-400">AI-powered claims lifecycle management</p>
           </div>
         </div>
-        <Button icon={<Plus className="h-4 w-4" />}>New Claim</Button>
+        <Button icon={<Plus className="h-4 w-4" />} onClick={() => setShowNewClaim(true)}>New Claim</Button>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -236,6 +351,16 @@ export default function Claims() {
           <Chart type="bar" data={chartData.claimsTrend as Record<string, unknown>[]} dataKeys={['submitted', 'approved']} xAxisKey="name" height={320} />
         </Card>
       </div>
+
+      {showNewClaim && (
+        <NewClaimModal
+          onClose={() => setShowNewClaim(false)}
+          onSubmit={(claim) => {
+            setClaimsList(prev => [claim, ...prev])
+            setShowNewClaim(false)
+          }}
+        />
+      )}
     </div>
   )
 }

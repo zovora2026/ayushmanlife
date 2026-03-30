@@ -12,6 +12,12 @@ import {
   Award,
   Grid3X3,
   Loader2,
+  Briefcase,
+  UserPlus,
+  Clock,
+  ArrowRight,
+  Shield,
+  Search,
 } from 'lucide-react'
 import { cn, getInitials, formatDate } from '../lib/utils'
 import { demoStaff } from '../lib/mock-data'
@@ -27,9 +33,36 @@ import type { Staff, Certification } from '../types'
 
 const TABS = [
   { id: 'talent', label: 'Talent Dashboard', icon: <Users className="h-4 w-4" /> },
+  { id: 'talent-solutions', label: 'Talent Solutions', icon: <Briefcase className="h-4 w-4" /> },
   { id: 'skills', label: 'Skill Matrix', icon: <Grid3X3 className="h-4 w-4" /> },
   { id: 'scheduler', label: 'Staff Scheduler', icon: <Calendar className="h-4 w-4" /> },
   { id: 'credentials', label: 'Credential Tracker', icon: <Award className="h-4 w-4" /> },
+]
+
+const TALENT_POOL = [
+  { name: 'Arun Mehta', specialization: 'Epic Analyst', experience: '6 yrs', certifications: 'Epic Certified, ITIL', availability: 'Available' },
+  { name: 'Kavita Sharma', specialization: 'Claims Processing', experience: '8 yrs', certifications: 'AAPC CPC, Six Sigma', availability: 'Available' },
+  { name: 'Pradeep Nair', specialization: 'Cloud Architect', experience: '10 yrs', certifications: 'AWS SA Pro, Azure Expert', availability: '2 weeks' },
+  { name: 'Sonia Gupta', specialization: 'ServiceNow Admin', experience: '5 yrs', certifications: 'CSA, CAD', availability: 'Available' },
+  { name: 'Rajiv Verma', specialization: 'Cybersecurity', experience: '7 yrs', certifications: 'CISSP, CEH', availability: 'Available' },
+  { name: 'Deepa Iyer', specialization: 'Revenue Cycle', experience: '4 yrs', certifications: 'CRCR, Epic Revenue', availability: '1 week' },
+]
+
+const SPECIALIZATIONS = [
+  { label: 'Claims Adjudication Experts', count: 12, icon: <CheckCircle className="h-5 w-5" /> },
+  { label: 'Underwriting Technology', count: 8, icon: <Shield className="h-5 w-5" /> },
+  { label: 'Fraud Detection Analysts', count: 6, icon: <Search className="h-5 w-5" /> },
+  { label: 'Policy Admin Systems', count: 10, icon: <BarChart3 className="h-5 w-5" /> },
+  { label: 'TPA Operations', count: 14, icon: <Briefcase className="h-5 w-5" /> },
+  { label: 'Regulatory Compliance', count: 7, icon: <Award className="h-5 w-5" /> },
+]
+
+const PIPELINE_STAGES = [
+  { label: 'Requirement', count: 24 },
+  { label: 'Screening', count: 18 },
+  { label: 'Interview', count: 12 },
+  { label: 'Offer', count: 7 },
+  { label: 'Onboarded', count: 5 },
 ]
 
 const SKILL_COLUMNS = ['Clinical', 'EMR/EHR', 'ServiceNow', 'Cloud', 'Data Analytics', 'Cybersecurity'] as const
@@ -315,6 +348,173 @@ export default function Workforce() {
               </Card>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* ── Talent Solutions ──────────────────────────────────────── */}
+      {activeTab === 'talent-solutions' && (
+        <div className="space-y-6">
+          {/* Summary Stats */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Stat
+              label="Active Placements"
+              value={156}
+              icon={<Briefcase className="h-5 w-5" />}
+            />
+            <Stat
+              label="Insurance Specialists"
+              value={48}
+              icon={<Shield className="h-5 w-5" />}
+            />
+            <Stat
+              label="Healthcare IT Consultants"
+              value={89}
+              icon={<UserPlus className="h-5 w-5" />}
+            />
+            <Stat
+              label="Avg Placement Time"
+              value="12 days"
+              icon={<Clock className="h-5 w-5" />}
+            />
+          </div>
+
+          {/* Two-column layout */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* Left column - Healthcare IT Talent Pool */}
+            <Card padding="none">
+              <div className="border-b border-border px-5 py-4 dark:border-border-dark">
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
+                  Healthcare IT Talent Pool
+                </h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-gray-50 dark:border-border-dark dark:bg-white/5">
+                      <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        Name
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        Specialization
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        Exp
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        Certifications
+                      </th>
+                      <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        Availability
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border dark:divide-border-dark">
+                    {TALENT_POOL.map((person) => (
+                      <tr
+                        key={person.name}
+                        className="transition-colors hover:bg-gray-50 dark:hover:bg-white/5"
+                      >
+                        <td className="whitespace-nowrap px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-white">
+                              {getInitials(person.name)}
+                            </div>
+                            <span className="font-medium text-gray-900 dark:text-gray-100">
+                              {person.name}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-gray-600 dark:text-gray-300">
+                          {person.specialization}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-gray-600 dark:text-gray-300">
+                          {person.experience}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1">
+                            {person.certifications.split(', ').map((cert) => (
+                              <Badge key={cert} variant="info" size="sm">
+                                {cert}
+                              </Badge>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3">
+                          <Badge
+                            variant={person.availability === 'Available' ? 'success' : 'warning'}
+                            dot
+                            size="sm"
+                          >
+                            {person.availability}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
+            {/* Right column - Insurance Talent Specializations */}
+            <Card>
+              <h3 className="mb-4 text-base font-semibold text-gray-900 dark:text-gray-100">
+                Insurance Talent Specializations
+              </h3>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {SPECIALIZATIONS.map((spec) => (
+                  <div
+                    key={spec.label}
+                    className="flex items-center gap-3 rounded-lg border border-border p-3 transition-shadow hover:shadow-md dark:border-border-dark"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary dark:bg-primary/20">
+                      {spec.icon}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                        {spec.label}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {spec.count} available
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+
+          {/* Bottom section - Direct Placement Pipeline */}
+          <Card>
+            <h3 className="mb-6 text-base font-semibold text-gray-900 dark:text-gray-100">
+              Direct Placement Pipeline
+            </h3>
+            <div className="flex items-center justify-between gap-2 overflow-x-auto">
+              {PIPELINE_STAGES.map((stage, idx) => (
+                <div key={stage.label} className="flex items-center gap-2">
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div
+                      className={cn(
+                        'flex h-14 w-14 items-center justify-center rounded-full text-lg font-bold text-white',
+                        idx === 0 && 'bg-blue-500',
+                        idx === 1 && 'bg-indigo-500',
+                        idx === 2 && 'bg-violet-500',
+                        idx === 3 && 'bg-amber-500',
+                        idx === 4 && 'bg-emerald-500'
+                      )}
+                    >
+                      {stage.count}
+                    </div>
+                    <span className="whitespace-nowrap text-xs font-medium text-gray-700 dark:text-gray-300">
+                      {stage.label}
+                    </span>
+                  </div>
+                  {idx < PIPELINE_STAGES.length - 1 && (
+                    <ArrowRight className="h-5 w-5 shrink-0 text-gray-300 dark:text-gray-600" />
+                  )}
+                </div>
+              ))}
+            </div>
+          </Card>
         </div>
       )}
 

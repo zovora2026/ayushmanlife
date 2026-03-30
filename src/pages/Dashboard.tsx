@@ -144,6 +144,23 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* Operational Status Strip */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {[
+          { label: 'Bed Occupancy', value: '82%', sub: '328 / 400 beds', color: 'text-warning' },
+          { label: 'ER Wait Time', value: '14 min', sub: 'Avg today', color: 'text-success' },
+          { label: 'Staff On Duty', value: '186', sub: '24 doctors, 92 nurses', color: 'text-primary' },
+          { label: 'OT Utilization', value: '73%', sub: '8 / 11 active', color: 'text-accent' },
+          { label: 'Pending Discharges', value: '12', sub: '4 awaiting billing', color: 'text-secondary' },
+        ].map(s => (
+          <div key={s.label} className="rounded-lg bg-white dark:bg-surface-dark border border-border dark:border-border-dark px-4 py-3">
+            <p className={cn('font-display font-bold text-lg', s.color)}>{s.value}</p>
+            <p className="text-xs font-medium text-text dark:text-text-dark">{s.label}</p>
+            <p className="text-[10px] text-muted mt-0.5">{s.sub}</p>
+          </div>
+        ))}
+      </div>
+
       {/* Quick Actions */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {quickActions.map((action) => (
