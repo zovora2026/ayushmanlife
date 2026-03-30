@@ -141,6 +141,10 @@ export const payer = {
     fetchAPI<{ alerts: FraudAlertDetail[]; summary: FraudAlertsSummary; by_type: Array<{ alert_type: string; count: number; avg_risk: number }> }>(`/payer/fraud-alerts?${new URLSearchParams(params || {})}`),
   updateFraudAlert: (data: { alert_id: string; status?: string; investigated_by?: string }) =>
     fetchAPI<{ alert: FraudAlert }>('/payer/fraud-alerts', { method: 'PUT', body: JSON.stringify(data) }),
+  analytics: () =>
+    fetchAPI<PayerAnalytics>('/payer/analytics'),
+  irdaiReport: (period?: string) =>
+    fetchAPI<IRDAIReport>(`/payer/irdai-report${period ? `?period=${period}` : ''}`),
 };
 
 // Fraud Investigation
@@ -585,6 +589,87 @@ export interface FraudAnalytics {
   monthly_trend: Array<{ month: string; alerts: number; confirmed: number }>;
   risk_distribution: Array<{ risk_band: string; count: number }>;
   currency: string;
+}
+
+// Payer Analytics
+export interface PayerAnalytics {
+  loss_ratio: {
+    ytd: number;
+    monthly: Array<{ month: string; total_premium: number; total_claims_paid: number; total_lives: number; loss_ratio: number }>;
+    by_scheme: Array<{ payer_scheme: string; total_premium: number; total_claims_paid: number; total_lives: number; loss_ratio: number; threshold: number; compliant: boolean }>;
+    detailed_monthly: Array<{ month: string; payer_scheme: string; premium_collected: number; claims_paid: number; loss_ratio: number }>;
+  };
+  portfolio: {
+    by_scheme: Array<{ payer_scheme: string; claims_count: number; total_claimed: number; total_approved: number; settled_count: number; avg_claim_amount: number; percentage: number }>;
+    by_department: Array<{ department: string; claim_count: number; total_claimed: number; total_approved: number; avg_claim: number }>;
+    total_claimed: number;
+  };
+  high_cost_claimants: Array<{ patient_name: string; scheme: string; claim_count: number; total_claimed: number; total_approved: number; avg_claim: number; last_claim_date: string }>;
+  claims_summary: {
+    total_claims: number;
+    total_claimed: number;
+    total_paid: number;
+    settled: number;
+    rejected: number;
+    pending: number;
+    settlement_rate: number;
+  };
+  claims_trend: Array<{ month: string; submitted: number; settled: number; rejected: number; amount_submitted: number; amount_settled: number }>;
+  premium_summary: {
+    total_premium: number;
+    total_lives: number;
+    new_policies: number;
+    renewals: number;
+    cancellations: number;
+  };
+  tat: {
+    avg_days: number;
+    min_days: number;
+    max_days: number;
+    compliance_pct: number;
+    threshold_days: number;
+  };
+  irdai_compliance: {
+    loss_ratio: { value: number; threshold: number; warning: number; status: string };
+    tat: { value: number; threshold: number; status: string };
+    settlement_rate: { value: number; threshold: number; status: string };
+  };
+  currency: string;
+}
+
+export interface IRDAIReport {
+  report_type: string;
+  period: string;
+  generated_at: string;
+  currency: string;
+  executive_summary: {
+    total_premium_collected: number;
+    total_claims_incurred: number;
+    overall_loss_ratio: number;
+    settlement_rate: number;
+    total_lives_covered: number;
+    unique_claimants: number;
+    fraud_cases_detected: number;
+    fraud_recovery: number;
+  };
+  claims_performance: {
+    summary: Record<string, number>;
+    by_scheme: Array<Record<string, unknown>>;
+    rejection_analysis: Array<{ rejection_reason: string; count: number; total_amount: number }>;
+  };
+  loss_ratio_analysis: {
+    overall: number;
+    by_scheme: Array<{ payer_scheme: string; premium: number; claims_incurred: number; loss_ratio: number; irdai_threshold: number; compliant: boolean }>;
+  };
+  turnaround_time: {
+    by_scheme: Array<{ payer_scheme: string; resolved_count: number; avg_tat_days: number; within_30_days: number; tat_compliance_pct: number }>;
+    irdai_threshold_days: number;
+  };
+  fraud_detection: {
+    alerts: Record<string, number>;
+    investigations: Record<string, number>;
+  };
+  compliance_scorecard: Record<string, { value: number; threshold: number; status: string }>;
 }
 
 export interface StaffMember extends User {

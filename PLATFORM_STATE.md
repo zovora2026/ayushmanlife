@@ -1,6 +1,6 @@
 # AyushmanLife Platform State — Honest Assessment
 
-> Last updated: 2026-03-30T15:00:00+05:30
+> Last updated: 2026-03-30T15:30:00+05:30
 > Git repository: [zovora2026/ayushmanlife](https://github.com/zovora2026/ayushmanlife) (main branch)
 > Live URL: https://ayushmanlife-516.pages.dev → https://ayushmanlife.in
 > Assessment criteria: APPLICATION_BUILD_LIST.md + HONEST_BUILD.md (replaces old benchmark)
@@ -11,8 +11,8 @@
 
 ```
 Frontend: React 19 + TypeScript 5.9 + Vite 8 + Tailwind CSS 4
-Backend:  Cloudflare Pages Functions (44 API routes)
-Database: Cloudflare D1 (ayushmanlife-db) — 31 tables, ~4800 rows, APAC region
+Backend:  Cloudflare Pages Functions (46 API routes)
+Database: Cloudflare D1 (ayushmanlife-db) — 32 tables, ~4850 rows, APAC region
 Auth:     Cookie-based D1 sessions + SHA-256 password hashing
 AI:       Claude API integration in Claims analysis (ICD-10/CPT coding)
 Deploy:   Cloudflare Pages (wrangler pages deploy)
@@ -249,7 +249,35 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 - WORKING: Alert status management (open→under_investigation→confirmed→resolved), investigator assignment
 - NOT YET: Automated fraud detection from claims data, ML-based risk scoring, evidence document upload, investigation SLA timers, batch alert management, export/reporting
 - PARTIALLY FAKE: Monthly trend skewed by seed data timing, recovery amounts are seed data not computed from actual recoveries
-### Build 9: Payer Analytics (APP 12) — NOT STARTED
+### Build 9: Payer Analytics (APP 12) — COMPLETE ✅
+
+**Definition of done**: Payer executives see loss ratios, claims trends, high-cost claimants, and regulatory reports. All from real D1 data.
+
+**E2E Test Results** (verified via API calls on ayushmanlife-516.pages.dev):
+1. Payer Analytics GET: YTD loss ratio 23.3%, 6 monthly data points, 5 schemes with individual loss ratios ✅
+2. Loss Ratio by Scheme: ECHS 43%, Ayushman Bharat 35.2%, Private 16.6%, CGHS 14.3%, Self-pay 0% — all compliant ✅
+3. Portfolio Distribution: 5 schemes with claim counts, amounts, percentages — all from D1 ✅
+4. High-Cost Claimants: 10 patients with claim counts, total claimed/approved, avg claim — all from D1 JOINs ✅
+5. Claims Trend: 6-month trend with submitted/settled/rejected counts and amounts ✅
+6. Premium Summary: ₹1.18Cr total premium, 3,800 lives covered, 1,432 new policies, 952 renewals ✅
+7. TAT Analysis: avg 30.5 days, 81.6% within 30-day IRDAI threshold ✅
+8. IRDAI Compliance Scorecard: loss ratio (compliant), TAT (warning), settlement rate (breach) ✅
+9. IRDAI Regulatory Report: full structured report with executive summary, claims performance, loss ratio by scheme, TAT by scheme, fraud summary, compliance scorecard ✅
+10. Frontend: Analytics tab with executive KPIs, IRDAI compliance scorecard, loss ratio chart, portfolio distribution chart, loss ratio by scheme table, claims trend chart, high-cost claimants table, IRDAI report summary ✅
+
+**Honest Assessment Questions**:
+1. Can a real user complete the primary workflow? **YES** — Payer executive can view loss ratios (YTD and by scheme), see claims trends, identify high-cost claimants, check IRDAI compliance status, and generate regulatory reports. All from D1.
+2. Does data persist correctly? **YES** — Premium collections table tracks monthly premium by scheme (30 records, 6 months × 5 schemes). Loss ratios computed from premium vs claims via SQL. Claims trend from submitted_at timestamps. High-cost claimants from patient-claims JOIN with aggregation.
+3. Is the UI professional enough for a hospital environment? **YES** — Executive-grade KPI cards, compliance scorecard with green/amber/red status, loss ratio area chart, portfolio bar chart, sortable scheme table with compliance badges, claims trend chart with color coding.
+4. Would someone pay ₹1,000/month for this specific app? **MAYBE** — The loss ratio analytics and IRDAI compliance tracking are genuinely useful for a TPA/insurer. Premium vs claims tracking by scheme is exactly what payer CFOs need. Missing: actuarial projections, automated regulatory filing, geographic breakdowns, reinsurance tracking, PDF report export.
+5. What's the most embarrassing thing about it? Premium data is seeded (not collected from actual policy sales). Self-pay scheme shows 0% loss ratio because no self-pay claims are in "approved"/"paid" status. The "by department" in portfolio really shows diagnosis text rather than clinical departments. TAT min_days shows -28 (a data quality issue with some claims having resolved_at before submitted_at). No PDF export for the IRDAI report.
+
+**What's actually working vs what's fake**:
+- WORKING: Loss ratio computation from premium_collections vs claims (monthly, by scheme, YTD), portfolio distribution, high-cost claimant identification, claims trend, IRDAI compliance scorecard, TAT analysis
+- WORKING: IRDAI regulatory report with 7 sections (executive summary, claims performance, loss ratio, TAT, fraud, portfolio, compliance scorecard)
+- WORKING: Payer analytics tab fully wired to D1 — no mock data in primary displays
+- NOT YET: Actuarial projections, geographic breakdowns, reinsurance tracking, PDF export, automated IRDAI filing, real-time premium collection from policy system
+- PARTIALLY FAKE: Premium data is manually seeded, "by department" shows diagnoses not departments, monthly lives counts derived from seed data
 ### Build 10: Client Portal (APP 7) — NOT STARTED
 ### Build 11: EMR Test Management (APP 2) — NOT STARTED
 ### Build 12: Cloud & Security Dashboard (APP 8) — NOT STARTED
@@ -259,4 +287,4 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 
 ---
 
-## Progress: 8/15 apps complete
+## Progress: 9/15 apps complete

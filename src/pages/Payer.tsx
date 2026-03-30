@@ -18,7 +18,7 @@ import {
 } from 'lucide-react'
 import { cn, formatCurrency, formatDate } from '../lib/utils'
 import { payer as payerAPI, claims as claimsAPI, adjudication as adjAPI, fraud as fraudAPI } from '../lib/api'
-import type { AdjudicationQueueClaim, AdjudicationRule, AdjudicationAnalytics, FraudAlertDetail, FraudAlertsSummary, FraudInvestigation, FraudAnalytics } from '../lib/api'
+import type { AdjudicationQueueClaim, AdjudicationRule, AdjudicationAnalytics, FraudAlertDetail, FraudAlertsSummary, FraudInvestigation, FraudAnalytics, PayerAnalytics, IRDAIReport } from '../lib/api'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { Stat } from '../components/ui/Stat'
@@ -378,6 +378,10 @@ export default function Payer() {
   const [d1FraudAnalytics, setD1FraudAnalytics] = useState<FraudAnalytics | null>(null)
   const [investigatingAlert, setInvestigatingAlert] = useState<string | null>(null)
 
+  // Payer Analytics D1 state
+  const [d1PayerAnalytics, setD1PayerAnalytics] = useState<PayerAnalytics | null>(null)
+  const [d1IrdaiReport, setD1IrdaiReport] = useState<IRDAIReport | null>(null)
+
   useEffect(() => {
     let mounted = true
     async function load() {
@@ -582,11 +586,13 @@ export default function Payer() {
           setAdjAnalytics(adjAnalyticsRes as AdjudicationAnalytics)
         }
 
-        // ── 5. Fraud D1 data ─────────────────────────────────────
-        const [fraudAlertsRes, fraudInvRes, fraudAnalRes] = await Promise.all([
+        // ── 5. Fraud D1 data + Payer Analytics ───────────────────
+        const [fraudAlertsRes, fraudInvRes, fraudAnalRes, payerAnalRes, irdaiRes] = await Promise.all([
           payerAPI.fraudAlerts().catch(() => null),
           fraudAPI.investigations().catch(() => null),
           fraudAPI.analytics().catch(() => null),
+          payerAPI.analytics().catch(() => null),
+          payerAPI.irdaiReport().catch(() => null),
         ])
         if (mounted && fraudAlertsRes) {
           setD1FraudAlerts((fraudAlertsRes as any).alerts || [])
@@ -597,6 +603,14 @@ export default function Payer() {
         }
         if (mounted && fraudAnalRes) {
           setD1FraudAnalytics(fraudAnalRes as FraudAnalytics)
+        }
+
+        // ── 6. Payer Analytics + IRDAI ─────────────────────────────
+        if (mounted && payerAnalRes) {
+          setD1PayerAnalytics(payerAnalRes as PayerAnalytics)
+        }
+        if (mounted && irdaiRes) {
+          setD1IrdaiReport(irdaiRes as IRDAIReport)
         }
 
       } catch {
@@ -1746,68 +1760,166 @@ export default function Payer() {
       {/* ── Analytics ─────────────────────────────────────────────── */}
       {activeTab === 'analytics' && (
         <div className="space-y-6">
+          {/* Executive KPIs */}
+          {d1PayerAnalytics && (
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
+              <Stat label="YTD Loss Ratio" value={`${d1PayerAnalytics.loss_ratio.ytd}%`} className={d1PayerAnalytics.loss_ratio.ytd > 85 ? 'border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950' : 'border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950'} />
+              <Stat label="Total Premium" value={formatCurrency(d1PayerAnalytics.premium_summary.total_premium)} />
+              <Stat label="Claims Paid" value={formatCurrency(d1PayerAnalytics.claims_summary.total_paid)} />
+              <Stat label="Settlement Rate" value={`${d1PayerAnalytics.claims_summary.settlement_rate}%`} />
+              <Stat label="Lives Covered" value={d1PayerAnalytics.premium_summary.total_lives.toLocaleString()} />
+              <Stat label="Avg TAT" value={`${d1PayerAnalytics.tat.avg_days} days`} />
+            </div>
+          )}
+
+          {/* IRDAI Compliance Scorecard */}
+          {d1PayerAnalytics?.irdai_compliance && (
+            <Card header={<div className="flex items-center gap-2"><ShieldAlert className="h-4 w-4 text-primary" /><h3 className="font-semibold text-gray-900 dark:text-gray-100">IRDAI Compliance Scorecard</h3></div>}>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                {Object.entries(d1PayerAnalytics.irdai_compliance).map(([key, metric]) => (
+                  <div key={key} className={cn('rounded-lg border p-4', metric.status === 'compliant' ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950' : metric.status === 'warning' ? 'border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950' : 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950')}>
+                    <div className="mb-1 text-xs font-medium uppercase text-gray-500">{key.replace(/_/g, ' ')}</div>
+                    <div className="text-2xl font-bold">{typeof metric.value === 'number' ? (key === 'loss_ratio' ? `${metric.value}%` : `${metric.value}%`) : metric.value}</div>
+                    <div className="mt-1 text-xs text-gray-500">Threshold: {key === 'loss_ratio' ? `≤${metric.threshold}%` : `≥${metric.threshold}%`}</div>
+                    <Badge variant={metric.status === 'compliant' ? 'success' : metric.status === 'warning' ? 'warning' : 'error'} className="mt-2">{metric.status}</Badge>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            {/* Loss Ratio Trend */}
-            <Card
-              header={
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-primary" />
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                    Loss Ratio Trend (FY 2025-26)
-                  </h3>
-                </div>
-              }
-            >
-              <Chart
-                type="area"
-                data={LOSS_RATIO_DATA as Record<string, unknown>[]}
-                dataKeys={['ratio']}
-                xAxisKey="name"
-                height={300}
-                colors={['#EF4444']}
-              />
+            {/* Loss Ratio Trend — from D1 */}
+            <Card header={<div className="flex items-center gap-2"><TrendingUp className="h-4 w-4 text-primary" /><h3 className="font-semibold text-gray-900 dark:text-gray-100">Loss Ratio Trend (6 Months)</h3></div>}>
+              {d1PayerAnalytics?.loss_ratio.monthly.length ? (
+                <Chart
+                  type="area"
+                  data={d1PayerAnalytics.loss_ratio.monthly.map(m => ({ name: m.month, ratio: m.loss_ratio, premium: Math.round(m.total_premium / 100000), claims: Math.round(m.total_claims_paid / 100000) })) as Record<string, unknown>[]}
+                  dataKeys={['ratio']}
+                  xAxisKey="name"
+                  height={300}
+                  colors={['#EF4444']}
+                />
+              ) : (
+                <Chart type="area" data={LOSS_RATIO_DATA as Record<string, unknown>[]} dataKeys={['ratio']} xAxisKey="name" height={300} colors={['#EF4444']} />
+              )}
             </Card>
 
-            {/* Claims by Scheme */}
-            <Card
-              header={
-                <div className="flex items-center gap-2">
-                  <IndianRupee className="h-4 w-4 text-primary" />
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                    Portfolio Distribution
-                  </h3>
-                </div>
-              }
-            >
-              <Chart
-                type="bar"
-                data={PORTFOLIO_DATA as Record<string, unknown>[]}
-                dataKeys={['value']}
-                xAxisKey="name"
-                height={300}
-              />
+            {/* Portfolio Distribution — from D1 */}
+            <Card header={<div className="flex items-center gap-2"><IndianRupee className="h-4 w-4 text-primary" /><h3 className="font-semibold text-gray-900 dark:text-gray-100">Portfolio Distribution</h3></div>}>
+              {d1PayerAnalytics?.portfolio.by_scheme.length ? (
+                <Chart
+                  type="bar"
+                  data={d1PayerAnalytics.portfolio.by_scheme.map(s => ({ name: s.payer_scheme.replace(/_/g, ' '), value: s.percentage, claims: s.claims_count })) as Record<string, unknown>[]}
+                  dataKeys={['value']}
+                  xAxisKey="name"
+                  height={300}
+                />
+              ) : (
+                <Chart type="bar" data={PORTFOLIO_DATA as Record<string, unknown>[]} dataKeys={['value']} xAxisKey="name" height={300} />
+              )}
             </Card>
           </div>
 
-          {/* High-Cost Claimants */}
-          <Card
-            header={
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-warning" />
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                  High-Cost Claimants
-                </h3>
+          {/* Loss Ratio by Scheme */}
+          {d1PayerAnalytics?.loss_ratio.by_scheme.length ? (
+            <Card header={<div className="flex items-center gap-2"><BarChart3 className="h-4 w-4 text-primary" /><h3 className="font-semibold text-gray-900 dark:text-gray-100">Loss Ratio by Payer Scheme</h3></div>}>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b text-left text-xs text-gray-500"><th className="p-3">Scheme</th><th className="p-3">Premium Collected</th><th className="p-3">Claims Paid</th><th className="p-3">Loss Ratio</th><th className="p-3">Lives</th><th className="p-3">Threshold</th><th className="p-3">Status</th></tr></thead>
+                  <tbody>
+                    {d1PayerAnalytics.loss_ratio.by_scheme.map((s) => (
+                      <tr key={s.payer_scheme} className="border-b last:border-0">
+                        <td className="p-3 font-medium capitalize">{s.payer_scheme.replace(/_/g, ' ')}</td>
+                        <td className="p-3">{formatCurrency(s.total_premium)}</td>
+                        <td className="p-3">{formatCurrency(s.total_claims_paid)}</td>
+                        <td className="p-3 font-bold">{s.loss_ratio}%</td>
+                        <td className="p-3">{s.total_lives?.toLocaleString()}</td>
+                        <td className="p-3">{s.threshold}%</td>
+                        <td className="p-3"><Badge variant={s.compliant ? 'success' : 'error'}>{s.compliant ? 'Compliant' : 'Breach'}</Badge></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            }
-            padding="none"
-          >
-            <div className="p-0">
-              <Table
-                columns={highCostColumns}
-                data={HIGH_COST_CLAIMANTS as unknown as Record<string, unknown>[]}
+            </Card>
+          ) : null}
+
+          {/* Claims Trend */}
+          {d1PayerAnalytics?.claims_trend.length ? (
+            <Card header={<div className="flex items-center gap-2"><TrendingUp className="h-4 w-4 text-primary" /><h3 className="font-semibold text-gray-900 dark:text-gray-100">Claims Trend (6 Months)</h3></div>}>
+              <Chart
+                type="bar"
+                data={d1PayerAnalytics.claims_trend.map(m => ({ name: m.month, submitted: m.submitted, settled: m.settled, rejected: m.rejected })) as Record<string, unknown>[]}
+                dataKeys={['submitted', 'settled', 'rejected']}
+                xAxisKey="name"
+                height={280}
+                colors={['#3B82F6', '#10B981', '#EF4444']}
               />
+            </Card>
+          ) : null}
+
+          {/* High-Cost Claimants — from D1 */}
+          <Card header={<div className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-warning" /><h3 className="font-semibold text-gray-900 dark:text-gray-100">High-Cost Claimants</h3></div>}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr className="border-b text-left text-xs text-gray-500"><th className="p-3">Patient</th><th className="p-3">Scheme</th><th className="p-3">Claims</th><th className="p-3">Total Claimed</th><th className="p-3">Total Approved</th><th className="p-3">Avg Claim</th></tr></thead>
+                <tbody>
+                  {(d1PayerAnalytics?.high_cost_claimants.length ? d1PayerAnalytics.high_cost_claimants : HIGH_COST_CLAIMANTS.map(h => ({ patient_name: h.name, scheme: h.scheme, claim_count: h.claimsCount, total_claimed: h.totalClaimed, total_approved: 0, avg_claim: h.avgClaim, last_claim_date: '' }))).map((h, i) => (
+                    <tr key={i} className="border-b last:border-0">
+                      <td className="p-3 font-medium">{h.patient_name}</td>
+                      <td className="p-3 capitalize">{(h.scheme || '').replace(/_/g, ' ')}</td>
+                      <td className="p-3">{h.claim_count}</td>
+                      <td className="p-3">{formatCurrency(h.total_claimed)}</td>
+                      <td className="p-3">{formatCurrency(h.total_approved)}</td>
+                      <td className="p-3">{formatCurrency(h.avg_claim)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </Card>
+
+          {/* IRDAI Report Summary */}
+          {d1IrdaiReport && (
+            <Card header={<div className="flex items-center gap-2"><FileCheck className="h-4 w-4 text-primary" /><h3 className="font-semibold text-gray-900 dark:text-gray-100">IRDAI Regulatory Report — {d1IrdaiReport.period}</h3></div>}>
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                <div className="rounded-lg border p-3">
+                  <div className="text-xs text-gray-500">Premium Collected</div>
+                  <div className="text-lg font-bold">{formatCurrency(d1IrdaiReport.executive_summary.total_premium_collected)}</div>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <div className="text-xs text-gray-500">Claims Incurred</div>
+                  <div className="text-lg font-bold">{formatCurrency(d1IrdaiReport.executive_summary.total_claims_incurred)}</div>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <div className="text-xs text-gray-500">Overall Loss Ratio</div>
+                  <div className="text-lg font-bold">{d1IrdaiReport.executive_summary.overall_loss_ratio}%</div>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <div className="text-xs text-gray-500">Settlement Rate</div>
+                  <div className="text-lg font-bold">{d1IrdaiReport.executive_summary.settlement_rate}%</div>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <div className="text-xs text-gray-500">Lives Covered</div>
+                  <div className="text-lg font-bold">{d1IrdaiReport.executive_summary.total_lives_covered?.toLocaleString()}</div>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <div className="text-xs text-gray-500">Unique Claimants</div>
+                  <div className="text-lg font-bold">{d1IrdaiReport.executive_summary.unique_claimants}</div>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <div className="text-xs text-gray-500">Fraud Cases</div>
+                  <div className="text-lg font-bold">{d1IrdaiReport.executive_summary.fraud_cases_detected}</div>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <div className="text-xs text-gray-500">Fraud Recovery</div>
+                  <div className="text-lg font-bold">{formatCurrency(d1IrdaiReport.executive_summary.fraud_recovery)}</div>
+                </div>
+              </div>
+              <div className="mt-4 text-xs text-gray-400">Generated: {new Date(d1IrdaiReport.generated_at).toLocaleString('en-IN')}</div>
+            </Card>
+          )}
         </div>
       )}
     </div>

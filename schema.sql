@@ -459,3 +459,18 @@ CREATE INDEX IF NOT EXISTS idx_rules_scheme ON adjudication_rules(payer_scheme);
 CREATE INDEX IF NOT EXISTS idx_investigations_alert ON fraud_investigations(alert_id);
 CREATE INDEX IF NOT EXISTS idx_investigations_status ON fraud_investigations(status);
 CREATE INDEX IF NOT EXISTS idx_inv_notes_investigation ON fraud_investigation_notes(investigation_id);
+
+-- Premium Collections (for loss ratio analytics)
+CREATE TABLE IF NOT EXISTS premium_collections (
+  id TEXT PRIMARY KEY,
+  payer_scheme TEXT NOT NULL,
+  month TEXT NOT NULL,
+  premium_collected REAL NOT NULL DEFAULT 0,
+  lives_covered INTEGER NOT NULL DEFAULT 0,
+  new_policies INTEGER DEFAULT 0,
+  renewals INTEGER DEFAULT 0,
+  cancellations INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_premium_scheme ON premium_collections(payer_scheme);
+CREATE INDEX IF NOT EXISTS idx_premium_month ON premium_collections(month);
