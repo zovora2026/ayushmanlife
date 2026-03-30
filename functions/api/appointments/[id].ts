@@ -10,23 +10,73 @@ function json(data: unknown, status = 200) {
   });
 }
 
+export const onRequestGet: PagesFunction<Env> = async (context) => {
+  try {
+    const appointmentId = context.params.id as string;
+    const db = context.env.DB;
+
+    if (!db) {
+      return json({
+        appointment: {
+          id: appointmentId,
+          patient_id: 'pat-1010',
+          doctor_id: 'usr-002',
+          department: 'Cardiology',
+          date: '2026-03-30',
+          time: '10:00 AM',
+          duration_minutes: 30,
+          type: 'consultation',
+          status: 'scheduled',
+          notes: null,
+        },
+      });
+    }
+
+    const appointment = await db
+      .prepare(
+        `SELECT a.id, a.patient_id, p.name as patient_name,
+                a.doctor_id, u.name as doctor_name,
+                a.department, a.date, a.time, a.duration_minutes,
+                a.type, a.status, a.notes, a.created_at
+         FROM appointments a
+         LEFT JOIN patients p ON a.patient_id = p.id
+         LEFT JOIN users u ON a.doctor_id = u.id
+         WHERE a.id = ?`
+      )
+      .bind(appointmentId)
+      .first();
+
+    if (!appointment) {
+      return json({ error: 'Appointment not found' }, 404);
+    }
+
+    return json({ appointment });
+  } catch (error) {
+    console.error('Error fetching appointment:', error);
+    return json({ error: 'Failed to fetch appointment' }, 500);
+  }
+};
+
 export const onRequestPut: PagesFunction<Env> = async (context) => {
   try {
     const appointmentId = context.params.id as string;
     const db = context.env.DB;
     const body = (await context.request.json()) as {
       status?: string;
-      time_slot?: string;
+      time?: string;
       doctor_id?: string;
-      visit_reason?: string;
       notes?: string;
+      department?: string;
+      date?: string;
+      duration_minutes?: number;
+      type?: string;
     };
 
-    if (!body.status && !body.time_slot && !body.doctor_id) {
+    if (!body.status && !body.time && !body.doctor_id && !body.notes && !body.department && !body.date) {
       return json(
         {
           error:
-            'At least one field (status, time_slot, doctor_id) is required for update',
+            'At least one field (status, time, doctor_id, notes, department, date) is required for update',
         },
         400
       );
@@ -55,40 +105,50 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
         appointment: {
           id: appointmentId,
           status: body.status || 'confirmed',
-          time_slot: body.time_slot || '10:00 AM',
-          doctor_id: body.doctor_id || 'doc-001',
-          visit_reason: body.visit_reason || 'Routine consultation',
+          time: body.time || '10:00 AM',
+          doctor_id: body.doctor_id || 'usr-002',
           notes: body.notes || '',
-          updated_at: new Date().toISOString(),
+          department: body.department || 'Cardiology',
         },
       });
     }
 
     const updates: string[] = [];
-    const bindings: (string | null)[] = [];
+    const bindings: (string | number | null)[] = [];
 
     if (body.status) {
       updates.push('status = ?');
       bindings.push(body.status);
     }
-    if (body.time_slot) {
-      updates.push('time_slot = ?');
-      bindings.push(body.time_slot);
+    if (body.time) {
+      updates.push('time = ?');
+      bindings.push(body.time);
     }
     if (body.doctor_id) {
       updates.push('doctor_id = ?');
       bindings.push(body.doctor_id);
     }
-    if (body.visit_reason) {
-      updates.push('visit_reason = ?');
-      bindings.push(body.visit_reason);
+    if (body.department) {
+      updates.push('department = ?');
+      bindings.push(body.department);
+    }
+    if (body.date) {
+      updates.push('date = ?');
+      bindings.push(body.date);
+    }
+    if (body.duration_minutes !== undefined) {
+      updates.push('duration_minutes = ?');
+      bindings.push(body.duration_minutes);
+    }
+    if (body.type) {
+      updates.push('type = ?');
+      bindings.push(body.type);
     }
     if (body.notes !== undefined) {
       updates.push('notes = ?');
       bindings.push(body.notes);
     }
 
-    updates.push("updated_at = datetime('now')");
     bindings.push(appointmentId);
 
     await db
@@ -99,7 +159,16 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       .run();
 
     const appointment = await db
-      .prepare(`SELECT * FROM appointments WHERE id = ?`)
+      .prepare(
+        `SELECT a.id, a.patient_id, p.name as patient_name,
+                a.doctor_id, u.name as doctor_name,
+                a.department, a.date, a.time, a.duration_minutes,
+                a.type, a.status, a.notes, a.created_at
+         FROM appointments a
+         LEFT JOIN patients p ON a.patient_id = p.id
+         LEFT JOIN users u ON a.doctor_id = u.id
+         WHERE a.id = ?`
+      )
       .bind(appointmentId)
       .first();
 

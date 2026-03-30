@@ -138,11 +138,10 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       conditions.push(`(
         LOWER(name) LIKE ? OR
         phone LIKE ? OR
-        LOWER(email) LIKE ? OR
-        abha_id LIKE ?
+        LOWER(email) LIKE ?
       )`);
       const like = `%${q}%`;
-      bindings.push(like, like, like, like);
+      bindings.push(like, like, like);
     }
     if (insuranceType) {
       conditions.push('insurance_type = ?');
@@ -159,7 +158,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     // Get paginated results
     const patients = await context.env.DB.prepare(
-      `SELECT * FROM patients ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`
+      `SELECT * FROM patients ${where} ORDER BY registered_at DESC LIMIT ? OFFSET ?`
     ).bind(...bindings, limit, offset).all();
 
     return json({ patients: patients.results, total, page });
@@ -172,7 +171,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     const body = await context.request.json() as Record<string, unknown>;
     const { name, age, gender, phone, email, address, insurance_type, insurance_id,
-            aadhaar_last4, abha_id, blood_group, conditions } = body;
+            insurance_provider, blood_group, emergency_contact, medical_history,
+            allergies, chronic_conditions } = body;
 
     if (!name || !phone) {
       return json({ message: 'Name and phone are required' }, 400);
@@ -185,8 +185,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       // Mock fallback — return the patient as if created
       const patient = {
         id, name, age, gender, phone, email, address,
-        insurance_type, insurance_id, aadhaar_last4, abha_id,
-        blood_group, conditions: conditions || [],
+        insurance_type, insurance_id, aadhaar_last4: body.aadhaar_last4, abha_id: body.abha_id,
+        blood_group, conditions: body.conditions || [],
         created_at: now, updated_at: now,
       };
       return json({ patient, message: 'Patient created (mock)' }, 201);
@@ -195,16 +195,18 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // Real D1 insert
     await context.env.DB.prepare(
       `INSERT INTO patients (id, name, age, gender, phone, email, address,
-        insurance_type, insurance_id, aadhaar_last4, abha_id, blood_group,
-        conditions, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        insurance_type, insurance_id, insurance_provider, blood_group,
+        emergency_contact, medical_history, allergies, chronic_conditions,
+        registered_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       id,
       name, age || null, gender || null, phone, email || null, address || null,
-      insurance_type || null, insurance_id || null, aadhaar_last4 || null,
-      abha_id || null, blood_group || null,
-      JSON.stringify(conditions || []),
-      now, now
+      insurance_type || null, insurance_id || null, insurance_provider || null,
+      blood_group || null,
+      emergency_contact || null, medical_history || null,
+      allergies || null, chronic_conditions || null,
+      now
     ).run();
 
     const patient = await context.env.DB.prepare(

@@ -15,7 +15,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const id = context.params.id as string;
     if (!id) return json({ message: 'Claim ID is required' }, 400);
 
-    // Optional body: payer_scheme override, notes, submitted_by
+    // Optional body: payer_scheme override, submitted_by
     let body: Record<string, unknown> = {};
     try {
       body = await context.request.json() as Record<string, unknown>;
@@ -45,8 +45,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
         // Validate required fields for submission
         const missingFields: string[] = [];
-        if (!claim.patient_name) missingFields.push('patient_name');
-        if (!claim.diagnosis_text) missingFields.push('diagnosis_text');
+        if (!claim.patient_id) missingFields.push('patient_id');
+        if (!claim.diagnosis) missingFields.push('diagnosis');
         if (!claim.claimed_amount || Number(claim.claimed_amount) <= 0) missingFields.push('claimed_amount');
         if (!claim.payer_scheme && !body.payer_scheme) missingFields.push('payer_scheme');
 
@@ -68,10 +68,6 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         if (body.payer_scheme) {
           updates.push('payer_scheme = ?');
           params.push(body.payer_scheme);
-        }
-        if (body.notes) {
-          updates.push('notes = ?');
-          params.push(body.notes);
         }
 
         params.push(id); // WHERE id = ?

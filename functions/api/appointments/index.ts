@@ -141,23 +141,25 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       return json({ appointments });
     }
 
-    let query = `SELECT a.id, p.name as patient_name, a.patient_id,
-                        d_staff.name as doctor_name, dept.name as department,
-                        a.appointment_date, a.time_slot, a.status, a.type, a.visit_reason,
-                        p.abha_id, a.insurance
+    // D1 query using actual schema:
+    // appointments: id, patient_id, doctor_id, department, date, time, duration_minutes, type, status, notes, created_at
+    // Join patients for patient_name, join users for doctor_name
+    let query = `SELECT a.id, a.patient_id, p.name as patient_name,
+                        a.doctor_id, u.name as doctor_name,
+                        a.department, a.date, a.time, a.duration_minutes,
+                        a.type, a.status, a.notes, a.created_at
                  FROM appointments a
-                 JOIN patients p ON a.patient_id = p.id
-                 LEFT JOIN staff d_staff ON a.doctor_id = d_staff.id
-                 LEFT JOIN departments dept ON a.department_id = dept.id
+                 LEFT JOIN patients p ON a.patient_id = p.id
+                 LEFT JOIN users u ON a.doctor_id = u.id
                  WHERE 1=1`;
     const bindings: string[] = [];
 
     if (date) {
-      query += ` AND date(a.appointment_date) = ?`;
+      query += ` AND a.date = ?`;
       bindings.push(date);
     }
     if (department) {
-      query += ` AND dept.name = ?`;
+      query += ` AND a.department = ?`;
       bindings.push(department);
     }
     if (status) {
@@ -165,7 +167,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       bindings.push(status);
     }
 
-    query += ` ORDER BY a.appointment_date ASC, a.time_slot ASC LIMIT 100`;
+    query += ` ORDER BY a.date ASC, a.time ASC LIMIT 100`;
 
     const stmt = db.prepare(query);
     const { results } = await (bindings.length > 0
@@ -186,19 +188,19 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const body = (await context.request.json()) as {
       patient_id: string;
       doctor_id?: string;
-      department_id?: string;
-      appointment_date: string;
-      time_slot: string;
+      department: string;
+      date: string;
+      time: string;
+      duration_minutes?: number;
       type?: string;
-      visit_reason?: string;
-      insurance?: string;
+      notes?: string;
     };
 
-    if (!body.patient_id || !body.appointment_date || !body.time_slot) {
+    if (!body.patient_id || !body.department || !body.date || !body.time) {
       return json(
         {
           error:
-            'patient_id, appointment_date, and time_slot are required',
+            'patient_id, department, date, and time are required',
         },
         400
       );
@@ -213,13 +215,13 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
             id,
             patient_id: body.patient_id,
             doctor_id: body.doctor_id || null,
-            department_id: body.department_id || null,
-            appointment_date: body.appointment_date,
-            time_slot: body.time_slot,
-            type: body.type || 'New Consultation',
-            visit_reason: body.visit_reason || '',
-            insurance: body.insurance || 'Self-Pay',
+            department: body.department,
+            date: body.date,
+            time: body.time,
+            duration_minutes: body.duration_minutes || 30,
+            type: body.type || 'consultation',
             status: 'scheduled',
+            notes: body.notes || null,
             created_at: new Date().toISOString(),
           },
         },
@@ -229,19 +231,19 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     await db
       .prepare(
-        `INSERT INTO appointments (id, patient_id, doctor_id, department_id, appointment_date, time_slot, type, visit_reason, insurance, status, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', datetime('now'))`
+        `INSERT INTO appointments (id, patient_id, doctor_id, department, date, time, duration_minutes, type, status, notes)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'scheduled', ?)`
       )
       .bind(
         id,
         body.patient_id,
         body.doctor_id || null,
-        body.department_id || null,
-        body.appointment_date,
-        body.time_slot,
-        body.type || 'New Consultation',
-        body.visit_reason || '',
-        body.insurance || 'Self-Pay'
+        body.department,
+        body.date,
+        body.time,
+        body.duration_minutes || 30,
+        body.type || 'consultation',
+        body.notes || null
       )
       .run();
 

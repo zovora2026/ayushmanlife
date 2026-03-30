@@ -193,8 +193,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     const { results } = await db
       .prepare(
-        `SELECT id, conversation_id, role, content, created_at
-         FROM messages
+        `SELECT id, conversation_id, role, content, message_type, metadata, created_at
+         FROM chat_messages
          WHERE conversation_id = ?
          ORDER BY created_at ASC`
       )
@@ -226,8 +226,8 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     if (db) {
       await db
         .prepare(
-          `INSERT INTO messages (id, conversation_id, role, content, created_at)
-           VALUES (?, ?, 'user', ?, datetime('now'))`
+          `INSERT INTO chat_messages (id, conversation_id, role, content, message_type, created_at)
+           VALUES (?, ?, 'user', ?, 'text', datetime('now'))`
         )
         .bind(userMsgId, conversationId, body.content)
         .run();
@@ -238,7 +238,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     if (db) {
       const { results } = await db
         .prepare(
-          `SELECT role, content FROM messages
+          `SELECT role, content FROM chat_messages
            WHERE conversation_id = ?
            ORDER BY created_at ASC
            LIMIT 50`
@@ -320,8 +320,8 @@ Guidelines:
     if (db) {
       await db
         .prepare(
-          `INSERT INTO messages (id, conversation_id, role, content, created_at)
-           VALUES (?, ?, 'assistant', ?, datetime('now'))`
+          `INSERT INTO chat_messages (id, conversation_id, role, content, message_type, created_at)
+           VALUES (?, ?, 'assistant', ?, 'text', datetime('now'))`
         )
         .bind(assistantMsgId, conversationId, assistantContent)
         .run();
@@ -329,7 +329,7 @@ Guidelines:
       // Update conversation updated_at
       await db
         .prepare(
-          `UPDATE conversations SET updated_at = datetime('now') WHERE id = ?`
+          `UPDATE chat_conversations SET updated_at = datetime('now') WHERE id = ?`
         )
         .bind(conversationId)
         .run();

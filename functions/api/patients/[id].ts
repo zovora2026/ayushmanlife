@@ -164,10 +164,10 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
     // Fields allowed to be updated
     const allowedFields = [
-      'name', 'age', 'gender', 'date_of_birth', 'phone', 'email', 'address',
-      'insurance_type', 'insurance_id', 'aadhaar_last4', 'abha_id', 'blood_group',
-      'conditions', 'allergies', 'emergency_contact_name', 'emergency_contact_phone',
-      'emergency_contact_relation',
+      'name', 'age', 'gender', 'phone', 'email', 'address',
+      'insurance_type', 'insurance_id', 'insurance_provider', 'blood_group',
+      'emergency_contact', 'medical_history', 'allergies', 'chronic_conditions',
+      'risk_score', 'churn_risk', 'satisfaction_score',
     ];
 
     const updates: string[] = [];
@@ -190,8 +190,8 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       return json({ message: 'No valid fields to update' }, 400);
     }
 
-    // Always update updated_at
-    updates.push('updated_at = ?');
+    // Always update last_visit
+    updates.push('last_visit = ?');
     const now = new Date().toISOString();
     bindings.push(now);
 

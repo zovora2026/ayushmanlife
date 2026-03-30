@@ -26,8 +26,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
             ROUND(
               AVG(
                 CASE
-                  WHEN processed_at IS NOT NULL AND submitted_at IS NOT NULL
-                  THEN julianday(processed_at) - julianday(submitted_at)
+                  WHEN resolved_at IS NOT NULL AND submitted_at IS NOT NULL
+                  THEN julianday(resolved_at) - julianday(submitted_at)
                   ELSE NULL
                 END
               ), 1

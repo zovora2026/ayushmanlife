@@ -7,6 +7,14 @@ function json(data: unknown, status = 200, headers: Record<string, string> = {})
   });
 }
 
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   try {
     const { email, password } = await context.request.json() as { email: string; password: string };
@@ -18,7 +26,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       if (email === 'demo@ayushmanlife.in' && password === 'demo123') {
         const sessionId = 'mock-session-' + Date.now();
         return json({
-          user: { id: 'usr-001', email, name: 'Dr. Rajesh Kumar', role: 'admin', department: 'Administration' },
+          user: { id: 'usr-001', email, name: 'Dr. Demo User', role: 'admin', department: 'Administration' },
           message: 'Login successful',
         }, 200, {
           'Set-Cookie': `session=${sessionId}; Path=/; HttpOnly; SameSite=Lax; Max-Age=86400`,
@@ -34,9 +42,20 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     if (!user) return json({ message: 'Invalid credentials' }, 401);
 
-    // Simple password check (in production, use bcrypt via Web Crypto)
-    const passwordMatch = user.password_hash === password + '_hashed' ||
-      await verifyPassword(password, user.password_hash as string);
+    // Password verification:
+    // 1. For demo seed data: password_hash is 'demo123_hashed', accept password 'demo123'
+    // 2. For registered users: password_hash is SHA-256 hex, compare hashed input
+    const storedHash = user.password_hash as string;
+    let passwordMatch = false;
+
+    // Check demo-style placeholder hash (e.g., 'demo123_hashed')
+    if (storedHash === password + '_hashed') {
+      passwordMatch = true;
+    } else {
+      // Check SHA-256 hash for properly registered users
+      const inputHash = await hashPassword(password);
+      passwordMatch = inputHash === storedHash;
+    }
 
     if (!passwordMatch) return json({ message: 'Invalid credentials' }, 401);
 
@@ -60,13 +79,3 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     return json({ message: 'Login failed', error: String(err) }, 500);
   }
 };
-
-async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  // Use Web Crypto API for password verification
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  return hashHex === hash;
-}

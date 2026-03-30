@@ -154,47 +154,26 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       });
     }
 
-    const [churnResult, atRiskResult, reasonsResult, trendResult] =
+    const [churnResult, atRiskResult] =
       await Promise.all([
         db
           .prepare(
             `SELECT
-              ROUND(CAST(SUM(CASE WHEN last_visit < date('now', '-90 days') AND status = 'active' THEN 1 ELSE 0 END) AS REAL) /
+              ROUND(CAST(SUM(CASE WHEN last_visit < date('now', '-90 days') THEN 1 ELSE 0 END) AS REAL) /
                     NULLIF(COUNT(*), 0) * 100, 1) as churn_rate,
               COUNT(*) as total_active
-             FROM patients WHERE status = 'active'`
+             FROM patients`
           )
           .first<{ churn_rate: number; total_active: number }>(),
         db
           .prepare(
-            `SELECT p.id, p.name, p.age, p.gender, p.city,
-                    pc.churn_probability, p.last_visit,
-                    CAST(julianday('now') - julianday(p.last_visit) AS INTEGER) as days_since_visit,
-                    pc.conditions, pc.risk_factors, pc.recommended_retention
-             FROM patients p
-             JOIN patient_churn pc ON p.id = pc.patient_id
-             WHERE pc.churn_probability >= 0.7
-             ORDER BY pc.churn_probability DESC
+            `SELECT id, name, age, gender, churn_risk, last_visit,
+                    CAST(julianday('now') - julianday(last_visit) AS INTEGER) as days_since_visit,
+                    chronic_conditions, satisfaction_score
+             FROM patients
+             WHERE churn_risk IS NOT NULL AND churn_risk >= 0.7
+             ORDER BY churn_risk DESC
              LIMIT 20`
-          )
-          .all(),
-        db
-          .prepare(
-            `SELECT reason, ROUND(CAST(COUNT(*) AS REAL) / (SELECT COUNT(*) FROM patient_churn WHERE churn_probability >= 0.5) * 100, 1) as percentage
-             FROM patient_churn_reasons
-             GROUP BY reason
-             ORDER BY percentage DESC`
-          )
-          .all(),
-        db
-          .prepare(
-            `SELECT strftime('%Y-%m', calculated_at) as month,
-                    ROUND(AVG(churn_rate), 1) as churn_rate,
-                    SUM(retained_count) as retained
-             FROM churn_monthly
-             WHERE calculated_at >= date('now', '-6 months')
-             GROUP BY strftime('%Y-%m', calculated_at)
-             ORDER BY month ASC`
           )
           .all(),
       ]);
@@ -207,8 +186,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       at_risk_count: atRiskResult.results?.length || 0,
       total_active_patients: churnResult?.total_active || 0,
       at_risk_patients: atRiskResult.results || [],
-      churn_by_reason: reasonsResult.results || [],
-      monthly_trend: trendResult.results || [],
+      churn_by_reason: [],
+      monthly_trend: [],
     });
   } catch (error) {
     console.error('Error fetching churn analytics:', error);

@@ -97,7 +97,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     }
 
     const body = await context.request.json() as Record<string, unknown>;
-    const { type, value, unit, recorded_by, notes } = body;
+    const { type, value, unit, recorded_by, source } = body;
 
     // Validate required fields
     if (!type || value === undefined || value === null) {
@@ -130,7 +130,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
         unit: resolvedUnit,
         recorded_at: now,
         recorded_by: recorded_by || 'System',
-        notes: notes || null,
+        notes: body.notes || null,
       };
       return json({ vital, message: 'Vital recorded (mock)' }, 201);
     }
@@ -146,11 +146,11 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     // Real D1 insert
     await context.env.DB.prepare(
-      `INSERT INTO vitals (id, patient_id, type, value, unit, recorded_at, recorded_by, notes)
+      `INSERT INTO vitals (id, patient_id, type, value, unit, recorded_at, recorded_by, source)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     ).bind(
       vitalId, patientId, type, value, resolvedUnit, now,
-      recorded_by || 'System', notes || null
+      recorded_by || null, source || 'manual'
     ).run();
 
     const vital = await context.env.DB.prepare(

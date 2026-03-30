@@ -186,7 +186,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const bindings: string[] = [];
 
     if (severity) {
-      query += ` AND severity = ?`;
+      query += ` AND alert_type = ?`;
       bindings.push(severity);
     }
     if (status) {
@@ -194,7 +194,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       bindings.push(status);
     }
 
-    query += ` ORDER BY detected_at DESC LIMIT 50`;
+    query += ` ORDER BY created_at DESC LIMIT 50`;
 
     const stmt = db.prepare(query);
     const { results } = await (bindings.length > 0

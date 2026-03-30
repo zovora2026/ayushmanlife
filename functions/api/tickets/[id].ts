@@ -10,6 +10,60 @@ function json(data: unknown, status = 200) {
   });
 }
 
+export const onRequestGet: PagesFunction<Env> = async (context) => {
+  try {
+    const ticketId = context.params.id as string;
+    const db = context.env.DB;
+
+    if (!db) {
+      return json({
+        ticket: {
+          id: ticketId,
+          ticket_number: 'TKT-2026-0001',
+          title: 'Sample ticket',
+          description: 'Sample ticket description',
+          category: 'General',
+          priority: 'medium',
+          status: 'open',
+          assigned_to: null,
+          created_by: null,
+          sla_hours: 24,
+          sla_breached: 0,
+          resolution: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          resolved_at: null,
+        },
+      });
+    }
+
+    const ticket = await db
+      .prepare(
+        `SELECT t.id, t.ticket_number, t.title, t.description, t.category,
+                t.priority, t.status,
+                t.assigned_to, u_assigned.name as assigned_to_name,
+                t.created_by, u_creator.name as created_by_name,
+                t.sla_hours, t.sla_breached, t.resolution,
+                t.created_at, t.updated_at, t.resolved_at
+         FROM tickets t
+         LEFT JOIN users u_assigned ON t.assigned_to = u_assigned.id
+         LEFT JOIN users u_creator ON t.created_by = u_creator.id
+         WHERE t.id = ?`
+      )
+      .bind(ticketId)
+      .first();
+
+    if (!ticket) {
+      return json({ error: 'Ticket not found' }, 404);
+    }
+
+    return json({ ticket });
+  } catch (error) {
+    console.error('Error fetching ticket:', error);
+    return json({ error: 'Failed to fetch ticket' }, 500);
+  }
+};
+
 export const onRequestPut: PagesFunction<Env> = async (context) => {
   try {
     const ticketId = context.params.id as string;
@@ -18,8 +72,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       status?: string;
       assigned_to?: string;
       priority?: string;
-      resolution_notes?: string;
-      notes?: string;
+      resolution?: string;
     };
 
     const validStatuses = [
@@ -53,27 +106,24 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
         ticket: {
           id: ticketId,
           status: body.status || 'in-progress',
-          assigned_to: body.assigned_to || 'Neha Gupta',
+          assigned_to: body.assigned_to || null,
           priority: body.priority || 'high',
-          resolution_notes: body.resolution_notes || null,
-          notes: body.notes || null,
+          resolution: body.resolution || null,
           updated_at: new Date().toISOString(),
         },
       });
     }
 
     const updates: string[] = [];
-    const bindings: (string | null)[] = [];
+    const bindings: (string | number | null)[] = [];
 
     if (body.status) {
       updates.push('status = ?');
       bindings.push(body.status);
 
-      // Set resolved/closed timestamps
-      if (body.status === 'resolved') {
+      // Set resolved_at timestamp when resolving
+      if (body.status === 'resolved' || body.status === 'closed') {
         updates.push("resolved_at = datetime('now')");
-      } else if (body.status === 'closed') {
-        updates.push("closed_at = datetime('now')");
       }
     }
     if (body.assigned_to) {
@@ -84,13 +134,9 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       updates.push('priority = ?');
       bindings.push(body.priority);
     }
-    if (body.resolution_notes) {
-      updates.push('resolution_notes = ?');
-      bindings.push(body.resolution_notes);
-    }
-    if (body.notes) {
-      updates.push('notes = ?');
-      bindings.push(body.notes);
+    if (body.resolution !== undefined) {
+      updates.push('resolution = ?');
+      bindings.push(body.resolution);
     }
 
     if (updates.length === 0) {
@@ -112,10 +158,15 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
     const ticket = await db
       .prepare(
-        `SELECT t.*, p.name as patient_name, s.name as assigned_to_name
+        `SELECT t.id, t.ticket_number, t.title, t.description, t.category,
+                t.priority, t.status,
+                t.assigned_to, u_assigned.name as assigned_to_name,
+                t.created_by, u_creator.name as created_by_name,
+                t.sla_hours, t.sla_breached, t.resolution,
+                t.created_at, t.updated_at, t.resolved_at
          FROM tickets t
-         LEFT JOIN patients p ON t.patient_id = p.id
-         LEFT JOIN staff s ON t.assigned_to = s.id
+         LEFT JOIN users u_assigned ON t.assigned_to = u_assigned.id
+         LEFT JOIN users u_creator ON t.created_by = u_creator.id
          WHERE t.id = ?`
       )
       .bind(ticketId)

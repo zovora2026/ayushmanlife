@@ -136,12 +136,12 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
           .prepare(
             `SELECT
               ROUND(
-                (CAST(SUM(CASE WHEN rating >= 9 THEN 1 ELSE 0 END) AS REAL) -
-                 CAST(SUM(CASE WHEN rating <= 6 THEN 1 ELSE 0 END) AS REAL)) /
-                COUNT(*) * 100, 0
+                (CAST(SUM(CASE WHEN nps_score >= 9 THEN 1 ELSE 0 END) AS REAL) -
+                 CAST(SUM(CASE WHEN nps_score <= 6 THEN 1 ELSE 0 END) AS REAL)) /
+                NULLIF(COUNT(*), 0) * 100, 0
               ) as nps
              FROM feedback
-             WHERE created_at >= date('now', '-30 days') AND nps_rating IS NOT NULL`
+             WHERE created_at >= date('now', '-30 days') AND nps_score IS NOT NULL`
           )
           .first<{ nps: number }>(),
         db
@@ -153,21 +153,19 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
           .first<{ avg_rating: number; total_responses: number }>(),
         db
           .prepare(
-            `SELECT d.name as department, ROUND(AVG(f.rating), 1) as avg_rating, COUNT(*) as responses
+            `SELECT f.department, ROUND(AVG(f.rating), 1) as avg_rating, COUNT(*) as responses
              FROM feedback f
-             JOIN departments d ON f.department_id = d.id
-             WHERE f.created_at >= date('now', '-30 days')
-             GROUP BY d.name
+             WHERE f.created_at >= date('now', '-30 days') AND f.department IS NOT NULL
+             GROUP BY f.department
              ORDER BY avg_rating DESC`
           )
           .all(),
         db
           .prepare(
-            `SELECT f.id, p.name as patient_name, d.name as department,
+            `SELECT f.id, p.name as patient_name, f.department,
                     f.rating, f.comment, f.created_at as date, f.sentiment
              FROM feedback f
-             JOIN patients p ON f.patient_id = p.id
-             JOIN departments d ON f.department_id = d.id
+             LEFT JOIN patients p ON f.patient_id = p.id
              ORDER BY f.created_at DESC
              LIMIT 10`
           )

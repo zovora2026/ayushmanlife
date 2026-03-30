@@ -234,35 +234,27 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       return json(schedule);
     }
 
-    const { results } = await db
-      .prepare(
-        `SELECT sch.id, sch.shift, sch.shift_time, sch.location, sch.status,
-                s.id as staff_id, s.name, s.role, d.name as department
-         FROM schedule sch
-         JOIN staff s ON sch.staff_id = s.id
-         LEFT JOIN departments d ON s.department_id = d.id
-         WHERE sch.schedule_date = ?
-         ${department ? 'AND d.name = ?' : ''}
-         ORDER BY sch.shift ASC, s.name ASC`
-      )
-      .bind(...(department ? [date, department] : [date]))
-      .all();
+    let schedQuery = `SELECT id, user_id, date, shift_type, start_time, end_time, department, status
+         FROM shift_schedules
+         WHERE date = ?`;
+    const schedBindings: string[] = [date];
 
-    const onLeave = await db
-      .prepare(
-        `SELECT l.*, s.name, s.role, d.name as department
-         FROM leaves l
-         JOIN staff s ON l.staff_id = s.id
-         LEFT JOIN departments d ON s.department_id = d.id
-         WHERE ? BETWEEN l.leave_from AND l.leave_to`
-      )
-      .bind(date)
+    if (department) {
+      schedQuery += ` AND department = ?`;
+      schedBindings.push(department);
+    }
+
+    schedQuery += ` ORDER BY shift_type ASC, user_id ASC`;
+
+    const { results } = await db
+      .prepare(schedQuery)
+      .bind(...schedBindings)
       .all();
 
     return json({
       date,
       staff_schedule: results || [],
-      on_leave: onLeave.results || [],
+      on_leave: [],
     });
   } catch (error) {
     console.error('Error fetching schedule:', error);
@@ -324,23 +316,28 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       );
     }
 
+    const startEnd = (shiftTimes[body.shift] || '').split(' — ');
+    const startTime = body.shift_time ? body.shift_time.split(' — ')[0] : (startEnd[0] || '');
+    const endTime = body.shift_time ? body.shift_time.split(' — ')[1] : (startEnd[1] || '');
+
     await db
       .prepare(
-        `INSERT INTO schedule (id, staff_id, schedule_date, shift, shift_time, location, status, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, 'scheduled', datetime('now'))`
+        `INSERT INTO shift_schedules (id, user_id, date, shift_type, start_time, end_time, department, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'scheduled')`
       )
       .bind(
         id,
         body.staff_id,
         body.schedule_date,
         body.shift,
-        body.shift_time || shiftTimes[body.shift],
-        body.location || 'TBD'
+        startTime,
+        endTime,
+        body.location || ''
       )
       .run();
 
     const entry = await db
-      .prepare(`SELECT * FROM schedule WHERE id = ?`)
+      .prepare(`SELECT * FROM shift_schedules WHERE id = ?`)
       .bind(id)
       .first();
 

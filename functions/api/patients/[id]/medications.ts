@@ -134,9 +134,9 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     const body = await context.request.json() as Record<string, unknown>;
     const {
-      name, generic_name, dosage, frequency, route,
-      prescribed_by, prescribed_by_id, start_date, end_date,
-      instructions, indication, refills_remaining, pharmacy,
+      name, dosage, frequency, route,
+      prescribed_by, start_date, end_date,
+      reminder_enabled, adherence_rate, notes,
     } = body;
 
     // Validate required fields
@@ -153,17 +153,17 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       const medication = {
         id: medId,
         patient_id: patientId,
-        name, generic_name: generic_name || null,
+        name, generic_name: body.generic_name || null,
         dosage, frequency, route: route || 'Oral',
         prescribed_by: prescribed_by || 'Unknown',
-        prescribed_by_id: prescribed_by_id || null,
+        prescribed_by_id: body.prescribed_by_id || null,
         start_date: resolvedStartDate,
         end_date: end_date || null,
-        instructions: instructions || null,
-        indication: indication || null,
+        instructions: body.instructions || null,
+        indication: body.indication || null,
         status: 'active',
-        refills_remaining: refills_remaining ?? 0,
-        pharmacy: pharmacy || null,
+        refills_remaining: body.refills_remaining ?? 0,
+        pharmacy: body.pharmacy || null,
         created_at: now,
       };
       return json({ medication, message: 'Medication prescribed (mock)' }, 201);
@@ -181,18 +181,16 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // Real D1 insert
     await context.env.DB.prepare(
       `INSERT INTO medications (
-        id, patient_id, name, generic_name, dosage, frequency, route,
-        prescribed_by, prescribed_by_id, start_date, end_date,
-        instructions, indication, status, refills_remaining, pharmacy, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)`
+        id, patient_id, name, dosage, frequency, route,
+        prescribed_by, start_date, end_date,
+        status, reminder_enabled, adherence_rate, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)`
     ).bind(
       medId, patientId,
-      name, generic_name || null, dosage, frequency, route || 'Oral',
-      prescribed_by || 'Unknown', prescribed_by_id || null,
+      name, dosage, frequency, route || 'oral',
+      prescribed_by || null,
       resolvedStartDate, end_date || null,
-      instructions || null, indication || null,
-      refills_remaining ?? 0, pharmacy || null,
-      now
+      reminder_enabled ?? 1, adherence_rate ?? 0, notes || null
     ).run();
 
     const medication = await context.env.DB.prepare(

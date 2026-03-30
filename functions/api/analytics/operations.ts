@@ -84,25 +84,17 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
     const [
       turnaroundResult,
-      bedResult,
       claimsPerDayResult,
-      appointmentsPerDayResult,
       losResult,
-      deptResult,
+      staffOnShiftResult,
     ] = await Promise.all([
       db
         .prepare(
-          `SELECT ROUND(AVG(julianday(completed_at) - julianday(submitted_at)), 1) as avg_days
+          `SELECT ROUND(AVG(julianday(resolved_at) - julianday(submitted_at)), 1) as avg_days
            FROM claims
-           WHERE completed_at IS NOT NULL AND submitted_at >= date('now', '-30 days')`
+           WHERE resolved_at IS NOT NULL AND submitted_at >= date('now', '-30 days')`
         )
         .first<{ avg_days: number }>(),
-      db
-        .prepare(
-          `SELECT CASE WHEN total > 0 THEN ROUND(CAST(occupied AS REAL) / total * 100, 1) ELSE 0 END as occupancy
-           FROM (SELECT COUNT(*) as total, SUM(CASE WHEN status = 'occupied' THEN 1 ELSE 0 END) as occupied FROM beds)`
-        )
-        .first<{ occupancy: number }>(),
       db
         .prepare(
           `SELECT ROUND(CAST(COUNT(*) AS REAL) / 30, 0) as per_day
@@ -111,40 +103,27 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
         .first<{ per_day: number }>(),
       db
         .prepare(
-          `SELECT ROUND(CAST(COUNT(*) AS REAL) / 30, 0) as per_day
-           FROM appointments WHERE appointment_date >= date('now', '-30 days')`
-        )
-        .first<{ per_day: number }>(),
-      db
-        .prepare(
           `SELECT ROUND(AVG(julianday(discharge_date) - julianday(admission_date)), 1) as avg_los
-           FROM admissions
-           WHERE discharge_date IS NOT NULL AND admission_date >= date('now', '-30 days')`
+           FROM claims
+           WHERE discharge_date IS NOT NULL AND admission_date IS NOT NULL AND admission_date >= date('now', '-30 days')`
         )
         .first<{ avg_los: number }>(),
       db
         .prepare(
-          `SELECT d.name as department,
-                  ROUND(AVG(CAST((julianday(a.seen_at) - julianday(a.check_in_at)) * 24 * 60 AS INTEGER)), 0) as avg_wait_min,
-                  COUNT(*) / 30 as patients_per_day,
-                  (SELECT COUNT(*) FROM staff s WHERE s.department_id = d.id AND s.status = 'active') as staff_count
-           FROM appointments a
-           JOIN departments d ON a.department_id = d.id
-           WHERE a.appointment_date >= date('now', '-30 days') AND a.seen_at IS NOT NULL
-           GROUP BY d.name
-           ORDER BY patients_per_day DESC`
+          `SELECT COUNT(*) as count FROM shift_schedules WHERE date = date('now') AND status = 'scheduled'`
         )
-        .all(),
+        .first<{ count: number }>(),
     ]);
 
     return json({
       avg_turnaround_days: turnaroundResult?.avg_days || 0,
-      bed_occupancy_pct: bedResult?.occupancy || 0,
+      bed_occupancy_pct: 0,
       staff_utilization_pct: 0,
       claims_per_day: claimsPerDayResult?.per_day || 0,
-      appointments_per_day: appointmentsPerDayResult?.per_day || 0,
+      appointments_per_day: 0,
       avg_length_of_stay_days: losResult?.avg_los || 0,
-      by_department: deptResult.results || [],
+      staff_on_shift_today: staffOnShiftResult?.count || 0,
+      by_department: [],
     });
   } catch (error) {
     console.error('Error fetching operations analytics:', error);

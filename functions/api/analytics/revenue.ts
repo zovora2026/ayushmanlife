@@ -112,44 +112,31 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       });
     }
 
-    const [monthlyResult, payerResult, departmentResult, totalResult] =
+    const [monthlyResult, payerResult, totalResult] =
       await Promise.all([
         db
           .prepare(
-            `SELECT strftime('%Y-%m', payment_date) as month, SUM(amount) as revenue, COUNT(*) as claims_settled
-             FROM payments
-             WHERE payment_date >= date('now', '-6 months')
-             GROUP BY strftime('%Y-%m', payment_date)
+            `SELECT strftime('%Y-%m', submitted_at) as month, COALESCE(SUM(approved_amount), 0) as revenue, COUNT(*) as claims_settled
+             FROM claims
+             WHERE status = 'approved' AND submitted_at >= date('now', '-6 months')
+             GROUP BY strftime('%Y-%m', submitted_at)
              ORDER BY month ASC`
           )
           .all(),
         db
           .prepare(
-            `SELECT p.payer_name as payer, SUM(pay.amount) as revenue,
-                    ROUND(SUM(pay.amount) * 100.0 / (SELECT SUM(amount) FROM payments WHERE payment_date >= date('now', '-30 days')), 1) as percentage,
+            `SELECT payer_name as payer, COALESCE(SUM(approved_amount), 0) as revenue,
+                    ROUND(COALESCE(SUM(approved_amount), 0) * 100.0 / NULLIF((SELECT SUM(approved_amount) FROM claims WHERE status = 'approved' AND submitted_at >= date('now', '-30 days')), 0), 1) as percentage,
                     COUNT(*) as claims_count
-             FROM payments pay
-             JOIN payers p ON pay.payer_id = p.id
-             WHERE pay.payment_date >= date('now', '-30 days')
-             GROUP BY p.payer_name
+             FROM claims
+             WHERE status = 'approved' AND submitted_at >= date('now', '-30 days')
+             GROUP BY payer_name
              ORDER BY revenue DESC`
           )
           .all(),
         db
           .prepare(
-            `SELECT d.name as department, SUM(pay.amount) as revenue,
-                    ROUND(SUM(pay.amount) * 100.0 / (SELECT SUM(amount) FROM payments WHERE payment_date >= date('now', '-30 days')), 1) as percentage,
-                    ROUND(AVG(pay.amount), 0) as avg_ticket_size
-             FROM payments pay
-             JOIN departments d ON pay.department_id = d.id
-             WHERE pay.payment_date >= date('now', '-30 days')
-             GROUP BY d.name
-             ORDER BY revenue DESC`
-          )
-          .all(),
-        db
-          .prepare(
-            `SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE payment_date >= date('now', '-30 days')`
+            `SELECT COALESCE(SUM(approved_amount), 0) as total FROM claims WHERE status = 'approved' AND submitted_at >= date('now', '-30 days')`
           )
           .first<{ total: number }>(),
       ]);
@@ -160,7 +147,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       currency: 'INR',
       monthly: monthlyResult.results || [],
       by_payer: payerResult.results || [],
-      by_department: departmentResult.results || [],
+      by_department: [],
     });
   } catch (error) {
     console.error('Error fetching revenue analytics:', error);

@@ -330,10 +330,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // Try to get from request body first
     try {
       const body = await context.request.json() as Record<string, unknown>;
-      diagnosisText = (body.diagnosis_text as string) || null;
+      diagnosisText = (body.diagnosis as string) || (body.diagnosis_text as string) || null;
       claimedAmount = body.claimed_amount ? Number(body.claimed_amount) : undefined;
-      icd10Codes = (body.icd10_codes as string) || null;
-      cptCodes = (body.cpt_codes as string) || null;
+      icd10Codes = (body.diagnosis_codes as string) || (body.icd10_codes as string) || null;
+      cptCodes = (body.procedure_codes as string) || (body.cpt_codes as string) || null;
     } catch {
       // Body might be empty; we'll try DB
     }
@@ -342,19 +342,19 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     if (!diagnosisText && context.env.DB) {
       try {
         const claim = await context.env.DB.prepare(
-          'SELECT diagnosis_text, claimed_amount, icd10_codes, cpt_codes FROM claims WHERE id = ?'
+          'SELECT diagnosis, claimed_amount, diagnosis_codes, procedure_codes FROM claims WHERE id = ?'
         ).bind(id).first<{
-          diagnosis_text: string;
+          diagnosis: string;
           claimed_amount: number;
-          icd10_codes: string;
-          cpt_codes: string;
+          diagnosis_codes: string;
+          procedure_codes: string;
         }>();
 
         if (claim) {
-          diagnosisText = claim.diagnosis_text;
+          diagnosisText = claim.diagnosis;
           claimedAmount = claim.claimed_amount;
-          icd10Codes = claim.icd10_codes;
-          cptCodes = claim.cpt_codes;
+          icd10Codes = claim.diagnosis_codes;
+          cptCodes = claim.procedure_codes;
         }
       } catch (dbErr) {
         console.error('D1 fetch for analysis failed:', dbErr);

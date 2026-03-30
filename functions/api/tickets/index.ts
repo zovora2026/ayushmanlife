@@ -142,13 +142,19 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       return json({ tickets, total: tickets.length });
     }
 
-    let query = `SELECT t.id, t.title, t.description, t.category, t.priority, t.status,
-                        p.name as patient_name, s.name as assigned_to, d.name as department,
-                        t.created_at, t.updated_at, t.sla_due
+    // D1 query using actual schema:
+    // tickets: id, ticket_number, title, description, category, priority, status,
+    //          assigned_to (TEXT ref users.id), created_by (TEXT ref users.id),
+    //          sla_hours, sla_breached, resolution, created_at, updated_at, resolved_at
+    let query = `SELECT t.id, t.ticket_number, t.title, t.description, t.category,
+                        t.priority, t.status,
+                        t.assigned_to, u_assigned.name as assigned_to_name,
+                        t.created_by, u_creator.name as created_by_name,
+                        t.sla_hours, t.sla_breached, t.resolution,
+                        t.created_at, t.updated_at, t.resolved_at
                  FROM tickets t
-                 LEFT JOIN patients p ON t.patient_id = p.id
-                 LEFT JOIN staff s ON t.assigned_to = s.id
-                 LEFT JOIN departments d ON t.department_id = d.id
+                 LEFT JOIN users u_assigned ON t.assigned_to = u_assigned.id
+                 LEFT JOIN users u_creator ON t.created_by = u_creator.id
                  WHERE 1=1`;
     const bindings: string[] = [];
 
@@ -188,8 +194,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       description: string;
       category: string;
       priority?: string;
-      patient_id?: string;
-      department_id?: string;
+      assigned_to?: string;
     };
 
     if (!body.title || !body.description || !body.category) {
@@ -199,34 +204,35 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       );
     }
 
-    const id = `TKT-2026-${String(Date.now()).slice(-4)}`;
+    const id = crypto.randomUUID();
+    const ticketNumber = `TKT-${Date.now()}`;
     const priority = body.priority || 'medium';
 
-    // Calculate SLA based on priority
-    const slaHours: Record<string, number> = {
+    // Calculate SLA hours based on priority
+    const slaHoursMap: Record<string, number> = {
       critical: 4,
       high: 24,
       medium: 48,
       low: 72,
     };
-    const slaDue = new Date(
-      Date.now() + (slaHours[priority] || 48) * 60 * 60 * 1000
-    ).toISOString();
+    const slaHours = slaHoursMap[priority] || 24;
 
     if (!db) {
       return json(
         {
           ticket: {
             id,
+            ticket_number: ticketNumber,
             title: body.title,
             description: body.description,
             category: body.category,
             priority,
             status: 'open',
-            patient_id: body.patient_id || null,
-            department_id: body.department_id || null,
-            assigned_to: null,
-            sla_due: slaDue,
+            assigned_to: body.assigned_to || null,
+            created_by: null,
+            sla_hours: slaHours,
+            sla_breached: 0,
+            resolution: null,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           },
@@ -235,20 +241,23 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       );
     }
 
+    const userId = (context.data as any)?.currentUser?.id || null;
+
     await db
       .prepare(
-        `INSERT INTO tickets (id, title, description, category, priority, status, patient_id, department_id, sla_due, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, 'open', ?, ?, ?, datetime('now'), datetime('now'))`
+        `INSERT INTO tickets (id, ticket_number, title, description, category, priority, status, assigned_to, created_by, sla_hours)
+         VALUES (?, ?, ?, ?, ?, ?, 'open', ?, ?, ?)`
       )
       .bind(
         id,
+        ticketNumber,
         body.title,
         body.description,
         body.category,
         priority,
-        body.patient_id || null,
-        body.department_id || null,
-        slaDue
+        body.assigned_to || null,
+        userId,
+        slaHours
       )
       .run();
 

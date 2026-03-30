@@ -233,9 +233,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
           params.push(date_to + 'T23:59:59Z');
         }
         if (search) {
-          conditions.push('(c.patient_name LIKE ? OR c.claim_number LIKE ? OR c.diagnosis_text LIKE ?)');
+          conditions.push('(c.claim_number LIKE ? OR c.diagnosis LIKE ?)');
           const searchTerm = `%${search}%`;
-          params.push(searchTerm, searchTerm, searchTerm);
+          params.push(searchTerm, searchTerm);
         }
 
         const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -292,17 +292,16 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const body = await context.request.json() as Record<string, unknown>;
 
     const {
-      patient_id, patient_name, patient_abha,
-      payer_scheme, provider_name,
-      diagnosis_text, icd10_codes, cpt_codes,
-      claimed_amount, priority,
+      patient_id, payer_scheme, payer_name, policy_number,
+      diagnosis, diagnosis_codes, procedure_codes,
+      claimed_amount,
       admission_date, discharge_date,
     } = body;
 
     // Validate required fields
-    if (!patient_name) return json({ message: 'patient_name is required' }, 400);
+    if (!patient_id) return json({ message: 'patient_id is required' }, 400);
     if (!payer_scheme) return json({ message: 'payer_scheme is required' }, 400);
-    if (!diagnosis_text) return json({ message: 'diagnosis_text is required' }, 400);
+    if (!diagnosis) return json({ message: 'diagnosis is required' }, 400);
     if (!claimed_amount || Number(claimed_amount) <= 0) {
       return json({ message: 'claimed_amount must be a positive number' }, 400);
     }
@@ -318,20 +317,20 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       try {
         await context.env.DB.prepare(
           `INSERT INTO claims (
-            id, claim_number, patient_id, patient_name, patient_abha,
-            payer_scheme, provider_name,
-            diagnosis_text, icd10_codes, cpt_codes,
-            claimed_amount, approved_amount, status, priority,
+            id, claim_number, patient_id,
+            payer_scheme, payer_name, policy_number,
+            diagnosis, diagnosis_codes, procedure_codes,
+            claimed_amount, approved_amount, status,
             admission_date, discharge_date,
-            submitted_at, processed_at,
+            submitted_at, resolved_at,
             created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, NULL, NULL, ?, ?)`
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL, NULL, ?, ?)`
         ).bind(
           id, claim_number,
-          patient_id || null, patient_name, patient_abha || null,
-          payer_scheme, provider_name || null,
-          diagnosis_text, icd10_codes || null, cpt_codes || null,
-          Number(claimed_amount), status, priority || 'normal',
+          patient_id,
+          payer_scheme, payer_name || null, policy_number || null,
+          diagnosis, diagnosis_codes || null, procedure_codes || null,
+          Number(claimed_amount), status,
           admission_date || null, discharge_date || null,
           now, now,
         ).run();
@@ -351,22 +350,20 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const newClaim = {
       id,
       claim_number,
-      patient_id: patient_id || null,
-      patient_name,
-      patient_abha: patient_abha || null,
+      patient_id,
       payer_scheme,
-      provider_name: provider_name || null,
-      diagnosis_text,
-      icd10_codes: icd10_codes || null,
-      cpt_codes: cpt_codes || null,
+      payer_name: payer_name || null,
+      policy_number: policy_number || null,
+      diagnosis,
+      diagnosis_codes: diagnosis_codes || null,
+      procedure_codes: procedure_codes || null,
       claimed_amount: Number(claimed_amount),
       approved_amount: null,
       status,
-      priority: priority || 'normal',
       admission_date: admission_date || null,
       discharge_date: discharge_date || null,
       submitted_at: null,
-      processed_at: null,
+      resolved_at: null,
       created_at: now,
       updated_at: now,
     };

@@ -222,38 +222,35 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       return json({ claims, summary, currency: 'INR' });
     }
 
-    let query = `SELECT c.id, p.name as patient_name, c.patient_id, p.abha_id,
-                        pol.policy_name as policy, pol.payer,
-                        c.procedure_name as procedure, c.icd_code, c.package_code,
-                        c.claimed_amount, c.approved_amount, c.adjudication_status,
-                        c.submitted_date, c.adjudicated_date,
-                        c.hospital, s.name as treating_doctor,
-                        c.admission_date, c.discharge_date, c.los_days, c.remarks
+    let query = `SELECT c.id, p.name as patient_name, c.patient_id,
+                        c.payer_scheme, c.payer_name, c.policy_number,
+                        c.diagnosis, c.diagnosis_codes, c.procedure_codes,
+                        c.claimed_amount, c.approved_amount, c.status,
+                        c.submitted_at, c.resolved_at,
+                        c.admission_date, c.discharge_date, c.rejection_reason
                  FROM claims c
-                 JOIN patients p ON c.patient_id = p.id
-                 LEFT JOIN policies pol ON c.policy_id = pol.id
-                 LEFT JOIN staff s ON c.doctor_id = s.id
+                 LEFT JOIN patients p ON c.patient_id = p.id
                  WHERE 1=1`;
     const bindings: string[] = [];
 
     if (payer) {
-      query += ` AND pol.payer LIKE ?`;
+      query += ` AND c.payer_name LIKE ?`;
       bindings.push(`%${payer}%`);
     }
     if (adjudicationStatus) {
-      query += ` AND c.adjudication_status = ?`;
+      query += ` AND c.status = ?`;
       bindings.push(adjudicationStatus);
     }
     if (dateFrom) {
-      query += ` AND c.submitted_date >= ?`;
+      query += ` AND c.submitted_at >= ?`;
       bindings.push(dateFrom);
     }
     if (dateTo) {
-      query += ` AND c.submitted_date <= ?`;
+      query += ` AND c.submitted_at <= ?`;
       bindings.push(dateTo);
     }
 
-    query += ` ORDER BY c.submitted_date DESC LIMIT 100`;
+    query += ` ORDER BY c.submitted_at DESC LIMIT 100`;
 
     const stmt = db.prepare(query);
     const { results } = await (bindings.length > 0

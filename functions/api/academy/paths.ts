@@ -232,11 +232,11 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       bindings.push(category);
     }
     if (role) {
-      query += ` AND (target_role = ? OR target_role = 'All')`;
+      query += ` AND (difficulty = ? OR difficulty = 'All')`;
       bindings.push(role);
     }
 
-    query += ` ORDER BY rating DESC, enrolled DESC`;
+    query += ` ORDER BY modules_count DESC`;
 
     const stmt = db.prepare(query);
     const { results } = await (bindings.length > 0

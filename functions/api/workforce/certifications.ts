@@ -196,35 +196,28 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       return json({ certifications, summary });
     }
 
-    let query = `SELECT c.id, c.staff_id, s.name as staff_name, d.name as department,
-                        c.certification_name, c.issued_by, c.issued_date, c.valid_until,
-                        c.credential_id,
+    let query = `SELECT c.id, c.user_id, c.certification_name, c.issuing_body,
+                        c.certification_id, c.issued_date, c.expiry_date,
+                        c.status, c.verified,
                         CASE
-                          WHEN c.valid_until < date('now') THEN 'expired'
-                          WHEN c.valid_until < date('now', '+90 days') THEN 'expiring-soon'
+                          WHEN c.expiry_date < date('now') THEN 'expired'
+                          WHEN c.expiry_date < date('now', '+90 days') THEN 'expiring-soon'
                           ELSE 'active'
-                        END as status,
-                        CAST(julianday(c.valid_until) - julianday('now') AS INTEGER) as days_until_expiry
-                 FROM certifications c
-                 JOIN staff s ON c.staff_id = s.id
-                 LEFT JOIN departments d ON s.department_id = d.id
+                        END as computed_status,
+                        CAST(julianday(c.expiry_date) - julianday('now') AS INTEGER) as days_until_expiry
+                 FROM staff_certifications c
                  WHERE 1=1`;
     const bindings: string[] = [];
 
     if (statusFilter === 'expired') {
-      query += ` AND c.valid_until < date('now')`;
+      query += ` AND c.expiry_date < date('now')`;
     } else if (statusFilter === 'expiring-soon') {
-      query += ` AND c.valid_until >= date('now') AND c.valid_until < date('now', '+90 days')`;
+      query += ` AND c.expiry_date >= date('now') AND c.expiry_date < date('now', '+90 days')`;
     } else if (statusFilter === 'active') {
-      query += ` AND c.valid_until >= date('now', '+90 days')`;
+      query += ` AND c.expiry_date >= date('now', '+90 days')`;
     }
 
-    if (department) {
-      query += ` AND d.name = ?`;
-      bindings.push(department);
-    }
-
-    query += ` ORDER BY c.valid_until ASC`;
+    query += ` ORDER BY c.expiry_date ASC`;
 
     const stmt = db.prepare(query);
     const { results } = await (bindings.length > 0

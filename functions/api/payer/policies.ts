@@ -145,16 +145,16 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const bindings: string[] = [];
 
     if (payer) {
-      query += ` AND payer LIKE ?`;
+      query += ` AND provider_name LIKE ?`;
       bindings.push(`%${payer}%`);
     }
     if (status === 'active') {
-      query += ` AND active = 1`;
+      query += ` AND status = 'active'`;
     } else if (status === 'inactive') {
-      query += ` AND active = 0`;
+      query += ` AND status != 'active'`;
     }
 
-    query += ` ORDER BY beneficiaries DESC`;
+    query += ` ORDER BY coverage_amount DESC`;
 
     const stmt = db.prepare(query);
     const { results } = await (bindings.length > 0
@@ -227,18 +227,20 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       );
     }
 
+    const policyNumber = `POL-${Date.now()}`;
+
     await db
       .prepare(
-        `INSERT INTO policies (id, policy_name, payer, type, coverage_amount, active, packages_covered, start_date, end_date, description, created_at)
-         VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?, datetime('now'))`
+        `INSERT INTO policies (id, policy_number, scheme, provider_name, holder_name, coverage_amount, start_date, end_date, status, benefits, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, datetime('now'))`
       )
       .bind(
         id,
-        body.policy_name,
+        policyNumber,
+        body.type || '',
         body.payer,
-        body.type,
+        body.policy_name,
         body.coverage_amount || 0,
-        body.packages_covered || 0,
         body.start_date,
         body.end_date,
         body.description || ''

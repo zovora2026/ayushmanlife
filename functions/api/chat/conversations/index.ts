@@ -56,12 +56,12 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       });
     }
 
-    const userId = (context.data as any)?.user?.id || 'anonymous';
+    const userId = (context.data as any)?.currentUser?.id || 'anonymous';
 
     const { results } = await db
       .prepare(
         `SELECT id, title, mode, status, updated_at
-         FROM conversations
+         FROM chat_conversations
          WHERE user_id = ?
          ORDER BY updated_at DESC
          LIMIT 50`
@@ -106,18 +106,18 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       );
     }
 
-    const userId = (context.data as any)?.user?.id || 'anonymous';
+    const userId = (context.data as any)?.currentUser?.id || 'anonymous';
 
     await db
       .prepare(
-        `INSERT INTO conversations (id, user_id, patient_id, title, mode, status, created_at, updated_at)
+        `INSERT INTO chat_conversations (id, user_id, patient_id, title, mode, status, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, 'active', datetime('now'), datetime('now'))`
       )
       .bind(id, userId, body.patient_id || null, title, mode)
       .run();
 
     const conversation = await db
-      .prepare(`SELECT * FROM conversations WHERE id = ?`)
+      .prepare(`SELECT * FROM chat_conversations WHERE id = ?`)
       .bind(id)
       .first();
 

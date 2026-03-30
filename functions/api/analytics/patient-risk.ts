@@ -186,31 +186,28 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       await Promise.all([
         db
           .prepare(
-            `SELECT p.id, p.name, p.age, p.gender, p.city, pr.risk_score, pr.conditions, pr.last_admission, pr.readmission_risk, pr.recommended_actions
-             FROM patients p
-             JOIN patient_risk pr ON p.id = pr.patient_id
-             WHERE pr.risk_score >= 75
-             ORDER BY pr.risk_score DESC
+            `SELECT id, name, age, gender, risk_score, chronic_conditions, last_visit, medical_history
+             FROM patients
+             WHERE risk_score IS NOT NULL AND risk_score >= 75
+             ORDER BY risk_score DESC
              LIMIT 20`
           )
           .all(),
         db
           .prepare(
-            `SELECT p.id, p.name, p.age, p.gender, p.city, pr.risk_score, pr.conditions, pr.last_visit, pr.readmission_risk, pr.recommended_actions
-             FROM patients p
-             JOIN patient_risk pr ON p.id = pr.patient_id
-             WHERE pr.risk_score >= 40 AND pr.risk_score < 75
-             ORDER BY pr.risk_score DESC
+            `SELECT id, name, age, gender, risk_score, chronic_conditions, last_visit, medical_history
+             FROM patients
+             WHERE risk_score IS NOT NULL AND risk_score >= 40 AND risk_score < 75
+             ORDER BY risk_score DESC
              LIMIT 20`
           )
           .all(),
         db
           .prepare(
-            `SELECT p.id, p.name, p.age, p.gender, p.city, pr.risk_score, pr.conditions, pr.last_visit, pr.readmission_risk, pr.recommended_actions
-             FROM patients p
-             JOIN patient_risk pr ON p.id = pr.patient_id
-             WHERE pr.risk_score < 40
-             ORDER BY pr.risk_score DESC
+            `SELECT id, name, age, gender, risk_score, chronic_conditions, last_visit, medical_history
+             FROM patients
+             WHERE risk_score IS NOT NULL AND risk_score < 40
+             ORDER BY risk_score DESC
              LIMIT 20`
           )
           .all(),
@@ -220,7 +217,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
               SUM(CASE WHEN risk_score >= 75 THEN 1 ELSE 0 END) as total_high,
               SUM(CASE WHEN risk_score >= 40 AND risk_score < 75 THEN 1 ELSE 0 END) as total_medium,
               SUM(CASE WHEN risk_score < 40 THEN 1 ELSE 0 END) as total_low
-             FROM patient_risk`
+             FROM patients
+             WHERE risk_score IS NOT NULL`
           )
           .first<{
             total_high: number;

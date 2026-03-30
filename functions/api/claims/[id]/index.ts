@@ -151,13 +151,13 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
     // Allowed fields for update
     const UPDATABLE_FIELDS = [
-      'status', 'priority',
-      'diagnosis_text', 'icd10_codes', 'cpt_codes',
+      'status',
+      'diagnosis', 'diagnosis_codes', 'procedure_codes',
       'claimed_amount', 'approved_amount',
-      'payer_scheme', 'provider_name',
+      'payer_scheme', 'payer_name', 'policy_number',
       'admission_date', 'discharge_date',
-      'package_code', 'package_name', 'package_rate',
-      'rejection_reason', 'notes',
+      'rejection_reason', 'documents',
+      'ai_coding_confidence', 'ai_completeness_score', 'fhir_bundle',
     ];
 
     const updates: string[] = [];
@@ -179,9 +179,9 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     const now = new Date().toISOString();
     params.push(now);
 
-    // If status is changing to approved/rejected, set processed_at
+    // If status is changing to approved/rejected, set resolved_at
     if (body.status === 'approved' || body.status === 'rejected') {
-      updates.push('processed_at = ?');
+      updates.push('resolved_at = ?');
       params.push(now);
     }
 
@@ -224,7 +224,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     updatedClaim.updated_at = now;
 
     if (body.status === 'approved' || body.status === 'rejected') {
-      updatedClaim.processed_at = now;
+      updatedClaim.resolved_at = now;
     }
 
     return json({ claim: updatedClaim, message: 'Claim updated successfully (mock)' });

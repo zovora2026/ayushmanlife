@@ -185,19 +185,17 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     }
 
     const userId = (context.data as any)?.user?.id;
-    let query = `SELECT e.id, e.staff_id, s.name as staff_name, d.name as department,
-                        e.path_id, lp.title as path_title, e.status, e.progress,
-                        e.modules_completed, lp.modules as total_modules,
-                        e.enrolled_at, e.completed_at, e.certificate_issued, e.score, e.time_spent_hours
-                 FROM enrollments e
-                 JOIN staff s ON e.staff_id = s.id
+    let query = `SELECT e.id, e.user_id, e.path_id,
+                        lp.name as path_title, e.status, e.progress_percent,
+                        lp.modules_count as total_modules,
+                        e.started_at, e.completed_at
+                 FROM learning_enrollments e
                  JOIN learning_paths lp ON e.path_id = lp.id
-                 LEFT JOIN departments d ON s.department_id = d.id
                  WHERE 1=1`;
     const bindings: string[] = [];
 
     if (userId) {
-      query += ` AND e.staff_id = ?`;
+      query += ` AND e.user_id = ?`;
       bindings.push(userId);
     }
     if (statusFilter) {
@@ -205,7 +203,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       bindings.push(statusFilter);
     }
 
-    query += ` ORDER BY e.enrolled_at DESC`;
+    query += ` ORDER BY e.started_at DESC`;
 
     const stmt = db.prepare(query);
     const { results } = await (bindings.length > 0
@@ -262,7 +260,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // Check if already enrolled
     const existing = await db
       .prepare(
-        `SELECT id FROM enrollments WHERE staff_id = ? AND path_id = ? AND status != 'dropped'`
+        `SELECT id FROM learning_enrollments WHERE user_id = ? AND path_id = ? AND status != 'dropped'`
       )
       .bind(staffId, body.path_id)
       .first();
@@ -276,14 +274,14 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     await db
       .prepare(
-        `INSERT INTO enrollments (id, staff_id, path_id, status, progress, modules_completed, enrolled_at, certificate_issued, score, time_spent_hours)
-         VALUES (?, ?, ?, 'not-started', 0, 0, datetime('now'), 0, NULL, 0)`
+        `INSERT INTO learning_enrollments (id, user_id, path_id, status, progress_percent, started_at)
+         VALUES (?, ?, ?, 'not-started', 0, datetime('now'))`
       )
       .bind(id, staffId, body.path_id)
       .run();
 
     const enrollment = await db
-      .prepare(`SELECT * FROM enrollments WHERE id = ?`)
+      .prepare(`SELECT * FROM learning_enrollments WHERE id = ?`)
       .bind(id)
       .first();
 

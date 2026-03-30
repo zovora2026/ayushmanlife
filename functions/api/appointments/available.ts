@@ -141,31 +141,65 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       });
     }
 
-    let query = `SELECT s.id as doctor_id, s.name as doctor, s.qualification, d.name as department,
-                        ts.time_slot as time, ts.is_available as available,
-                        s.consultation_fee, s.room
-                 FROM time_slots ts
-                 JOIN staff s ON ts.doctor_id = s.id
-                 JOIN departments d ON s.department_id = d.id
-                 WHERE ts.slot_date = ?`;
-    const bindings: string[] = [date];
+    // D1 query: find doctors (users with role='doctor') and their booked appointments for the date
+    // Then compute available slots from a standard time grid
+    let doctorQuery = `SELECT id as doctor_id, name as doctor, department
+                       FROM users
+                       WHERE role = 'doctor'`;
+    const doctorBindings: string[] = [];
 
     if (department) {
-      query += ` AND d.name = ?`;
-      bindings.push(department);
+      doctorQuery += ` AND department = ?`;
+      doctorBindings.push(department);
     }
 
-    query += ` ORDER BY d.name, ts.time_slot ASC`;
+    doctorQuery += ` ORDER BY department, name`;
 
-    const { results } = await db
-      .prepare(query)
-      .bind(...bindings)
+    const doctorStmt = db.prepare(doctorQuery);
+    const { results: doctors } = await (doctorBindings.length > 0
+      ? doctorStmt.bind(...doctorBindings)
+      : doctorStmt
+    ).all();
+
+    // Get booked times for the given date
+    const { results: bookedAppointments } = await db
+      .prepare(
+        `SELECT doctor_id, time FROM appointments
+         WHERE date = ? AND status NOT IN ('cancelled', 'no-show')`
+      )
+      .bind(date)
       .all();
+
+    // Standard time slots
+    const standardSlots = [
+      '09:00 AM', '09:30 AM', '10:00 AM', '10:30 AM',
+      '11:00 AM', '11:30 AM', '02:00 PM', '02:30 PM',
+      '03:00 PM', '03:30 PM',
+    ];
+
+    // Build booked times map: doctor_id -> Set of booked times
+    const bookedMap = new Map<string, Set<string>>();
+    for (const appt of (bookedAppointments || [])) {
+      const docId = appt.doctor_id as string;
+      if (!bookedMap.has(docId)) bookedMap.set(docId, new Set());
+      bookedMap.get(docId)!.add(appt.time as string);
+    }
+
+    // Build response grouped by doctor
+    const slots = (doctors || []).map((doc: any) => ({
+      department: doc.department,
+      doctor: doc.doctor,
+      doctor_id: doc.doctor_id,
+      slots: standardSlots.map((time) => ({
+        time,
+        available: !(bookedMap.get(doc.doctor_id)?.has(time)),
+      })),
+    }));
 
     return json({
       date,
       currency: 'INR',
-      slots: results || [],
+      slots,
     });
   } catch (error) {
     console.error('Error fetching available slots:', error);

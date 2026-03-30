@@ -74,22 +74,16 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     const bindings: (string | number | null)[] = [];
 
     if (body.progress !== undefined) {
-      updates.push('progress = ?');
+      updates.push('progress_percent = ?');
       bindings.push(body.progress);
 
       // Auto-set status based on progress
       if (body.progress === 100 && !body.status) {
         updates.push("status = 'completed'");
         updates.push("completed_at = datetime('now')");
-        updates.push('certificate_issued = 1');
       } else if (body.progress > 0 && !body.status) {
         updates.push("status = 'in-progress'");
       }
-    }
-
-    if (body.modules_completed !== undefined) {
-      updates.push('modules_completed = ?');
-      bindings.push(body.modules_completed);
     }
 
     if (body.status) {
@@ -98,18 +92,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
       if (body.status === 'completed') {
         updates.push("completed_at = datetime('now')");
-        updates.push('certificate_issued = 1');
       }
-    }
-
-    if (body.score !== undefined) {
-      updates.push('score = ?');
-      bindings.push(body.score);
-    }
-
-    if (body.time_spent_hours !== undefined) {
-      updates.push('time_spent_hours = ?');
-      bindings.push(body.time_spent_hours);
     }
 
     if (updates.length === 0) {
@@ -119,22 +102,20 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
       );
     }
 
-    updates.push("updated_at = datetime('now')");
     bindings.push(enrollmentId);
 
     await db
       .prepare(
-        `UPDATE enrollments SET ${updates.join(', ')} WHERE id = ?`
+        `UPDATE learning_enrollments SET ${updates.join(', ')} WHERE id = ?`
       )
       .bind(...bindings)
       .run();
 
     const enrollment = await db
       .prepare(
-        `SELECT e.*, lp.title as path_title, s.name as staff_name
-         FROM enrollments e
+        `SELECT e.*, lp.name as path_title
+         FROM learning_enrollments e
          JOIN learning_paths lp ON e.path_id = lp.id
-         JOIN staff s ON e.staff_id = s.id
          WHERE e.id = ?`
       )
       .bind(enrollmentId)
