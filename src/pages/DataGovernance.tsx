@@ -1,4 +1,4 @@
-import { Database, Shield, FileText, CheckCircle, AlertTriangle, BarChart3, Lock, Eye } from 'lucide-react'
+import { Database, Shield, FileText, CheckCircle, AlertTriangle, BarChart3, Lock, Eye, ArrowRight, UserCheck, RefreshCw } from 'lucide-react'
 import { cn } from '../lib/utils'
 
 const qualityScores = [
@@ -139,6 +139,75 @@ export default function DataGovernance() {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Data Lineage */}
+      <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-5">
+        <h2 className="font-display font-semibold text-text dark:text-text-dark mb-4 flex items-center gap-2">
+          <RefreshCw className="w-5 h-5 text-primary" /> Data Lineage
+        </h2>
+        <p className="text-xs text-muted mb-4">Track how data flows across systems — from source to analytics</p>
+        <div className="space-y-3">
+          {[
+            { source: 'HIS / EMR', transforms: ['PHI Anonymization', 'Data Validation'], destination: 'Analytics Warehouse', records: '2.4M/day', status: 'Active' },
+            { source: 'Claims Engine', transforms: ['Deduplication', 'FHIR Mapping'], destination: 'Payer Gateway', records: '847/day', status: 'Active' },
+            { source: 'Lab Systems', transforms: ['HL7 Parsing', 'Quality Check'], destination: 'Patient Records', records: '1.2K/day', status: 'Active' },
+            { source: 'Wearable APIs', transforms: ['Normalization', 'Threshold Alert'], destination: 'V-Care Dashboard', records: '12K/day', status: 'Active' },
+          ].map((l, i) => (
+            <div key={i} className="flex items-center gap-2 p-3 rounded-lg bg-gray-50 dark:bg-slate-800 text-xs overflow-x-auto">
+              <span className="shrink-0 px-2 py-1 rounded bg-primary/10 text-primary font-medium">{l.source}</span>
+              <ArrowRight className="w-3 h-3 text-muted shrink-0" />
+              <div className="flex gap-1 shrink-0">
+                {l.transforms.map(t => (
+                  <span key={t} className="px-1.5 py-0.5 rounded bg-accent/10 text-accent font-medium">{t}</span>
+                ))}
+              </div>
+              <ArrowRight className="w-3 h-3 text-muted shrink-0" />
+              <span className="shrink-0 px-2 py-1 rounded bg-success/10 text-success font-medium">{l.destination}</span>
+              <span className="ml-auto shrink-0 text-muted">{l.records}</span>
+              <span className="shrink-0 w-2 h-2 rounded-full bg-success" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Consent Management */}
+      <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-5">
+        <h2 className="font-display font-semibold text-text dark:text-text-dark mb-4 flex items-center gap-2">
+          <UserCheck className="w-5 h-5 text-primary" /> Consent Management
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          {[
+            { label: 'Total Consents', value: '12,847', color: 'text-primary' },
+            { label: 'Active', value: '11,923', color: 'text-success' },
+            { label: 'Expired', value: '724', color: 'text-warning' },
+            { label: 'Revoked', value: '200', color: 'text-error' },
+          ].map(s => (
+            <div key={s.label} className="text-center p-3 rounded-lg bg-gray-50 dark:bg-slate-800">
+              <p className={cn('font-display font-bold text-xl', s.color)}>{s.value}</p>
+              <p className="text-xs text-muted mt-1">{s.label}</p>
+            </div>
+          ))}
+        </div>
+        <div className="space-y-2">
+          {[
+            { type: 'Treatment Data Sharing', consent: '98.2%', purpose: 'Clinical care coordination', dpdp: 'Compliant' },
+            { type: 'Insurance Claim Processing', consent: '94.7%', purpose: 'Payer claim submission', dpdp: 'Compliant' },
+            { type: 'Research & Analytics', consent: '67.3%', purpose: 'De-identified research data', dpdp: 'Compliant' },
+            { type: 'Marketing Communications', consent: '42.1%', purpose: 'Health tips & promotions', dpdp: 'Compliant' },
+          ].map(c => (
+            <div key={c.type} className="flex items-center gap-4 p-3 rounded-lg bg-gray-50 dark:bg-slate-800">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-text dark:text-text-dark">{c.type}</p>
+                <p className="text-xs text-muted">{c.purpose}</p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-sm font-bold text-primary">{c.consent}</p>
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-success/10 text-success">DPDP {c.dpdp}</span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

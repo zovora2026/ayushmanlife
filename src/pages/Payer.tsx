@@ -887,6 +887,14 @@ export default function Payer() {
             />
           </div>
 
+          {/* Fraud Detection KPIs */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <Stat label="Fraud Savings (YTD)" value={'\u20B94.2 Cr'} change={18.5} changeLabel="vs last year" icon={<ShieldAlert className="h-5 w-5" />} />
+            <Stat label="Alerts Generated" value="847" change={-12.3} changeLabel="fewer false positives" icon={<AlertTriangle className="h-5 w-5" />} />
+            <Stat label="Investigation Rate" value="94%" change={5.1} changeLabel="vs last quarter" icon={<Eye className="h-5 w-5" />} />
+            <Stat label="AI Detection Accuracy" value="97.2%" change={2.4} changeLabel="model improvement" icon={<TrendingUp className="h-5 w-5" />} />
+          </div>
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredFraudAlerts.map((alert) => (
               <Card

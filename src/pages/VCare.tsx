@@ -29,6 +29,12 @@ import {
   ArrowRight,
   ShieldCheck,
   Phone,
+  Watch,
+  Bluetooth,
+  BluetoothOff,
+  BatteryMedium,
+  BatteryLow,
+  Smartphone,
 } from 'lucide-react'
 import { useChatStore } from '../store/chatStore'
 import { patients as patientsAPI } from '../lib/api'
@@ -616,18 +622,164 @@ export default function VCare() {
           {contextLoading ? (
             <div className="flex items-center justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-muted" /></div>
           ) : (
-            <div className="grid grid-cols-2 gap-2">
-              {patientVitals.map((vital) => (
-                <div key={vital.label} className="flex items-center gap-2.5 rounded-lg border border-border bg-white px-3 py-2.5 dark:border-border-dark dark:bg-surface-dark">
-                  <vital.icon className={cn('h-4 w-4 shrink-0', vital.color)} />
-                  <div>
-                    <p className="text-[10px] font-medium text-muted">{vital.label}</p>
-                    <p className="text-sm font-bold text-text dark:text-text-dark">{vital.value}<span className="ml-0.5 text-[10px] font-normal text-muted">{vital.unit}</span></p>
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                {patientVitals.map((vital) => (
+                  <div key={vital.label} className="flex items-center gap-2.5 rounded-lg border border-border bg-white px-3 py-2.5 dark:border-border-dark dark:bg-surface-dark">
+                    <vital.icon className={cn('h-4 w-4 shrink-0', vital.color)} />
+                    <div>
+                      <p className="text-[10px] font-medium text-muted">{vital.label}</p>
+                      <p className="text-sm font-bold text-text dark:text-text-dark">{vital.value}<span className="ml-0.5 text-[10px] font-normal text-muted">{vital.unit}</span></p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Vitals Trend Mini-Charts */}
+              <div className="mt-4 space-y-3">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-muted">7-Day Trends</p>
+
+                {/* Blood Pressure Trend */}
+                <div className="rounded-lg border border-border bg-white p-3 dark:border-border-dark dark:bg-surface-dark">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Activity className="h-3 w-3 text-error" />
+                    <span className="text-[10px] font-medium text-text dark:text-text-dark">Blood Pressure</span>
+                  </div>
+                  <div className="flex items-end gap-1.5" style={{ height: '40px' }}>
+                    {[
+                      { h: '85%', color: 'bg-green-400' },
+                      { h: '92%', color: 'bg-red-400' },
+                      { h: '78%', color: 'bg-green-400' },
+                      { h: '88%', color: 'bg-green-400' },
+                      { h: '95%', color: 'bg-red-400' },
+                      { h: '82%', color: 'bg-green-400' },
+                      { h: '80%', color: 'bg-green-400' },
+                    ].map((bar, i) => (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
+                        <div className={cn('w-full rounded-sm', bar.color)} style={{ height: bar.h }} />
+                        <span className="text-[8px] text-muted">{['M','T','W','T','F','S','S'][i]}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
+
+                {/* Heart Rate Trend */}
+                <div className="rounded-lg border border-border bg-white p-3 dark:border-border-dark dark:bg-surface-dark">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Heart className="h-3 w-3 text-pink-500" />
+                    <span className="text-[10px] font-medium text-text dark:text-text-dark">Heart Rate</span>
+                  </div>
+                  <div className="flex items-end gap-1.5" style={{ height: '40px' }}>
+                    {['72%', '80%', '75%', '85%', '70%', '78%', '76%'].map((h, i) => (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
+                        <div className="w-full rounded-sm bg-primary" style={{ height: h }} />
+                        <span className="text-[8px] text-muted">{['M','T','W','T','F','S','S'][i]}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* SpO2 Trend */}
+                <div className="rounded-lg border border-border bg-white p-3 dark:border-border-dark dark:bg-surface-dark">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Droplets className="h-3 w-3 text-accent" />
+                    <span className="text-[10px] font-medium text-text dark:text-text-dark">SpO2</span>
+                  </div>
+                  <div className="flex items-end gap-1.5" style={{ height: '40px' }}>
+                    {[
+                      { h: '97%', val: 97 },
+                      { h: '95%', val: 95 },
+                      { h: '98%', val: 98 },
+                      { h: '92%', val: 92 },
+                      { h: '96%', val: 96 },
+                      { h: '89%', val: 89 },
+                      { h: '98%', val: 98 },
+                    ].map((dot, i) => (
+                      <div key={i} className="flex-1 flex flex-col items-center gap-0.5" style={{ height: '100%' }}>
+                        <div className="flex-1 flex items-end justify-center" style={{ paddingBottom: `calc(100% - ${dot.h})` }}>
+                          <div
+                            className={cn(
+                              'h-2.5 w-2.5 rounded-full',
+                              dot.val >= 95 ? 'bg-green-400' : dot.val >= 90 ? 'bg-yellow-400' : 'bg-red-400'
+                            )}
+                          />
+                        </div>
+                        <span className="text-[8px] text-muted">{['M','T','W','T','F','S','S'][i]}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
           )}
+        </Card>
+
+        {/* Connected Devices */}
+        <Card header={<div className="flex items-center gap-2"><Bluetooth className="h-4 w-4 text-primary" /><h3 className="font-display font-semibold text-text dark:text-text-dark">Connected Devices</h3></div>}>
+          <div className="space-y-3">
+            {[
+              {
+                name: 'Smart Watch',
+                icon: Watch,
+                connected: true,
+                lastSync: '5 min ago',
+                battery: 78,
+              },
+              {
+                name: 'BP Monitor',
+                icon: Activity,
+                connected: true,
+                lastSync: '2 hours ago',
+                battery: 45,
+              },
+              {
+                name: 'Glucometer',
+                icon: Smartphone,
+                connected: false,
+                lastSync: '2 days ago',
+                battery: null,
+              },
+            ].map((device) => (
+              <div key={device.name} className="flex items-center gap-3 rounded-lg border border-border bg-white px-3 py-2.5 dark:border-border-dark dark:bg-surface-dark">
+                <div className={cn(
+                  'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
+                  device.connected ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'
+                )}>
+                  <device.icon className={cn('h-4 w-4', device.connected ? 'text-green-600' : 'text-red-400')} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className={cn(
+                      'h-1.5 w-1.5 rounded-full shrink-0',
+                      device.connected ? 'bg-green-500' : 'bg-red-500'
+                    )} />
+                    <p className="text-xs font-semibold text-text dark:text-text-dark truncate">{device.name}</p>
+                  </div>
+                  <div className="mt-0.5 flex items-center gap-2 text-[10px] text-muted">
+                    <span className="flex items-center gap-0.5">
+                      {device.connected ? <Bluetooth className="h-2.5 w-2.5" /> : <BluetoothOff className="h-2.5 w-2.5" />}
+                      {device.connected ? 'Connected' : 'Disconnected'}
+                    </span>
+                    <span>Sync: {device.lastSync}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 text-[10px] text-muted shrink-0">
+                  {device.battery !== null ? (
+                    <>
+                      {device.battery > 50 ? (
+                        <BatteryMedium className="h-3.5 w-3.5 text-green-500" />
+                      ) : (
+                        <BatteryLow className="h-3.5 w-3.5 text-yellow-500" />
+                      )}
+                      <span className="font-medium">{device.battery}%</span>
+                    </>
+                  ) : (
+                    <span className="text-muted">N/A</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </Card>
 
         <Card header={<div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-primary" /><h3 className="font-display font-semibold text-text dark:text-text-dark">Upcoming Appointments</h3></div>} padding="none">

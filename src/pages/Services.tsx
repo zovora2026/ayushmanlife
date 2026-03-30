@@ -22,6 +22,14 @@ import {
   Bot,
   Tag,
   CheckCircle,
+  Workflow,
+  Monitor,
+  Stethoscope,
+  UserCheck,
+  GitPullRequest,
+  Package,
+  Database,
+  Award,
 } from 'lucide-react'
 import { cn, formatDate } from '../lib/utils'
 import { tickets as ticketsAPI } from '../lib/api'
@@ -157,6 +165,7 @@ const TABS = [
   { id: 'sla', label: 'SLA Dashboard', icon: <BarChart3 className="h-4 w-4" /> },
   { id: 'kb', label: 'Knowledge Base', icon: <BookOpen className="h-4 w-4" /> },
   { id: 'insurance-ops', label: 'Insurance Operations', icon: <ShieldCheck className="h-4 w-4" /> },
+  { id: 'servicenow', label: 'ServiceNow', icon: <Workflow className="h-4 w-4" /> },
 ]
 
 const FILTER_OPTIONS: TicketFilter[] = ['All', 'Open', 'In Progress', 'Resolved', 'Closed']
@@ -377,6 +386,139 @@ const INSURANCE_WORKFLOWS: AutomatedWorkflow[] = [
   { name: 'IRDAI Monthly Report Generation', triggeredToday: 1, lastRun: '2026-03-30T06:00:00', status: 'Active' },
   { name: 'Payer Reconciliation Batch', triggeredToday: 6, lastRun: '2026-03-30T13:00:00', status: 'Active' },
 ]
+
+// ── ServiceNow Healthcare Workflows Data ──────────────────────────────────────
+
+interface ServiceNowModule {
+  name: string
+  icon: React.ReactNode
+  metric1Label: string
+  metric1Value: string
+  metric2Label: string
+  metric2Value: string
+}
+
+const SERVICENOW_MODULES: ServiceNowModule[] = [
+  {
+    name: 'IT Service Management (ITSM)',
+    icon: <Monitor className="h-5 w-5" />,
+    metric1Label: 'Open Incidents',
+    metric1Value: '847',
+    metric2Label: 'SLA Compliance',
+    metric2Value: '99.2%',
+  },
+  {
+    name: 'Clinical Device Management',
+    icon: <Stethoscope className="h-5 w-5" />,
+    metric1Label: 'Devices Tracked',
+    metric1Value: '2,340',
+    metric2Label: 'Maintenance Due',
+    metric2Value: '12',
+  },
+  {
+    name: 'Provider Credentialing',
+    icon: <UserCheck className="h-5 w-5" />,
+    metric1Label: 'Active Providers',
+    metric1Value: '186',
+    metric2Label: 'Renewals Due',
+    metric2Value: '8',
+  },
+  {
+    name: 'Change Management',
+    icon: <GitPullRequest className="h-5 w-5" />,
+    metric1Label: 'Active Changes',
+    metric1Value: '23',
+    metric2Label: 'CAB Approvals Pending',
+    metric2Value: '3',
+  },
+  {
+    name: 'Asset Management',
+    icon: <Package className="h-5 w-5" />,
+    metric1Label: 'Total Assets',
+    metric1Value: '4,512',
+    metric2Label: 'Total Value',
+    metric2Value: '\u20B912.4 Cr',
+  },
+  {
+    name: 'CMDB Healthcare',
+    icon: <Database className="h-5 w-5" />,
+    metric1Label: 'CIs Mapped',
+    metric1Value: '1,847',
+    metric2Label: 'Accuracy',
+    metric2Value: '98.5%',
+  },
+]
+
+interface ServiceNowActivity {
+  ticketId: string
+  module: string
+  description: string
+  priority: 'P1' | 'P2' | 'P3' | 'P4'
+  assignedTo: string
+  status: 'In Progress' | 'Open' | 'Resolved' | 'Pending CAB'
+}
+
+const SERVICENOW_ACTIVITY: ServiceNowActivity[] = [
+  {
+    ticketId: 'INC0012847',
+    module: 'ITSM',
+    description: 'Network latency in ICU wing B',
+    priority: 'P2',
+    assignedTo: 'Infra Team',
+    status: 'In Progress',
+  },
+  {
+    ticketId: 'INC0012846',
+    module: 'Clinical Device Mgmt',
+    description: 'MRI scanner firmware update required',
+    priority: 'P3',
+    assignedTo: 'BioMed Team',
+    status: 'Open',
+  },
+  {
+    ticketId: 'CHG0004521',
+    module: 'Change Management',
+    description: 'EMR database migration to v12.3',
+    priority: 'P1',
+    assignedTo: 'DB Admin Team',
+    status: 'Pending CAB',
+  },
+  {
+    ticketId: 'CRED-00892',
+    module: 'Provider Credentialing',
+    description: 'Dr. Ananya Rao - license renewal verification',
+    priority: 'P3',
+    assignedTo: 'Credentialing Ops',
+    status: 'In Progress',
+  },
+  {
+    ticketId: 'INC0012845',
+    module: 'ITSM',
+    description: 'Pharmacy module timeout during shift change',
+    priority: 'P2',
+    assignedTo: 'App Support Team',
+    status: 'Resolved',
+  },
+]
+
+function getSnPriorityVariant(priority: string): 'error' | 'warning' | 'info' | 'neutral' {
+  switch (priority) {
+    case 'P1': return 'error'
+    case 'P2': return 'warning'
+    case 'P3': return 'info'
+    default: return 'neutral'
+  }
+}
+
+function getSnStatusVariant(status: string): 'error' | 'warning' | 'success' | 'info' | 'neutral' {
+  switch (status) {
+    case 'Open': return 'info'
+    case 'In Progress': return 'warning'
+    case 'Resolved': return 'success'
+    case 'Pending CAB': return 'neutral'
+    default: return 'info'
+  }
+}
 
 // ── Helpers ─────────────────────────────────────────────────────────────────────
 
@@ -1036,6 +1178,117 @@ export default function Services() {
                 </Card>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── ServiceNow Healthcare Workflows ─────────────────────── */}
+      {activeTab === 'servicenow' && (
+        <div className="space-y-6">
+          {/* Overview Banner */}
+          <Card className="border-primary/30 bg-primary/5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary dark:bg-primary/20">
+                  <Workflow className="h-6 w-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">ServiceNow Healthcare Workflows</h3>
+                    <Badge variant="info" size="sm">
+                      <Award className="h-3 w-3 mr-0.5" />
+                      Elite Partner
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                    Purpose-built ServiceNow modules for healthcare IT service management, clinical device management, and provider lifecycle workflows.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Badge variant="success" size="md">
+                  <Award className="h-3.5 w-3.5 mr-0.5" />
+                  2x Healthcare Partner of the Year
+                </Badge>
+              </div>
+            </div>
+          </Card>
+
+          {/* Active Workflows Grid */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              Active Workflow Modules
+            </h3>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {SERVICENOW_MODULES.map((mod) => (
+                <Card key={mod.name}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary dark:bg-primary/20">
+                        {mod.icon}
+                      </div>
+                      <h4 className="font-semibold text-gray-900 dark:text-gray-100">{mod.name}</h4>
+                    </div>
+                    <span className="flex items-center gap-1.5 text-xs font-medium text-success">
+                      <span className="h-2 w-2 rounded-full bg-success" />
+                      Active
+                    </span>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <div className="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{mod.metric1Label}</p>
+                      <p className="mt-0.5 text-lg font-bold text-gray-900 dark:text-gray-100">{mod.metric1Value}</p>
+                    </div>
+                    <div className="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/[0.03]">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{mod.metric2Label}</p>
+                      <p className="mt-0.5 text-lg font-bold text-gray-900 dark:text-gray-100">{mod.metric2Value}</p>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          {/* Recent ServiceNow Activity Table */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              Recent ServiceNow Activity
+            </h3>
+            <Table
+              columns={[
+                { key: 'ticketId', label: 'Ticket / ID' },
+                { key: 'module', label: 'Module' },
+                {
+                  key: 'description',
+                  label: 'Description',
+                  render: (item: Record<string, unknown>) => (
+                    <span className="max-w-[220px] truncate block font-medium text-gray-900 dark:text-gray-100">
+                      {item.description as string}
+                    </span>
+                  ),
+                },
+                {
+                  key: 'priority',
+                  label: 'Priority',
+                  render: (item: Record<string, unknown>) => (
+                    <Badge variant={getSnPriorityVariant(item.priority as string)} dot>
+                      {item.priority as string}
+                    </Badge>
+                  ),
+                },
+                { key: 'assignedTo', label: 'Assigned To' },
+                {
+                  key: 'status',
+                  label: 'Status',
+                  render: (item: Record<string, unknown>) => (
+                    <Badge variant={getSnStatusVariant(item.status as string)} dot>
+                      {item.status as string}
+                    </Badge>
+                  ),
+                },
+              ]}
+              data={SERVICENOW_ACTIVITY as unknown as Record<string, unknown>[]}
+            />
           </div>
         </div>
       )}
