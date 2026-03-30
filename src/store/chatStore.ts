@@ -29,8 +29,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   loadConversation: async (id?: string) => {
     try {
       if (id) {
-        const { messages } = await chatAPI.messages(id)
-        const mapped: ChatMessage[] = messages.map(m => ({
+        const res = await chatAPI.messages(id)
+        const rawMessages = res?.messages || []
+        const mapped: ChatMessage[] = rawMessages.map(m => ({
           id: m.id,
           role: m.role as 'user' | 'assistant',
           content: m.content,
@@ -64,15 +65,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       if (convId && !convId.startsWith('local-')) {
         // Real API call
-        const { assistantMessage } = await chatAPI.send(convId, content)
-        const mapped: ChatMessage = {
-          id: assistantMessage.id,
-          role: 'assistant',
-          content: assistantMessage.content,
-          timestamp: assistantMessage.created_at,
-          type: (assistantMessage.message_type || 'text') as ChatMessage['type'],
+        const res = await chatAPI.send(convId, content)
+        const assistantMessage = res?.assistantMessage
+        if (assistantMessage) {
+          const mapped: ChatMessage = {
+            id: assistantMessage.id,
+            role: 'assistant',
+            content: assistantMessage.content,
+            timestamp: assistantMessage.created_at,
+            type: (assistantMessage.message_type || 'text') as ChatMessage['type'],
+          }
+          set((s) => ({ messages: [...s.messages, mapped], isTyping: false }))
+        } else {
+          throw new Error('No assistant message in response')
         }
-        set((s) => ({ messages: [...s.messages, mapped], isTyping: false }))
         return
       }
     } catch {

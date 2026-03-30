@@ -65,7 +65,7 @@ export default function About() {
                   { value: '99.2%', label: 'Platform Uptime' },
                   { value: '94%', label: 'Patient Satisfaction' },
                 ].map(s => (
-                  <div key={s.label} className="p-5 rounded-xl bg-primary/5 text-center">
+                  <div key={s.label} className="p-5 rounded-xl bg-primary/5 dark:bg-primary/10 text-center">
                     <p className="font-display font-bold text-3xl text-primary">{s.value}</p>
                     <p className="text-sm text-muted mt-1">{s.label}</p>
                   </div>
@@ -133,7 +133,7 @@ export default function About() {
                 { name: 'Google Cloud', badge: 'Healthcare API', status: 'Technology Partner' },
                 { name: 'Workday', badge: 'HCM & Finance', status: 'Services Partner' },
               ].map(p => (
-                <div key={p.name} className="p-4 rounded-xl bg-gray-50 dark:bg-surface-dark border border-border dark:border-border-dark text-center">
+                <div key={p.name} className="p-4 rounded-xl bg-gray-50 dark:bg-gray-900 border border-border dark:border-border-dark text-center">
                   <p className="font-display font-semibold text-sm text-text dark:text-text-dark">{p.name}</p>
                   <p className="text-xs text-primary font-medium mt-1">{p.badge}</p>
                   <p className="text-[10px] text-muted mt-0.5">{p.status}</p>

@@ -217,28 +217,28 @@ export default function Dashboard() {
           <>
             <Stat
               label="Total Patients"
-              value={kpis ? kpis.total_patients.toLocaleString('en-IN') : '12,847'}
+              value={kpis?.total_patients != null ? kpis.total_patients.toLocaleString('en-IN') : '12,847'}
               change={8.2}
               changeLabel="vs last month"
               icon={<Users className="h-5 w-5" />}
             />
             <Stat
               label="Claims Processed"
-              value={kpis ? kpis.claims_this_month.toLocaleString('en-IN') : '1,247'}
+              value={kpis?.claims_this_month != null ? kpis.claims_this_month.toLocaleString('en-IN') : '1,247'}
               change={12.5}
               changeLabel="vs last month"
               icon={<FileCheck className="h-5 w-5" />}
             />
             <Stat
               label="Satisfaction Score"
-              value={kpis ? `${kpis.satisfaction_score}%` : '94.2%'}
+              value={kpis?.satisfaction_score != null ? `${kpis.satisfaction_score}%` : '94.2%'}
               change={3.1}
               changeLabel="vs last month"
               icon={<Heart className="h-5 w-5" />}
             />
             <Stat
               label="Revenue (MTD)"
-              value={kpis ? `\u20B9${(kpis.monthly_revenue / 10000000).toFixed(1)} Cr` : '\u20B92.4 Cr'}
+              value={kpis?.monthly_revenue != null ? `\u20B9${(kpis.monthly_revenue / 10000000).toFixed(1)} Cr` : '\u20B92.4 Cr'}
               change={-2.3}
               changeLabel="vs last month"
               icon={<IndianRupee className="h-5 w-5" />}

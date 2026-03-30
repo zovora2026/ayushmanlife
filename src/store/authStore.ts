@@ -13,8 +13,14 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => {
-  const stored = localStorage.getItem('ayushmanlife_user')
-  const initialUser = stored ? JSON.parse(stored) as User : null
+  let initialUser: User | null = null
+  try {
+    const stored = localStorage.getItem('ayushmanlife_user')
+    if (stored) initialUser = JSON.parse(stored) as User
+  } catch {
+    // Corrupted localStorage — start fresh
+    localStorage.removeItem('ayushmanlife_user')
+  }
 
   return {
     user: initialUser,

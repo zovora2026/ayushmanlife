@@ -50,13 +50,13 @@ export default function Hero({ stats }: { stats?: DashboardKPIs | null }) {
 
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30" />
 
-      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-32 md:py-40">
+      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-24 sm:py-32 md:py-40">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-white/90 text-sm mb-8 backdrop-blur-sm">
           <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
           AI-Native Healthcare Platform — Now Live
         </div>
 
-        <h1 className="font-display font-extrabold text-5xl md:text-7xl text-white leading-[1.1] tracking-tight mb-6">
+        <h1 className="font-display font-extrabold text-4xl sm:text-5xl md:text-7xl text-white leading-[1.1] tracking-tight mb-6">
           AI-Native Healthcare{' '}
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 to-blue-400">
             Platform for India
@@ -84,7 +84,7 @@ export default function Hero({ stats }: { stats?: DashboardKPIs | null }) {
           </Link>
         </div>
 
-        <div className="flex justify-center gap-8 sm:gap-12 mb-12">
+        <div className="flex flex-wrap justify-center gap-6 sm:gap-12 mb-12">
           {[
             { value: stats?.active_claims ?? 0, suffix: '+', label: 'Claims Processed' },
             { value: stats?.total_patients ?? 0, suffix: '+', label: 'Patients Served' },

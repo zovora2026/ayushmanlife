@@ -18,7 +18,7 @@ export function Tabs({ tabs, activeTab, onChange, className }: TabsProps) {
   return (
     <div
       className={cn(
-        'flex border-b border-border dark:border-border-dark',
+        'flex overflow-x-auto border-b border-border dark:border-border-dark scrollbar-hide',
         className
       )}
       role="tablist"
@@ -31,7 +31,7 @@ export function Tabs({ tabs, activeTab, onChange, className }: TabsProps) {
             role="tab"
             aria-selected={isActive}
             className={cn(
-              'relative flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors',
+              'relative flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap shrink-0',
               'hover:text-primary dark:hover:text-primary',
               isActive
                 ? 'text-primary dark:text-primary'

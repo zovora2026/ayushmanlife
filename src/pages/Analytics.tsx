@@ -200,7 +200,7 @@ export default function Analytics() {
   // ── Derive risk-tab display data (API -> fallback to mock) ──
   // Build a normalized patient list usable by the table
   const riskPatients = riskData
-    ? [...riskData.high_risk, ...riskData.medium_risk, ...riskData.low_risk].map((p) => ({
+    ? [...(riskData.high_risk || []), ...(riskData.medium_risk || []), ...(riskData.low_risk || [])].map((p) => ({
         id: p.id,
         name: p.name,
         age: p.age ?? 0,
@@ -231,17 +231,17 @@ export default function Analytics() {
   // ── Satisfaction display data ──
   const npsScore = satData ? satData.nps_score : 78
   const npsLabel = npsScore >= 70 ? 'Excellent' : npsScore >= 50 ? 'Good' : 'Needs Work'
-  const satDeptChart = satData
+  const satDeptChart = satData?.by_department
     ? satData.by_department.map((d) => ({ name: d.department, score: d.score ?? (d as Record<string, unknown>).avg_rating ?? 0 }))
     : (chartData.departmentSatisfaction as Record<string, unknown>[])
-  const satFeedback = satData
+  const satFeedback = satData?.recent_feedback
     ? satData.recent_feedback.map((f, i) => ({ id: i + 1, rating: f.rating, comment: f.comment, department: f.department, date: f.date }))
     : feedbackItems
 
   // ── Revenue display data ──
   const revTotal = revData ? `₹${(revData.total_revenue / 10000000).toFixed(1)} Cr` : '₹8.4 Cr'
   const revGrowth = revData ? revData.growth_rate : 5.2
-  const revDeptTable = revData
+  const revDeptTable = revData?.by_department
     ? revData.by_department.map((d) => ({
         name: d.department,
         revenue: d.amount ?? (d as Record<string, unknown>).revenue ?? 0,
@@ -249,10 +249,10 @@ export default function Analytics() {
         growth: 0,
       }))
     : departmentRevenueTable
-  const revByPayer = revData
+  const revByPayer = revData?.by_payer
     ? revData.by_payer.map((p) => ({ name: p.payer, revenue: p.amount ?? (p as Record<string, unknown>).revenue ?? 0 }))
     : (chartData.payerMix as Record<string, unknown>[])
-  const revByMonth = revData
+  const revByMonth = revData?.monthly
     ? revData.monthly.map((m) => ({ name: m.month, revenue: m.revenue, target: m.revenue }))
     : (chartData.revenueByMonth as Record<string, unknown>[])
 
@@ -288,10 +288,10 @@ export default function Analytics() {
         loading ? <LoadingSpinner /> : (
         <div className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <Stat label="Total Patients" value={dashboardData ? dashboardData.total_patients.toLocaleString('en-IN') : '12,847'} change={8.2} changeLabel="vs last month" icon={<Users className="h-5 w-5" />} />
-            <Stat label="Claims Processed" value={dashboardData ? dashboardData.claims_this_month.toLocaleString('en-IN') : '1,247'} change={12.5} changeLabel="vs last month" icon={<FileCheck className="h-5 w-5" />} />
-            <Stat label="Satisfaction" value={dashboardData ? `${dashboardData.satisfaction_score}` : '94.2%'} change={3.1} changeLabel="vs last month" icon={<Heart className="h-5 w-5" />} />
-            <Stat label="Revenue (MTD)" value={dashboardData ? `\u20B9${(dashboardData.monthly_revenue / 10000000).toFixed(1)} Cr` : '\u20B92.4 Cr'} change={-2.3} changeLabel="vs last month" icon={<IndianRupee className="h-5 w-5" />} />
+            <Stat label="Total Patients" value={dashboardData?.total_patients != null ? dashboardData.total_patients.toLocaleString('en-IN') : '12,847'} change={8.2} changeLabel="vs last month" icon={<Users className="h-5 w-5" />} />
+            <Stat label="Claims Processed" value={dashboardData?.claims_this_month != null ? dashboardData.claims_this_month.toLocaleString('en-IN') : '1,247'} change={12.5} changeLabel="vs last month" icon={<FileCheck className="h-5 w-5" />} />
+            <Stat label="Satisfaction" value={dashboardData?.satisfaction_score != null ? `${dashboardData.satisfaction_score}%` : '94.2%'} change={3.1} changeLabel="vs last month" icon={<Heart className="h-5 w-5" />} />
+            <Stat label="Revenue (MTD)" value={dashboardData?.monthly_revenue != null ? `\u20B9${(dashboardData.monthly_revenue / 10000000).toFixed(1)} Cr` : '\u20B92.4 Cr'} change={-2.3} changeLabel="vs last month" icon={<IndianRupee className="h-5 w-5" />} />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

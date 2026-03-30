@@ -83,7 +83,7 @@ export default function Navbar() {
                   to="/login"
                   className={cn(
                     'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                    isLanding && !scrolled ? 'text-white/80 hover:text-white' : 'text-muted hover:text-text'
+                    isLanding && !scrolled ? 'text-white/80 hover:text-white' : 'text-muted hover:text-text dark:hover:text-text-dark'
                   )}
                 >
                   <LogIn className="w-4 h-4" /> Login

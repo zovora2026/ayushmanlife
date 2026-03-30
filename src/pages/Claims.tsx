@@ -249,14 +249,14 @@ export default function Claims() {
           ))
         ) : (
           <>
-            <Stat label="Total Claims" value={stats ? stats.total_claims.toLocaleString('en-IN') : '1,247'}
+            <Stat label="Total Claims" value={stats?.total_claims != null ? stats.total_claims.toLocaleString('en-IN') : '1,247'}
               change={12.5} changeLabel="vs last month" icon={<FileCheck className="h-5 w-5" />} />
-            <Stat label="Approval Rate" value={stats ? `${stats.approval_rate}%` : '87.3%'}
+            <Stat label="Approval Rate" value={stats?.approval_rate != null ? `${stats.approval_rate}%` : '87.3%'}
               change={3.2} changeLabel="vs last month" icon={<CheckCircle2 className="h-5 w-5" />} />
-            <Stat label="Avg Processing Time" value={stats ? `${stats.avg_processing_days} days` : '2.4 days'}
+            <Stat label="Avg Processing Time" value={stats?.avg_processing_days != null ? `${stats.avg_processing_days} days` : '2.4 days'}
               change={-8.1} changeLabel="faster" icon={<Clock className="h-5 w-5" />} />
             <Stat label="Pending Amount"
-              value={stats ? formatCurrency(stats.total_amount - stats.approved_amount) : '\u20B91.23 Cr'}
+              value={stats?.total_amount != null && stats?.approved_amount != null ? formatCurrency(stats.total_amount - stats.approved_amount) : '\u20B91.23 Cr'}
               change={-5.4} changeLabel="vs last month" icon={<IndianRupee className="h-5 w-5" />} />
           </>
         )}
@@ -277,7 +277,7 @@ export default function Claims() {
 
       {viewMode === 'table' && (
         <Card padding="none">
-          <div className="flex flex-wrap gap-2 border-b border-border px-5 py-4 dark:border-border-dark">
+          <div className="flex flex-wrap gap-2 border-b border-border px-5 py-4 dark:border-border-dark overflow-x-auto scrollbar-hide">
             {statusFilters.map((filter) => (
               <button key={filter} onClick={() => setActiveFilter(filter)}
                 className={cn('rounded-full px-3 py-1.5 text-xs font-medium transition-colors',

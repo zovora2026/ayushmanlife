@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { GraduationCap, Users, Award, Clock, BookOpen, Star, ChevronRight, BarChart3, CheckCircle, AlertTriangle, Loader2, Target, TrendingUp, Database, RefreshCw, Layers, Calendar, Rocket, Shield, ArrowRight, Zap, Activity } from 'lucide-react'
 import { cn } from '../lib/utils'
-import { academy as academyAPI } from '../lib/api'
+import { academy as academyAPI, workforce as workforceAPI } from '../lib/api'
 
 const tabs = ['Dashboard', 'Learning Paths', 'Certifications', 'Apprenticeship', 'Go-Live Center', 'Skill Assessment', 'ERP Services']
 
@@ -14,6 +14,33 @@ interface LearningPathData {
   duration: string
   enrolled: number
   category: string
+}
+
+interface EnrollmentSummary {
+  totalEnrollments: number
+  completedCount: number
+  inProgressCount: number
+  notStartedCount: number
+  avgProgress: number
+  certificatesIssued: number
+  activeLearners: number
+  totalHoursSpent: number
+}
+
+interface CertificationRow {
+  staff: string
+  cert: string
+  status: 'Active' | 'Expiring' | 'Expired'
+  expiry: string
+  verified: boolean
+}
+
+interface CertSummary {
+  total: number
+  active: number
+  expiringSoon: number
+  expired: number
+  complianceRate: number
 }
 
 const DEFAULT_LEARNING_PATHS: LearningPathData[] = [
@@ -29,16 +56,35 @@ const DEFAULT_LEARNING_PATHS: LearningPathData[] = [
   { id: '10', title: 'Workday for Healthcare', modules: 12, completed: 0, difficulty: 'Beginner', duration: '55 hrs', enrolled: 89, category: 'ERP' },
 ]
 
-const certifications = [
-  { staff: 'Dr. Priya Sharma', cert: 'Epic Certified Analyst', status: 'Active' as const, expiry: '2027-06-15', verified: true },
-  { staff: 'Amit Patel', cert: 'ServiceNow CSA', status: 'Active' as const, expiry: '2026-12-01', verified: true },
-  { staff: 'Meera Reddy', cert: 'AWS Solutions Architect', status: 'Expiring' as const, expiry: '2026-05-15', verified: true },
-  { staff: 'Rajesh Kumar', cert: 'CISSP', status: 'Active' as const, expiry: '2027-03-20', verified: true },
-  { staff: 'Sunita Agarwal', cert: 'Oracle Health Certified', status: 'Expired' as const, expiry: '2026-01-10', verified: false },
-  { staff: 'Vikram Singh', cert: 'Azure Administrator', status: 'Active' as const, expiry: '2027-09-01', verified: true },
-  { staff: 'Anita Desai', cert: 'PMP', status: 'Expiring' as const, expiry: '2026-04-30', verified: true },
-  { staff: 'Deepak Joshi', cert: 'ITIL v4 Foundation', status: 'Active' as const, expiry: '2028-01-15', verified: true },
+const DEFAULT_CERTIFICATIONS: CertificationRow[] = [
+  { staff: 'Dr. Priya Sharma', cert: 'Epic Certified Analyst', status: 'Active', expiry: '2027-06-15', verified: true },
+  { staff: 'Amit Patel', cert: 'ServiceNow CSA', status: 'Active', expiry: '2026-12-01', verified: true },
+  { staff: 'Meera Reddy', cert: 'AWS Solutions Architect', status: 'Expiring', expiry: '2026-05-15', verified: true },
+  { staff: 'Rajesh Kumar', cert: 'CISSP', status: 'Active', expiry: '2027-03-20', verified: true },
+  { staff: 'Sunita Agarwal', cert: 'Oracle Health Certified', status: 'Expired', expiry: '2026-01-10', verified: false },
+  { staff: 'Vikram Singh', cert: 'Azure Administrator', status: 'Active', expiry: '2027-09-01', verified: true },
+  { staff: 'Anita Desai', cert: 'PMP', status: 'Expiring', expiry: '2026-04-30', verified: true },
+  { staff: 'Deepak Joshi', cert: 'ITIL v4 Foundation', status: 'Active', expiry: '2028-01-15', verified: true },
 ]
+
+const DEFAULT_ENROLLMENT_SUMMARY: EnrollmentSummary = {
+  totalEnrollments: 8,
+  completedCount: 3,
+  inProgressCount: 4,
+  notStartedCount: 1,
+  avgProgress: 64,
+  certificatesIssued: 3,
+  activeLearners: 342,
+  totalHoursSpent: 12450,
+}
+
+const DEFAULT_CERT_SUMMARY: CertSummary = {
+  total: 8,
+  active: 5,
+  expiringSoon: 2,
+  expired: 1,
+  complianceRate: 87.5,
+}
 
 const cohorts = [
   { name: 'Cohort Alpha 2026', size: 25, startDate: '2026-01-15', phase: 'Deployment', completion: 72 },
@@ -56,29 +102,117 @@ export default function Academy() {
   const [activeTab, setActiveTab] = useState('Dashboard')
   const [loading, setLoading] = useState(true)
   const [learningPaths, setLearningPaths] = useState<LearningPathData[]>(DEFAULT_LEARNING_PATHS)
+  const [enrollmentSummary, setEnrollmentSummary] = useState<EnrollmentSummary>(DEFAULT_ENROLLMENT_SUMMARY)
+  const [certifications, setCertifications] = useState<CertificationRow[]>(DEFAULT_CERTIFICATIONS)
+  const [certSummary, setCertSummary] = useState<CertSummary>(DEFAULT_CERT_SUMMARY)
 
   useEffect(() => {
     let mounted = true
     async function load() {
       try {
-        const [pathsRes] = await Promise.all([
+        const [pathsRes, enrollRes, certRes] = await Promise.all([
           academyAPI.paths().catch(() => null),
           academyAPI.enrollments().catch(() => null),
+          workforceAPI.certifications().catch(() => null),
         ])
-        if (mounted && pathsRes?.paths?.length) {
-          setLearningPaths(pathsRes.paths.map((p) => ({
-            id: p.id,
-            title: p.name,
-            modules: p.modules_count,
-            completed: 0,
-            difficulty: p.difficulty,
-            duration: p.estimated_hours ? `${p.estimated_hours} hrs` : 'N/A',
-            enrolled: 0,
-            category: p.category,
+
+        // Build enrollment lookup: path_id -> list of enrollments
+        const enrollmentsByPath: Record<string, { progress: number; status: string; time_spent_hours?: number }[]> = {}
+        const rawEnrollments: { status: string; progress: number; certificate_issued?: boolean; time_spent_hours?: number; modules_completed?: number; total_modules?: number }[] = []
+        if (enrollRes && (enrollRes as any).enrollments?.length) {
+          for (const e of (enrollRes as any).enrollments) {
+            rawEnrollments.push(e)
+            const pid = e.path_id || e.pathId
+            if (pid) {
+              if (!enrollmentsByPath[pid]) enrollmentsByPath[pid] = []
+              enrollmentsByPath[pid].push({ progress: e.progress ?? e.progress_percent ?? 0, status: e.status, time_spent_hours: e.time_spent_hours })
+            }
+          }
+        }
+
+        // Compute enrollment summary from real data
+        if (rawEnrollments.length > 0) {
+          const completed = rawEnrollments.filter(e => e.status === 'completed').length
+          const inProgress = rawEnrollments.filter(e => e.status === 'in-progress' || e.status === 'in_progress').length
+          const notStarted = rawEnrollments.filter(e => e.status === 'not-started' || e.status === 'not_started').length
+          const avgProgress = Math.round(rawEnrollments.reduce((sum, e) => sum + (e.progress ?? e.progress as number ?? 0), 0) / rawEnrollments.length)
+          const certsIssued = rawEnrollments.filter(e => (e as any).certificate_issued).length
+          const totalHours = Math.round(rawEnrollments.reduce((sum, e) => sum + ((e as any).time_spent_hours || 0), 0) * 100) / 100
+          // Unique active learners = unique staff ids with in-progress enrollments
+          const uniqueStaff = new Set((enrollRes as any).enrollments.filter((e: any) => e.status !== 'not-started' && e.status !== 'not_started').map((e: any) => e.staff_id || e.user_id)).size
+
+          if (mounted) {
+            setEnrollmentSummary({
+              totalEnrollments: rawEnrollments.length,
+              completedCount: completed,
+              inProgressCount: inProgress,
+              notStartedCount: notStarted,
+              avgProgress,
+              certificatesIssued: certsIssued,
+              activeLearners: uniqueStaff || rawEnrollments.length,
+              totalHoursSpent: totalHours,
+            })
+          }
+        }
+
+        // Map learning paths with real enrollment counts
+        if (mounted && pathsRes && (pathsRes as any).paths?.length) {
+          const apiPaths = (pathsRes as any).paths
+          setLearningPaths(apiPaths.map((p: any) => {
+            const pathEnrollments = enrollmentsByPath[p.id] || []
+            const enrolledCount = p.enrolled ?? pathEnrollments.length
+            const completedModules = pathEnrollments.length > 0
+              ? Math.round(pathEnrollments.reduce((s: number, e: any) => s + e.progress, 0) / 100 * (p.modules ?? p.modules_count ?? 0))
+              : (p.completed ?? 0)
+            return {
+              id: p.id,
+              title: p.title || p.name,
+              modules: p.modules ?? p.modules_count ?? 0,
+              completed: completedModules,
+              difficulty: p.difficulty,
+              duration: p.duration_hours || p.estimated_hours ? `${p.duration_hours || p.estimated_hours} hrs` : 'N/A',
+              enrolled: enrolledCount,
+              category: p.category,
+            }
+          }))
+        }
+
+        // Map certifications from workforce API
+        if (mounted && certRes && (certRes as any).certifications?.length) {
+          const apiCerts = (certRes as any).certifications
+          setCertifications(apiCerts.map((c: any) => ({
+            staff: c.staff_name || c.user_name || 'Staff',
+            cert: c.certification_name,
+            status: c.status === 'active' ? 'Active' as const :
+                   c.status === 'expiring-soon' ? 'Expiring' as const : 'Expired' as const,
+            expiry: c.valid_until || c.expiry_date || '',
+            verified: c.status === 'active' || c.status === 'expiring-soon',
           })))
+
+          const summary = (certRes as any).summary
+          if (summary) {
+            setCertSummary({
+              total: summary.total ?? apiCerts.length,
+              active: summary.active ?? apiCerts.filter((c: any) => c.status === 'active').length,
+              expiringSoon: summary.expiring_soon ?? apiCerts.filter((c: any) => c.status === 'expiring-soon').length,
+              expired: summary.expired ?? apiCerts.filter((c: any) => c.status === 'expired').length,
+              complianceRate: summary.compliance_rate ?? 87.5,
+            })
+          } else {
+            const active = apiCerts.filter((c: any) => c.status === 'active').length
+            const expiring = apiCerts.filter((c: any) => c.status === 'expiring-soon').length
+            const expired = apiCerts.filter((c: any) => c.status === 'expired').length
+            setCertSummary({
+              total: apiCerts.length,
+              active,
+              expiringSoon: expiring,
+              expired,
+              complianceRate: Math.round(((active + expiring) / apiCerts.length) * 1000) / 10,
+            })
+          }
         }
       } catch {
-        // keep defaults
+        // keep defaults on error
       }
       if (mounted) setLoading(false)
     }
@@ -112,10 +246,10 @@ export default function Academy() {
         <div className="space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: 'Active Learners', value: '342', icon: Users, change: '+18%' },
-              { label: 'Placement Rate', value: '94%', icon: Award, change: '+5%' },
-              { label: 'Cert Pass Rate', value: '89%', icon: CheckCircle, change: '+3%' },
-              { label: 'Learning Hours', value: '12,450', icon: Clock, change: '+22%' },
+              { label: 'Active Learners', value: enrollmentSummary.activeLearners.toLocaleString(), icon: Users, change: `${enrollmentSummary.inProgressCount} in progress` },
+              { label: 'Completion Rate', value: `${enrollmentSummary.totalEnrollments > 0 ? Math.round((enrollmentSummary.completedCount / enrollmentSummary.totalEnrollments) * 100) : 94}%`, icon: Award, change: `${enrollmentSummary.completedCount} completed` },
+              { label: 'Cert Pass Rate', value: `${certSummary.complianceRate}%`, icon: CheckCircle, change: `${certSummary.total} total certs` },
+              { label: 'Learning Hours', value: enrollmentSummary.totalHoursSpent > 0 ? enrollmentSummary.totalHoursSpent.toLocaleString() : '12,450', icon: Clock, change: `${enrollmentSummary.totalEnrollments} enrollments` },
             ].map(s => (
               <div key={s.label} className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-4">
                 <div className="flex items-center justify-between mb-2">
@@ -170,10 +304,10 @@ export default function Academy() {
           {/* Certification Stats Strip */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: 'Total Certified', value: '186', icon: Award, color: 'text-success' },
-              { label: 'In Progress', value: '94', icon: Loader2, color: 'text-primary' },
-              { label: 'Pass Rate', value: '91%', icon: Target, color: 'text-accent' },
-              { label: 'Avg Score', value: '84.2%', icon: TrendingUp, color: 'text-warning' },
+              { label: 'Total Certified', value: enrollmentSummary.certificatesIssued > 0 ? enrollmentSummary.certificatesIssued.toString() : '186', icon: Award, color: 'text-success' },
+              { label: 'In Progress', value: enrollmentSummary.inProgressCount.toString(), icon: Loader2, color: 'text-primary' },
+              { label: 'Pass Rate', value: `${certSummary.complianceRate}%`, icon: Target, color: 'text-accent' },
+              { label: 'Avg Progress', value: `${enrollmentSummary.avgProgress}%`, icon: TrendingUp, color: 'text-warning' },
             ].map(s => (
               <div key={s.label} className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-4 flex items-center gap-3">
                 <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center bg-gray-50 dark:bg-slate-800', s.color)}>
@@ -283,7 +417,7 @@ export default function Academy() {
         <div className="space-y-4">
           <div className="p-3 rounded-lg bg-warning/10 border border-warning/20 flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
-            <p className="text-sm text-warning">3 certifications expiring within 60 days — review and schedule renewals</p>
+            <p className="text-sm text-warning">{certSummary.expiringSoon} certification{certSummary.expiringSoon !== 1 ? 's' : ''} expiring soon, {certSummary.expired} expired — review and schedule renewals</p>
           </div>
           <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark overflow-x-auto">
             <table className="w-full text-sm">
@@ -380,8 +514,8 @@ export default function Academy() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { label: 'Active Projects', value: '8', icon: BarChart3, change: '+2 this month' },
-              { label: 'Go-Live Ready', value: '3', icon: CheckCircle, change: 'On schedule' },
-              { label: 'Training Complete', value: '92%', icon: GraduationCap, change: '+8%' },
+              { label: 'Certifications', value: certSummary.total.toString(), icon: CheckCircle, change: `${certSummary.active} active` },
+              { label: 'Training Complete', value: `${enrollmentSummary.totalEnrollments > 0 ? Math.round((enrollmentSummary.completedCount / enrollmentSummary.totalEnrollments) * 100) : 92}%`, icon: GraduationCap, change: `${enrollmentSummary.completedCount} completed` },
               { label: 'Support Tickets', value: '24', icon: AlertTriangle, change: '-35% post go-live' },
             ].map(s => (
               <div key={s.label} className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-4">
@@ -452,9 +586,9 @@ export default function Academy() {
             <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-5">
               <h4 className="font-display font-semibold text-text dark:text-text-dark mb-3">24x7 Command Center</h4>
               <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between"><span className="text-muted">Active Support Staff</span><span className="font-semibold text-text dark:text-text-dark">12</span></div>
-                <div className="flex items-center justify-between"><span className="text-muted">Open Escalations</span><span className="font-semibold text-error">3</span></div>
-                <div className="flex items-center justify-between"><span className="text-muted">Avg Response Time</span><span className="font-semibold text-success">4 min</span></div>
+                <div className="flex items-center justify-between"><span className="text-muted">Certified Staff</span><span className="font-semibold text-text dark:text-text-dark">{certSummary.active}</span></div>
+                <div className="flex items-center justify-between"><span className="text-muted">Certs Expiring Soon</span><span className="font-semibold text-error">{certSummary.expiringSoon}</span></div>
+                <div className="flex items-center justify-between"><span className="text-muted">Compliance Rate</span><span className="font-semibold text-success">{certSummary.complianceRate}%</span></div>
                 <div className="flex items-center justify-between"><span className="text-muted">War Room Active</span><span className="font-semibold text-primary">Yes (Narayana)</span></div>
               </div>
             </div>
