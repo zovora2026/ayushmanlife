@@ -2,7 +2,7 @@
 
 > Last updated: 2026-03-30
 > Git repository: [zovora2026/ayushmanlife](https://github.com/zovora2026/ayushmanlife) (main branch)
-> Live URL: https://ayushmanlife.pages.dev → https://ayushmanlife.in (custom domain pending DNS propagation)
+> Live URL: https://ayushmanlife-516.pages.dev → https://ayushmanlife.in (custom domain added, SSL pending)
 
 ---
 
@@ -243,8 +243,8 @@ AyushmanLife targets India's $372B healthcare market, positioning as an AI-nativ
 ### Deployment Configuration
 - **Hosting**: Cloudflare Pages
 - **Project name**: `ayushmanlife`
-- **Pages URL**: https://ayushmanlife.pages.dev
-- **Custom domains**: ayushmanlife.in, www.ayushmanlife.in (pending DNS verification)
+- **Pages URL**: https://ayushmanlife-516.pages.dev
+- **Custom domains**: ayushmanlife.in, www.ayushmanlife.in (added, SSL provisioning)
 - **Build command**: `npm run build`
 - **Output directory**: `dist`
 - **Compatibility flags**: `nodejs_compat`
@@ -253,15 +253,15 @@ AyushmanLife targets India's $372B healthcare market, positioning as an AI-nativ
 ### DNS Setup Required
 For `ayushmanlife.in` to work, add these DNS records in your domain registrar:
 ```
-CNAME  @    ayushmanlife.pages.dev
-CNAME  www  ayushmanlife.pages.dev
+CNAME  @    ayushmanlife-516.pages.dev
+CNAME  www  ayushmanlife-516.pages.dev
 ```
 If the domain is on Cloudflare DNS, the CNAME records are created automatically.
 
 ### GitHub Secrets Required
 For GitHub Actions auto-deploy, add these secrets to the repository:
 - `CLOUDFLARE_API_TOKEN` — Create at Cloudflare Dashboard → My Profile → API Tokens → "Edit Cloudflare Workers" template
-- `CLOUDFLARE_ACCOUNT_ID` — `30bba541d6851253a3af3e91e04fb4ec`
+- `CLOUDFLARE_ACCOUNT_ID` — `56ec2e6234573c5d380e8eca46c3527f`
 
 ### Optional: Live AI
 To enable live V-Care AI (instead of mock responses):
@@ -322,18 +322,32 @@ To enable live V-Care AI (instead of mock responses):
 ## 11. Repository & Infrastructure
 
 - **Git**: https://github.com/zovora2026/ayushmanlife (public, `main` branch)
-- **Cloudflare Pages**: Project `ayushmanlife` on account `30bba541d6851253a3af3e91e04fb4ec`
-- **Pages URL**: https://ayushmanlife.pages.dev
-- **Custom domain**: ayushmanlife.in (DNS verification pending)
+- **Cloudflare Pages**: Project `ayushmanlife` on account `56ec2e6234573c5d380e8eca46c3527f`
+- **Pages URL**: https://ayushmanlife-516.pages.dev
+- **Custom domains**: ayushmanlife.in, www.ayushmanlife.in (added via API, SSL provisioning)
+- **Cloudflare Zone**: `b93ffea28604f18e217764023b90cffb` (ayushmanlife.in DNS managed by Cloudflare)
 - **CI/CD**: `.github/workflows/deploy.yml` → auto-deploy on push to `main`
 - **Total source files**: 54 TypeScript/TSX files
 - **Total lines of code**: ~9,200
 - **Production bundle**: 73KB CSS + 224KB JS core + lazy-loaded chunks (gzipped: ~72KB + ~113KB charts)
-- **Cloudflare Account ID**: `30bba541d6851253a3af3e91e04fb4ec`
+- **Cloudflare Account ID**: `56ec2e6234573c5d380e8eca46c3527f`
 
 ---
 
 ## 12. Changelog
+
+### 2026-03-30 — Migrated to Correct Cloudflare Account
+
+**Problem**: Initial deployment was on the wrong Cloudflare account (`30bba541d6851253a3af3e91e04fb4ec`). The domain `ayushmanlife.in` is managed on account `56ec2e6234573c5d380e8eca46c3527f`.
+
+**Actions**:
+- Created new Pages project `ayushmanlife` on correct account `56ec2e6234573c5d380e8eca46c3527f`
+- Deployed 61 files to https://ayushmanlife-516.pages.dev (HTTP 200 verified)
+- Added custom domains via Cloudflare API: `ayushmanlife.in` and `www.ayushmanlife.in`
+- Domain zone `b93ffea28604f18e217764023b90cffb` detected — DNS on same Cloudflare account, CNAME auto-managed
+- Updated GitHub Actions workflow with correct account ID
+- Created `.env` file with Cloudflare credentials (gitignored)
+- Old project on account `30bba541d6851253a3af3e91e04fb4ec` could not be deleted (token lacks access)
 
 ### 2026-03-30 — Landing Page Layout Cleanup
 
