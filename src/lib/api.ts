@@ -215,6 +215,28 @@ export const projects = {
     fetchAPI<{ message: ProjectMessage }>('/projects/messages', { method: 'POST', body: JSON.stringify(data) }),
 };
 
+// Testing
+export const testing = {
+  dashboard: (projectId?: string) =>
+    fetchAPI<TestDashboard>(`/testing/dashboard${projectId ? `?project_id=${projectId}` : ''}`),
+  suites: (projectId?: string) =>
+    fetchAPI<{ suites: TestSuite[]; total: number }>(`/testing/suites${projectId ? `?project_id=${projectId}` : ''}`),
+  createSuite: (data: Partial<TestSuite>) =>
+    fetchAPI<{ suite: TestSuite }>('/testing/suites', { method: 'POST', body: JSON.stringify(data) }),
+  scripts: (params?: Record<string, string>) =>
+    fetchAPI<{ scripts: TestScript[]; total: number }>(`/testing/scripts?${new URLSearchParams(params || {})}`),
+  createScript: (data: Partial<TestScript>) =>
+    fetchAPI<{ script: TestScript }>('/testing/scripts', { method: 'POST', body: JSON.stringify(data) }),
+  updateScript: (data: { id: string; status?: string; notes?: string; tester_name?: string }) =>
+    fetchAPI<{ script: TestScript }>('/testing/scripts', { method: 'PUT', body: JSON.stringify(data) }),
+  defects: (params?: Record<string, string>) =>
+    fetchAPI<{ defects: TestDefect[]; total: number }>(`/testing/defects?${new URLSearchParams(params || {})}`),
+  createDefect: (data: Partial<TestDefect>) =>
+    fetchAPI<{ defect: TestDefect }>('/testing/defects', { method: 'POST', body: JSON.stringify(data) }),
+  updateDefect: (data: { id: string; status?: string; severity?: string; resolution?: string; assigned_to?: string }) =>
+    fetchAPI<{ defect: TestDefect }>('/testing/defects', { method: 'PUT', body: JSON.stringify(data) }),
+};
+
 // Academy
 export const academy = {
   paths: () => fetchAPI<{ paths: LearningPath[] }>('/academy/paths'),
@@ -998,4 +1020,74 @@ export interface AdjudicationAnalytics {
   turnaround_time: { avg_tat_days: number; min_tat_days: number; max_tat_days: number };
   recent_adjudications: Array<AdjudicationDecision & { claim_number: string; claimed_amount: number; payer_scheme: string }>;
   currency: string;
+}
+
+// EMR Test Management
+export interface TestSuite {
+  id: string;
+  project_id?: string;
+  name: string;
+  workstream: string;
+  description?: string;
+  total_scripts: number;
+  assigned_to?: string;
+  status: string;
+  target_date?: string;
+  created_at: string;
+  passed?: number;
+  failed?: number;
+  blocked?: number;
+  not_run?: number;
+  open_defects?: number;
+}
+
+export interface TestScript {
+  id: string;
+  suite_id: string;
+  title: string;
+  description?: string;
+  preconditions?: string;
+  steps?: string;
+  expected_result?: string;
+  assigned_to?: string;
+  tester_name?: string;
+  status: string;
+  priority: string;
+  execution_date?: string;
+  notes?: string;
+  created_at: string;
+  suite_name?: string;
+  workstream?: string;
+  open_defects?: number;
+}
+
+export interface TestDefect {
+  id: string;
+  script_id?: string;
+  suite_id: string;
+  title: string;
+  description?: string;
+  severity: string;
+  status: string;
+  assigned_to?: string;
+  reporter?: string;
+  resolution?: string;
+  created_at: string;
+  resolved_at?: string;
+  suite_name?: string;
+  script_title?: string;
+}
+
+export interface TestDashboard {
+  summary: {
+    total_suites: number;
+    total_scripts: number;
+    total_defects: number;
+    pass_rate: number;
+    execution_rate: number;
+  };
+  script_status: Record<string, number>;
+  defect_severity: Record<string, number>;
+  defect_status: Record<string, number>;
+  suites: TestSuite[];
 }

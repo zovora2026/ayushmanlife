@@ -515,5 +515,55 @@ CREATE TABLE IF NOT EXISTS premium_collections (
 CREATE INDEX IF NOT EXISTS idx_premium_scheme ON premium_collections(payer_scheme);
 CREATE INDEX IF NOT EXISTS idx_premium_month ON premium_collections(month);
 CREATE INDEX IF NOT EXISTS idx_milestones_project ON project_milestones(project_id);
+
+-- EMR Test Management
+CREATE TABLE IF NOT EXISTS test_suites (
+  id TEXT PRIMARY KEY,
+  project_id TEXT REFERENCES projects(id),
+  name TEXT NOT NULL,
+  workstream TEXT NOT NULL,
+  description TEXT,
+  total_scripts INTEGER DEFAULT 0,
+  assigned_to TEXT,
+  status TEXT DEFAULT 'not_started',
+  target_date DATE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS test_scripts (
+  id TEXT PRIMARY KEY,
+  suite_id TEXT NOT NULL REFERENCES test_suites(id),
+  title TEXT NOT NULL,
+  description TEXT,
+  preconditions TEXT,
+  steps TEXT,
+  expected_result TEXT,
+  assigned_to TEXT,
+  tester_name TEXT,
+  status TEXT DEFAULT 'not_run',
+  priority TEXT DEFAULT 'medium',
+  execution_date DATETIME,
+  notes TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS test_defects (
+  id TEXT PRIMARY KEY,
+  script_id TEXT REFERENCES test_scripts(id),
+  suite_id TEXT REFERENCES test_suites(id),
+  title TEXT NOT NULL,
+  description TEXT,
+  severity TEXT DEFAULT 'medium',
+  status TEXT DEFAULT 'open',
+  assigned_to TEXT,
+  reporter TEXT,
+  resolution TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  resolved_at DATETIME
+);
+
+CREATE INDEX IF NOT EXISTS idx_scripts_suite ON test_scripts(suite_id);
+CREATE INDEX IF NOT EXISTS idx_defects_script ON test_defects(script_id);
+CREATE INDEX IF NOT EXISTS idx_defects_suite ON test_defects(suite_id);
 CREATE INDEX IF NOT EXISTS idx_documents_project ON project_documents(project_id);
 CREATE INDEX IF NOT EXISTS idx_messages_project ON project_messages(project_id);

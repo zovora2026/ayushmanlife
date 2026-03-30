@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, MessageSquareHeart, FileCheck, TrendingUp, Database,
   Headphones, Users, Building2, Briefcase, GraduationCap, Lightbulb, Settings,
-  ChevronLeft, ChevronRight, Heart, LogOut,
+  ClipboardCheck, ChevronLeft, ChevronRight, Heart, LogOut,
 } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { useAuthStore } from '../../store/authStore'
@@ -12,6 +12,7 @@ import type { LucideIcon } from 'lucide-react'
 const iconMap: Record<string, LucideIcon> = {
   LayoutDashboard, MessageSquareHeart, FileCheck, TrendingUp, Database,
   Headphones, Users, Building2, Briefcase, GraduationCap, Lightbulb, Settings,
+  ClipboardCheck,
 }
 
 interface NavGroup {
@@ -41,6 +42,7 @@ const navGroups: NavGroup[] = [
       { label: 'Managed Services', href: '/services', icon: 'Headphones' },
       { label: 'Workforce', href: '/workforce', icon: 'Users' },
       { label: 'Client Portal', href: '/client-portal', icon: 'Briefcase' },
+      { label: 'Test Management', href: '/test-management', icon: 'ClipboardCheck' },
     ],
   },
   {
