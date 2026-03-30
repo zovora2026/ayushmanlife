@@ -361,6 +361,42 @@ CREATE TABLE IF NOT EXISTS knowledge_base (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Claims Adjudication
+CREATE TABLE IF NOT EXISTS adjudication_rules (
+  id TEXT PRIMARY KEY,
+  rule_name TEXT NOT NULL,
+  description TEXT,
+  payer_scheme TEXT,
+  condition_type TEXT NOT NULL,
+  condition_value TEXT NOT NULL,
+  action TEXT NOT NULL DEFAULT 'auto_approve',
+  confidence_threshold REAL DEFAULT 80,
+  priority INTEGER DEFAULT 10,
+  enabled INTEGER DEFAULT 1,
+  times_triggered INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS claim_adjudications (
+  id TEXT PRIMARY KEY,
+  claim_id TEXT NOT NULL REFERENCES claims(id),
+  action TEXT NOT NULL,
+  adjudicated_by TEXT REFERENCES users(id),
+  amount_approved REAL,
+  remarks TEXT,
+  rules_applied TEXT,
+  decision_date DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS claim_timeline (
+  id TEXT PRIMARY KEY,
+  claim_id TEXT NOT NULL REFERENCES claims(id),
+  event TEXT NOT NULL,
+  actor TEXT,
+  detail TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
@@ -391,3 +427,7 @@ CREATE INDEX IF NOT EXISTS idx_kb_category ON knowledge_base(category);
 CREATE INDEX IF NOT EXISTS idx_modules_path ON learning_modules(path_id);
 CREATE INDEX IF NOT EXISTS idx_assessments_module ON learning_assessments(module_id);
 CREATE INDEX IF NOT EXISTS idx_submissions_user ON assessment_submissions(user_id);
+CREATE INDEX IF NOT EXISTS idx_adjudications_claim ON claim_adjudications(claim_id);
+CREATE INDEX IF NOT EXISTS idx_adjudications_date ON claim_adjudications(decision_date);
+CREATE INDEX IF NOT EXISTS idx_timeline_claim ON claim_timeline(claim_id);
+CREATE INDEX IF NOT EXISTS idx_rules_scheme ON adjudication_rules(payer_scheme);

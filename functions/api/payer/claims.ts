@@ -222,7 +222,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       return json({ claims, summary, currency: 'INR' });
     }
 
-    let query = `SELECT c.id, p.name as patient_name, c.patient_id,
+    let query = `SELECT c.id, c.claim_number, p.name as patient_name, c.patient_id,
                         c.payer_scheme, c.payer_name, c.policy_number,
                         c.diagnosis, c.diagnosis_codes, c.procedure_codes,
                         c.claimed_amount, c.approved_amount, c.status,
@@ -258,8 +258,25 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       : stmt
     ).all();
 
+    const claims = results || [];
+
+    // Compute summary
+    const summaryResult = await db.prepare(`
+      SELECT
+        COUNT(*) as total_claims,
+        COALESCE(SUM(claimed_amount), 0) as total_claimed,
+        COALESCE(SUM(approved_amount), 0) as total_approved,
+        COUNT(CASE WHEN status IN ('approved', 'paid') THEN 1 END) as approved_count,
+        COUNT(CASE WHEN status = 'rejected' THEN 1 END) as rejected_count,
+        COUNT(CASE WHEN status IN ('submitted', 'under_review', 'pre_auth_pending') THEN 1 END) as pending_count,
+        COUNT(CASE WHEN status = 'partially_approved' THEN 1 END) as partially_approved_count
+      FROM claims
+      WHERE submitted_at IS NOT NULL
+    `).first();
+
     return json({
-      claims: results || [],
+      claims,
+      summary: summaryResult || {},
       currency: 'INR',
     });
   } catch (error) {

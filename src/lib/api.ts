@@ -135,8 +135,25 @@ export const payer = {
   policies: () => fetchAPI<{ policies: Policy[] }>('/payer/policies'),
   createPolicy: (data: Partial<Policy>) =>
     fetchAPI<{ policy: Policy }>('/payer/policies', { method: 'POST', body: JSON.stringify(data) }),
-  claims: () => fetchAPI<{ claims: Claim[] }>('/payer/claims'),
+  claims: (params?: Record<string, string>) =>
+    fetchAPI<{ claims: PayerClaim[]; summary: PayerClaimsSummary; currency: string }>(`/payer/claims?${new URLSearchParams(params || {})}`),
   fraudAlerts: () => fetchAPI<{ alerts: FraudAlert[] }>('/payer/fraud-alerts'),
+};
+
+// Adjudication
+export const adjudication = {
+  queue: (params?: Record<string, string>) =>
+    fetchAPI<{ claims: AdjudicationQueueClaim[]; queue_stats: AdjudicationQueueStats; by_payer_scheme: Array<{ payer_scheme: string; count: number; total_amount: number }> }>(`/adjudication/queue?${new URLSearchParams(params || {})}`),
+  getClaim: (id: string) =>
+    fetchAPI<{ claim: AdjudicationClaimDetail; adjudications: AdjudicationDecision[]; timeline: ClaimTimelineEvent[]; fraud_alerts: FraudAlert[]; policy: Policy | null }>(`/adjudication/${id}`),
+  adjudicate: (id: string, data: { action: string; amount_approved?: number; remarks: string; rules_applied?: string }) =>
+    fetchAPI<{ adjudication: AdjudicationDecision; claim: Claim; message: string }>(`/adjudication/${id}`, { method: 'POST', body: JSON.stringify(data) }),
+  rules: (params?: Record<string, string>) =>
+    fetchAPI<{ rules: AdjudicationRule[]; summary: AdjudicationRulesSummary }>(`/adjudication/rules?${new URLSearchParams(params || {})}`),
+  createRule: (data: Partial<AdjudicationRule>) =>
+    fetchAPI<{ rule: AdjudicationRule }>('/adjudication/rules', { method: 'POST', body: JSON.stringify(data) }),
+  analytics: () =>
+    fetchAPI<AdjudicationAnalytics>('/adjudication/analytics'),
 };
 
 // Workforce
@@ -616,4 +633,113 @@ export interface ConsultantMatch {
   match_score: number;
   match_pct: number;
   available_capacity: number;
+}
+
+// Adjudication types
+export interface PayerClaim extends Claim {
+  abha_id?: string;
+  adjudication_action?: string;
+  adjudication_remarks?: string;
+  adjudicated_date?: string;
+  adjudicator_name?: string;
+  los_days?: number;
+}
+
+export interface PayerClaimsSummary {
+  total_claims: number;
+  total_claimed: number;
+  total_approved: number;
+  approved_count: number;
+  rejected_count: number;
+  pending_count: number;
+  partially_approved_count?: number;
+}
+
+export interface AdjudicationQueueClaim extends Claim {
+  days_pending?: number;
+  active_fraud_alerts?: number;
+  max_fraud_score?: number;
+}
+
+export interface AdjudicationQueueStats {
+  total_pending: number;
+  submitted: number;
+  under_review: number;
+  pre_auth_pending: number;
+  appealed: number;
+  total_amount_pending: number;
+  avg_days_pending: number;
+}
+
+export interface AdjudicationClaimDetail extends Claim {
+  age?: number;
+  gender?: string;
+  insurance_type?: string;
+  abha_id?: string;
+}
+
+export interface AdjudicationDecision {
+  id: string;
+  claim_id: string;
+  action: string;
+  adjudicated_by?: string;
+  adjudicator_name?: string;
+  amount_approved?: number;
+  remarks?: string;
+  rules_applied?: string;
+  decision_date: string;
+}
+
+export interface ClaimTimelineEvent {
+  id: string;
+  claim_id: string;
+  event: string;
+  actor?: string;
+  detail?: string;
+  created_at: string;
+}
+
+export interface AdjudicationRule {
+  id: string;
+  rule_name: string;
+  description?: string;
+  payer_scheme?: string;
+  condition_type: string;
+  condition_value: string;
+  action: string;
+  confidence_threshold: number;
+  priority: number;
+  enabled: number;
+  times_triggered: number;
+}
+
+export interface AdjudicationRulesSummary {
+  total_rules: number;
+  enabled: number;
+  total_triggered: number;
+  by_action: Record<string, number>;
+}
+
+export interface AdjudicationAnalytics {
+  overall: {
+    total_adjudicated: number;
+    approved: number;
+    rejected: number;
+    partially_approved: number;
+    total_approved_amount: number;
+    avg_approved_amount: number;
+    approval_rate: number;
+    auto_adjudication_rate: number;
+  };
+  pending: {
+    total_pending: number;
+    pending_amount: number;
+    avg_days_in_queue: number;
+  };
+  by_payer_scheme: Array<{ payer_scheme: string; total: number; approved: number; rejected: number; total_approved_amount: number; approval_rate: number }>;
+  monthly_trend: Array<{ month: string; total: number; approved: number; rejected: number; amount_approved: number }>;
+  rules_performance: AdjudicationRule[];
+  turnaround_time: { avg_tat_days: number; min_tat_days: number; max_tat_days: number };
+  recent_adjudications: Array<AdjudicationDecision & { claim_number: string; claimed_amount: number; payer_scheme: string }>;
+  currency: string;
 }

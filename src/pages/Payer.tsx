@@ -17,7 +17,8 @@ import {
   Globe,
 } from 'lucide-react'
 import { cn, formatCurrency, formatDate } from '../lib/utils'
-import { payer as payerAPI, claims as claimsAPI } from '../lib/api'
+import { payer as payerAPI, claims as claimsAPI, adjudication as adjAPI } from '../lib/api'
+import type { AdjudicationQueueClaim, AdjudicationRule, AdjudicationAnalytics } from '../lib/api'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { Stat } from '../components/ui/Stat'
@@ -361,15 +362,27 @@ export default function Payer() {
     totalClaimsProcessed: 0, digitalCount: 0, manualCount: 0, digitalRatio: 78, avgProcessingDays: 3.5,
   })
 
+  // Adjudication state
+  const [adjQueue, setAdjQueue] = useState<AdjudicationQueueClaim[]>([])
+  const [adjQueueStats, setAdjQueueStats] = useState<{ total_pending: number; submitted: number; under_review: number; total_amount_pending: number; avg_days_pending: number }>({ total_pending: 0, submitted: 0, under_review: 0, total_amount_pending: 0, avg_days_pending: 0 })
+  const [adjRules, setAdjRules] = useState<AdjudicationRule[]>([])
+  const [adjAnalytics, setAdjAnalytics] = useState<AdjudicationAnalytics | null>(null)
+  const [adjudicating, setAdjudicating] = useState<string | null>(null)
+  const [adjRemarks, setAdjRemarks] = useState('')
+  const [adjAmount, setAdjAmount] = useState('')
+
   useEffect(() => {
     let mounted = true
     async function load() {
       try {
-        const [policiesRes, fraudRes, payerClaimsRes, claimsStatsRes] = await Promise.all([
+        const [policiesRes, fraudRes, payerClaimsRes, claimsStatsRes, adjQueueRes, adjRulesRes, adjAnalyticsRes] = await Promise.all([
           payerAPI.policies().catch(() => null),
           payerAPI.fraudAlerts().catch(() => null),
           payerAPI.claims().catch(() => null),
           claimsAPI.stats().catch(() => null),
+          adjAPI.queue().catch(() => null),
+          adjAPI.rules().catch(() => null),
+          adjAPI.analytics().catch(() => null),
         ])
 
         // ── 1. Policy data + lifecycle counts ──────────────────────
@@ -550,6 +563,18 @@ export default function Payer() {
           }
         }
 
+        // ── 4. Adjudication data ─────────────────────────────────
+        if (mounted && adjQueueRes) {
+          setAdjQueue((adjQueueRes as any).claims || [])
+          setAdjQueueStats((adjQueueRes as any).queue_stats || {})
+        }
+        if (mounted && adjRulesRes) {
+          setAdjRules((adjRulesRes as any).rules || [])
+        }
+        if (mounted && adjAnalyticsRes) {
+          setAdjAnalytics(adjAnalyticsRes as AdjudicationAnalytics)
+        }
+
       } catch {
         // keep defaults on full failure
       }
@@ -563,6 +588,33 @@ export default function Payer() {
     if (schemeFilter === 'All') return policies
     return policies.filter((p) => p.scheme === schemeFilter)
   }, [schemeFilter, policies])
+
+  // Adjudication handler
+  const handleAdjudicate = async (claimId: string, action: 'approve' | 'reject' | 'partially_approve') => {
+    if (!adjRemarks.trim()) return
+    try {
+      setAdjudicating(claimId)
+      const data: { action: string; remarks: string; amount_approved?: number } = { action, remarks: adjRemarks }
+      if (action === 'partially_approve' && adjAmount) {
+        data.amount_approved = parseFloat(adjAmount)
+      }
+      await adjAPI.adjudicate(claimId, data)
+      // Refresh queue
+      const qRes = await adjAPI.queue().catch(() => null)
+      if (qRes) {
+        setAdjQueue((qRes as any).claims || [])
+        setAdjQueueStats((qRes as any).queue_stats || {})
+      }
+      const aRes = await adjAPI.analytics().catch(() => null)
+      if (aRes) setAdjAnalytics(aRes as AdjudicationAnalytics)
+      setAdjRemarks('')
+      setAdjAmount('')
+    } catch (err) {
+      console.error('Adjudication error:', err)
+    } finally {
+      setAdjudicating(null)
+    }
+  }
 
   const filteredFraudAlerts = useMemo(() => {
     if (!fraudSearch) return fraudAlerts
@@ -940,118 +992,170 @@ export default function Payer() {
         </div>
       )}
 
-      {/* ── Claims Adjudication (Kanban) ──────────────────────────── */}
+      {/* ── Claims Adjudication ──────────────────────────── */}
       {activeTab === 'adjudication' && (
         <div className="space-y-4">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Track claims through every stage of the adjudication pipeline.
-          </p>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            {KANBAN_COLUMNS.map((column) => {
-              const claims = KANBAN_CLAIMS[column]
-              return (
-                <div key={column} className="flex flex-col">
-                  {/* Column Header */}
-                  <div
-                    className={cn(
-                      'mb-3 rounded-lg border border-border bg-gray-50 px-3 py-2.5 border-t-4 dark:border-border-dark dark:bg-white/5',
-                      getKanbanColumnColor(column),
-                    )}
-                  >
-                    <div className="flex items-center justify-between">
-                      <Badge variant={getKanbanBadgeVariant(column)} size="md" dot>
-                        {column}
-                      </Badge>
-                      <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
-                        {claims.length}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Column Cards */}
-                  <div className="flex flex-col gap-3">
-                    {claims.map((claim) => (
-                      <Card
-                        key={claim.id}
-                        padding="sm"
-                        className="cursor-pointer transition-shadow hover:shadow-md"
-                      >
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs font-semibold text-primary">
-                              {claim.claimNumber}
-                            </p>
-                            <span className="text-xs text-gray-400 dark:text-gray-500">
-                              {formatDate(claim.date)}
-                            </span>
-                          </div>
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                            {claim.patient}
-                          </p>
-                          <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-                            {claim.diagnosis}
-                          </p>
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                              {formatCurrency(claim.amount)}
-                            </span>
-                            <span className="truncate text-xs text-gray-400 dark:text-gray-500 max-w-[80px]">
-                              {claim.provider}
-                            </span>
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-                    {claims.length === 0 && (
-                      <div className="rounded-lg border border-dashed border-border py-6 text-center text-xs text-gray-400 dark:border-border-dark dark:text-gray-500">
-                        No claims
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
+          {/* Queue Stats */}
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <Stat label="Pending Claims" value={adjQueueStats.total_pending} icon={<Clock className="h-5 w-5" />} />
+            <Stat label="Amount Pending" value={formatCurrency(adjQueueStats.total_amount_pending)} icon={<IndianRupee className="h-5 w-5" />} />
+            <Stat label="Avg Days in Queue" value={adjQueueStats.avg_days_pending || 0} icon={<TrendingUp className="h-5 w-5" />} />
+            <Stat label="Approval Rate" value={`${adjAnalytics?.overall?.approval_rate || 0}%`} icon={<CheckCircle2 className="h-5 w-5" />} />
           </div>
 
-          {/* Auto-Adjudication Rules Engine */}
+          {/* Adjudication Queue */}
+          <Card header={<h3 className="font-display font-semibold text-text dark:text-text-dark">Claims Awaiting Adjudication ({adjQueue.length})</h3>}>
+            {adjQueue.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted">No claims pending adjudication</p>
+            ) : (
+              <div className="space-y-3">
+                {adjQueue.map((claim) => (
+                  <div key={claim.id} className="rounded-lg border border-border p-4 dark:border-border-dark hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-mono text-sm font-semibold text-primary">{claim.claim_number}</span>
+                          <Badge variant={claim.status === 'submitted' ? 'info' : claim.status === 'under_review' ? 'warning' : claim.status === 'appealed' ? 'error' : 'neutral'} size="sm">
+                            {(claim.status || '').replace(/_/g, ' ')}
+                          </Badge>
+                          {(claim as any).active_fraud_alerts > 0 && (
+                            <Badge variant="error" size="sm" dot>Fraud Alert</Badge>
+                          )}
+                        </div>
+                        <p className="text-sm font-medium text-text dark:text-text-dark">{claim.patient_name || 'Unknown'}</p>
+                        <p className="text-xs text-muted truncate">{claim.diagnosis}</p>
+                        <div className="flex items-center gap-4 mt-1 text-xs text-muted">
+                          <span>{claim.payer_scheme?.replace(/_/g, ' ')}</span>
+                          {claim.admission_date && <span>Admitted: {formatDate(claim.admission_date)}</span>}
+                          {(claim as any).days_pending != null && <span>{Math.round((claim as any).days_pending)} days pending</span>}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-lg font-bold text-text dark:text-text-dark">{formatCurrency(claim.claimed_amount)}</p>
+                        <p className="text-xs text-muted">Claimed</p>
+                      </div>
+                    </div>
+
+                    {/* Adjudication Actions */}
+                    <div className="mt-3 pt-3 border-t border-border dark:border-border-dark">
+                      <div className="flex items-end gap-3">
+                        <div className="flex-1">
+                          <label className="text-xs font-medium text-muted mb-1 block">Remarks</label>
+                          <input
+                            type="text"
+                            placeholder="Adjudication remarks..."
+                            className="w-full rounded-md border border-border bg-white px-3 py-1.5 text-sm dark:bg-slate-800 dark:border-border-dark dark:text-text-dark"
+                            value={adjudicating === claim.id ? adjRemarks : ''}
+                            onChange={(e) => { setAdjudicating(claim.id); setAdjRemarks(e.target.value) }}
+                            onFocus={() => setAdjudicating(claim.id)}
+                          />
+                        </div>
+                        <div className="w-28">
+                          <label className="text-xs font-medium text-muted mb-1 block">Amount</label>
+                          <input
+                            type="number"
+                            placeholder={String(claim.claimed_amount)}
+                            className="w-full rounded-md border border-border bg-white px-3 py-1.5 text-sm dark:bg-slate-800 dark:border-border-dark dark:text-text-dark"
+                            value={adjudicating === claim.id ? adjAmount : ''}
+                            onChange={(e) => { setAdjudicating(claim.id); setAdjAmount(e.target.value) }}
+                            onFocus={() => setAdjudicating(claim.id)}
+                          />
+                        </div>
+                        <div className="flex gap-2 shrink-0">
+                          <button
+                            onClick={() => handleAdjudicate(claim.id, 'approve')}
+                            disabled={adjudicating === claim.id && !adjRemarks.trim()}
+                            className="rounded-md bg-success px-3 py-1.5 text-xs font-medium text-white hover:bg-success/90 disabled:opacity-50"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => handleAdjudicate(claim.id, 'partially_approve')}
+                            disabled={adjudicating === claim.id && !adjRemarks.trim()}
+                            className="rounded-md bg-warning px-3 py-1.5 text-xs font-medium text-white hover:bg-warning/90 disabled:opacity-50"
+                          >
+                            Partial
+                          </button>
+                          <button
+                            onClick={() => handleAdjudicate(claim.id, 'reject')}
+                            disabled={adjudicating === claim.id && !adjRemarks.trim()}
+                            className="rounded-md bg-error px-3 py-1.5 text-xs font-medium text-white hover:bg-error/90 disabled:opacity-50"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {/* Auto-Adjudication Rules Engine — from D1 */}
           <Card header={<h3 className="font-display font-semibold text-text dark:text-text-dark">Auto-Adjudication Rules Engine</h3>}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div className="p-3 rounded-lg bg-success/5 border border-success/20 dark:bg-success/10">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-semibold text-text dark:text-text-dark">Auto-Approved Today</span>
-                  <span className="text-lg font-bold text-success">847</span>
+                  <span className="text-sm font-semibold text-text dark:text-text-dark">Total Adjudicated</span>
+                  <span className="text-lg font-bold text-success">{adjAnalytics?.overall?.total_adjudicated || 0}</span>
                 </div>
-                <p className="text-xs text-muted">72% of total claims auto-adjudicated without manual intervention</p>
+                <p className="text-xs text-muted">{adjAnalytics?.overall?.auto_adjudication_rate || 0}% via auto-adjudication rules</p>
+              </div>
+              <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 dark:bg-primary/10">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-semibold text-text dark:text-text-dark">Total Approved</span>
+                  <span className="text-lg font-bold text-primary">{formatCurrency(adjAnalytics?.overall?.total_approved_amount || 0)}</span>
+                </div>
+                <p className="text-xs text-muted">Avg {formatCurrency(adjAnalytics?.overall?.avg_approved_amount || 0)} per claim</p>
               </div>
               <div className="p-3 rounded-lg bg-warning/5 border border-warning/20 dark:bg-warning/10">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm font-semibold text-text dark:text-text-dark">Flagged for Review</span>
-                  <span className="text-lg font-bold text-warning">127</span>
+                  <span className="text-sm font-semibold text-text dark:text-text-dark">Avg TAT</span>
+                  <span className="text-lg font-bold text-warning">{adjAnalytics?.turnaround_time?.avg_tat_days || 0} days</span>
                 </div>
-                <p className="text-xs text-muted">Claims requiring manual adjudication due to rule exceptions</p>
+                <p className="text-xs text-muted">Submission to resolution</p>
               </div>
             </div>
             <div className="space-y-2">
-              {[
-                { rule: 'Standard outpatient claim < ₹25,000', action: 'Auto-approve', confidence: 95, triggered: 412 },
-                { rule: 'Ayushman Bharat package rate match', action: 'Auto-approve', confidence: 92, triggered: 189 },
-                { rule: 'Duplicate claim detection (same patient, 7 days)', action: 'Flag & hold', confidence: 88, triggered: 23 },
-                { rule: 'Amount exceeds 2x package rate', action: 'Escalate to reviewer', confidence: 85, triggered: 34 },
-                { rule: 'Pre-auth expired or missing', action: 'Auto-deny with reason', confidence: 97, triggered: 71 },
-              ].map((r, i) => (
-                <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
+              {adjRules.map((r) => (
+                <div key={r.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-text dark:text-text-dark">{r.rule}</p>
-                    <p className="text-xs text-muted mt-0.5">Action: <span className={cn('font-medium', r.action.includes('approve') ? 'text-success' : r.action.includes('deny') ? 'text-error' : 'text-warning')}>{r.action}</span></p>
+                    <p className="text-sm font-medium text-text dark:text-text-dark">{r.rule_name}</p>
+                    <p className="text-xs text-muted mt-0.5">
+                      Action: <span className={cn('font-medium', r.action.includes('approve') ? 'text-success' : r.action.includes('reject') ? 'text-error' : 'text-warning')}>{r.action.replace(/_/g, ' ')}</span>
+                      {r.payer_scheme && <span className="ml-2">({r.payer_scheme.replace(/_/g, ' ')})</span>}
+                    </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-xs font-medium text-primary">{r.confidence}% confidence</p>
-                    <p className="text-xs text-muted">{r.triggered} today</p>
+                    <p className="text-xs font-medium text-primary">{r.confidence_threshold}% threshold</p>
+                    <p className="text-xs text-muted">{r.times_triggered} triggered</p>
                   </div>
                 </div>
               ))}
             </div>
           </Card>
+
+          {/* Recent Adjudication Decisions */}
+          {adjAnalytics?.recent_adjudications && adjAnalytics.recent_adjudications.length > 0 && (
+            <Card header={<h3 className="font-display font-semibold text-text dark:text-text-dark">Recent Decisions</h3>}>
+              <div className="space-y-2">
+                {adjAnalytics.recent_adjudications.map((adj, i) => (
+                  <div key={i} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5">
+                    <Badge variant={adj.action === 'approve' ? 'success' : adj.action === 'reject' ? 'error' : adj.action === 'partially_approve' ? 'warning' : 'info'} size="sm">
+                      {adj.action.replace(/_/g, ' ')}
+                    </Badge>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-mono text-primary">{adj.claim_number}</span>
+                      <span className="ml-2 text-xs text-muted">{adj.payer_scheme?.replace(/_/g, ' ')}</span>
+                    </div>
+                    <span className="text-sm font-semibold text-text dark:text-text-dark">{formatCurrency(adj.amount_approved || 0)}</span>
+                    <span className="text-xs text-muted">{adj.adjudicator_name || 'Auto'}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
         </div>
       )}
 
