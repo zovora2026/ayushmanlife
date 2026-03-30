@@ -23,10 +23,11 @@ import { Card } from '../components/ui/Card'
 import { Stat } from '../components/ui/Stat'
 import { Badge } from '../components/ui/Badge'
 import { Chart } from '../components/ui/Chart'
-import { analytics, appointments as aptAPI, claims as claimsAPI } from '../lib/api'
+import { analytics, appointments as aptAPI, claims as claimsAPI, tickets as ticketsAPI, workforce as workforceAPI } from '../lib/api'
 import { demoAppointments, demoActivities, chartData } from '../lib/mock-data'
 import { cn, formatDate, getRelativeTime, getStatusColor } from '../lib/utils'
-import type { DashboardKPIs, Appointment, ClaimStats, RevenueData } from '../lib/api'
+import type { DashboardKPIs, Appointment, Claim, ClaimStats, RevenueData, PatientRiskData, Ticket, Certification } from '../lib/api'
+import type { ActivityItem } from '../types'
 
 const activityDotColors: Record<string, string> = {
   claim: 'bg-accent',
@@ -36,12 +37,14 @@ const activityDotColors: Record<string, string> = {
   alert: 'bg-error',
 }
 
-const quickActions = [
-  { label: 'New Claim', icon: FilePlus2, href: '/claims', color: 'bg-primary/10 text-primary' },
-  { label: 'Chat with V-Care', icon: MessageSquareHeart, href: '/vcare', color: 'bg-secondary/10 text-secondary' },
-  { label: 'View Analytics', icon: BarChart3, href: '/analytics', color: 'bg-accent/10 text-accent' },
-  { label: 'Manage Staff', icon: UserCog, href: '/workforce', color: 'bg-success/10 text-success' },
-]
+function getQuickActions(claimStats: ClaimStats | null, kpis: DashboardKPIs | null, slaCount: number) {
+  return [
+    { label: 'New Claim', icon: FilePlus2, href: '/claims', color: 'bg-primary/10 text-primary', badge: claimStats ? `${claimStats.pending_count} pending` : undefined },
+    { label: 'Chat with V-Care', icon: MessageSquareHeart, href: '/vcare', color: 'bg-secondary/10 text-secondary' },
+    { label: 'View Analytics', icon: BarChart3, href: '/analytics', color: 'bg-accent/10 text-accent', badge: kpis ? `${kpis.appointments_today} appts today` : undefined },
+    { label: 'Manage Staff', icon: UserCog, href: '/workforce', color: 'bg-success/10 text-success', badge: slaCount > 0 ? `${slaCount} alerts` : undefined },
+  ]
+}
 
 export default function Dashboard() {
   const { user } = useAuthStore()
@@ -49,26 +52,117 @@ export default function Dashboard() {
   const [upcomingApts, setUpcomingApts] = useState<Appointment[]>([])
   const [claimStats, setClaimStats] = useState<ClaimStats | null>(null)
   const [revenueData, setRevenueData] = useState<RevenueData | null>(null)
+  const [recentClaims, setRecentClaims] = useState<Claim[]>([])
+  const [riskData, setRiskData] = useState<PatientRiskData | null>(null)
+  const [slaTickets, setSlaTickets] = useState<Ticket[]>([])
+  const [expiringCerts, setExpiringCerts] = useState<Certification[]>([])
+  const [activities, setActivities] = useState<ActivityItem[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let mounted = true
     async function load() {
       try {
-        const [dashData, aptData, statsData, revData] = await Promise.all([
+        const [dashData, aptData, statsData, revData, claimsData, riskResult, ticketResult, certResult] = await Promise.all([
           analytics.dashboard(),
           aptAPI.list({ status: 'scheduled', limit: '5' }),
           claimsAPI.stats().catch(() => null),
           analytics.revenue().catch(() => null),
+          claimsAPI.list({ limit: '5' }).catch(() => null),
+          analytics.patientRisk().catch(() => null),
+          ticketsAPI.list({ limit: '10' }).catch(() => null),
+          workforceAPI.certifications().catch(() => null),
         ])
         if (mounted) {
           setKpis(dashData)
           setUpcomingApts(aptData.appointments || [])
           if (statsData) setClaimStats(statsData)
           if (revData) setRevenueData(revData)
+
+          const fetchedClaims = claimsData?.claims || []
+          setRecentClaims(fetchedClaims)
+
+          if (riskResult) setRiskData(riskResult)
+
+          // Filter tickets that breached SLA or are close to breach
+          const breachedTickets = (ticketResult?.tickets || []).filter(
+            (t) => t.sla_breached === 1 || t.priority === 'critical' || t.priority === 'high'
+          )
+          setSlaTickets(breachedTickets)
+
+          // Filter certifications expiring within 30 days
+          const now = new Date()
+          const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 3600000)
+          const expiring = (certResult?.certifications || []).filter((c) => {
+            if (!c.expiry_date) return false
+            const exp = new Date(c.expiry_date)
+            return exp <= thirtyDaysFromNow && exp >= now
+          })
+          setExpiringCerts(expiring)
+
+          // Build real activity feed from fetched data
+          const realActivities: ActivityItem[] = []
+
+          // Map recent claims into activities
+          fetchedClaims.forEach((claim, i) => {
+            const statusAction =
+              claim.status === 'approved' ? 'Claim approved' :
+              claim.status === 'rejected' ? 'Claim rejected' :
+              claim.status === 'submitted' ? 'Claim submitted' :
+              claim.status === 'under_review' ? 'Claim under review' :
+              `Claim ${claim.status}`
+            realActivities.push({
+              id: `claim-act-${i}`,
+              action: statusAction,
+              subject: `${claim.claim_number} for ${claim.patient_name || 'Patient'} — ₹${claim.claimed_amount?.toLocaleString('en-IN') || '0'}`,
+              timestamp: claim.submitted_at || claim.created_at || new Date().toISOString(),
+              type: 'claim',
+            })
+          })
+
+          // Map upcoming appointments into activities
+          ;(aptData.appointments || []).slice(0, 3).forEach((apt, i) => {
+            realActivities.push({
+              id: `apt-act-${i}`,
+              action: 'Appointment scheduled',
+              subject: `${apt.patient_name || 'Patient'} with ${apt.doctor_name || 'Doctor'} — ${apt.department}`,
+              timestamp: apt.date ? `${apt.date}T${apt.time || '00:00'}:00` : new Date().toISOString(),
+              type: 'appointment',
+            })
+          })
+
+          // Add high-risk patient alerts
+          if (riskResult?.high_risk) {
+            riskResult.high_risk.slice(0, 2).forEach((p, i) => {
+              realActivities.push({
+                id: `risk-act-${i}`,
+                action: 'High-risk patient flagged',
+                subject: `${p.name}${p.age ? ` (Age ${p.age})` : ''} — Risk Score ${p.risk_score ?? 'N/A'}`,
+                timestamp: new Date(Date.now() - (i + 1) * 3600000).toISOString(),
+                type: 'alert',
+              })
+            })
+          }
+
+          // Add SLA breach alerts
+          breachedTickets.slice(0, 1).forEach((t, i) => {
+            realActivities.push({
+              id: `sla-act-${i}`,
+              action: 'SLA breach warning',
+              subject: `${t.ticket_number} — ${t.title}`,
+              timestamp: t.created_at || new Date().toISOString(),
+              type: 'alert',
+            })
+          })
+
+          // Sort by timestamp descending
+          realActivities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+
+          setActivities(realActivities.length > 0 ? realActivities : demoActivities)
         }
       } catch {
         // API unavailable — use fallback mock data
+        if (mounted) setActivities(demoActivities)
       }
       if (mounted) setLoading(false)
     }
@@ -172,16 +266,21 @@ export default function Dashboard() {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {quickActions.map((action) => (
+        {getQuickActions(claimStats, kpis, slaTickets.length).map((action) => (
           <Link key={action.label} to={action.href}>
             <Card className="group cursor-pointer transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
               <div className="flex items-center gap-3">
                 <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-lg', action.color)}>
                   <action.icon className="h-5 w-5" />
                 </div>
-                <span className="text-sm font-semibold text-text dark:text-text-dark group-hover:text-primary transition-colors">
-                  {action.label}
-                </span>
+                <div className="min-w-0">
+                  <span className="text-sm font-semibold text-text dark:text-text-dark group-hover:text-primary transition-colors">
+                    {action.label}
+                  </span>
+                  {action.badge && (
+                    <p className="text-[10px] text-muted mt-0.5">{action.badge}</p>
+                  )}
+                </div>
               </div>
             </Card>
           </Link>
@@ -267,7 +366,7 @@ export default function Dashboard() {
           padding="none"
         >
           <ul className="divide-y divide-border dark:divide-border-dark">
-            {demoActivities.slice(0, 8).map((activity) => (
+            {activities.slice(0, 8).map((activity) => (
               <li
                 key={activity.id}
                 className="flex items-start gap-3 px-5 py-3.5 transition-colors hover:bg-gray-50 dark:hover:bg-white/5"
@@ -345,10 +444,12 @@ export default function Dashboard() {
             <div>
               <h4 className="text-sm font-semibold text-text dark:text-text-dark">SLA Breach Warning</h4>
               <p className="mt-1 text-xs text-muted leading-relaxed">
-                Claim CLM-2026-0043 (Amit Singh) is approaching the 48-hour review deadline. Requires immediate attention.
+                {slaTickets.length > 0
+                  ? `${slaTickets[0].ticket_number} — ${slaTickets[0].title}. ${slaTickets.length > 1 ? `+${slaTickets.length - 1} more tickets need attention.` : 'Requires immediate attention.'}`
+                  : 'No active SLA breaches. All tickets are within SLA thresholds.'}
               </p>
               <Link to="/claims" className="mt-2 inline-block text-xs font-semibold text-warning hover:underline">
-                Review Claim &rarr;
+                {slaTickets.length > 0 ? 'Review Tickets' : 'View Claims'} &rarr;
               </Link>
             </div>
           </div>
@@ -362,7 +463,9 @@ export default function Dashboard() {
             <div>
               <h4 className="text-sm font-semibold text-text dark:text-text-dark">Credential Expiring</h4>
               <p className="mt-1 text-xs text-muted leading-relaxed">
-                Dr. Ravi Shankar&apos;s BLS certification expires on 5 Apr 2026. Schedule renewal before the deadline.
+                {expiringCerts.length > 0
+                  ? `${expiringCerts[0].user_name || 'Staff member'}'s ${expiringCerts[0].certification_name} expires on ${formatDate(expiringCerts[0].expiry_date!)}. ${expiringCerts.length > 1 ? `${expiringCerts.length - 1} more expiring soon.` : 'Schedule renewal before the deadline.'}`
+                  : 'No certifications expiring within 30 days. All credentials are up to date.'}
               </p>
               <Link to="/workforce" className="mt-2 inline-block text-xs font-semibold text-accent hover:underline">
                 Manage Credentials &rarr;
@@ -379,10 +482,12 @@ export default function Dashboard() {
             <div>
               <h4 className="text-sm font-semibold text-text dark:text-text-dark">High-Risk Patient</h4>
               <p className="mt-1 text-xs text-muted leading-relaxed">
-                Sunita Devi (Age 67) — Risk Score 85. Vitals showing deterioration trend. BP 150/94, Blood Glucose 162.
+                {riskData?.high_risk && riskData.high_risk.length > 0
+                  ? `${riskData.high_risk[0].name}${riskData.high_risk[0].age ? ` (Age ${riskData.high_risk[0].age})` : ''} — Risk Score ${riskData.high_risk[0].risk_score ?? 'N/A'}. ${riskData.total_high > 1 ? `${riskData.total_high} high-risk patients need monitoring.` : 'Vitals showing deterioration trend.'}`
+                  : 'No high-risk patients flagged. All patients within safe parameters.'}
               </p>
               <Link to="/dashboard" className="mt-2 inline-block text-xs font-semibold text-error hover:underline">
-                View Patient &rarr;
+                {riskData?.total_high ? `View ${riskData.total_high} Patient${riskData.total_high > 1 ? 's' : ''}` : 'View Patients'} &rarr;
               </Link>
             </div>
           </div>

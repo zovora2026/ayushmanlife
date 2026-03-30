@@ -7,6 +7,131 @@ function json(data: unknown, status = 200) {
   });
 }
 
+// ── Patient context types ───────────────────────────────────────────────────
+
+interface PatientProfile {
+  id: string;
+  name: string;
+  age: number | null;
+  gender: string | null;
+  blood_group: string | null;
+  medical_history: string | null;
+  allergies: string | null;
+  chronic_conditions: string | null;
+  insurance_type: string | null;
+  insurance_provider: string | null;
+}
+
+interface VitalRecord {
+  type: string;
+  value: number;
+  unit: string;
+  recorded_at: string;
+}
+
+interface MedicationRecord {
+  name: string;
+  dosage: string;
+  frequency: string;
+  route: string;
+  status: string;
+  notes: string | null;
+}
+
+interface PatientContext {
+  profile: PatientProfile | null;
+  recent_vitals: VitalRecord[];
+  active_medications: MedicationRecord[];
+}
+
+// ── Load patient context from D1 ───────────────────────────────────────────
+
+async function loadPatientContext(
+  db: D1Database,
+  patientId: string,
+): Promise<PatientContext> {
+  const ctx: PatientContext = {
+    profile: null,
+    recent_vitals: [],
+    active_medications: [],
+  };
+
+  try {
+    // Run all three queries concurrently
+    const [patientResult, vitalsResult, medsResult] = await Promise.all([
+      db
+        .prepare(
+          `SELECT id, name, age, gender, blood_group, medical_history,
+                  allergies, chronic_conditions, insurance_type, insurance_provider
+           FROM patients WHERE id = ?`,
+        )
+        .bind(patientId)
+        .first<PatientProfile>(),
+
+      db
+        .prepare(
+          `SELECT type, value, unit, recorded_at
+           FROM vitals
+           WHERE patient_id = ?
+           ORDER BY recorded_at DESC
+           LIMIT 20`,
+        )
+        .bind(patientId)
+        .all<VitalRecord>(),
+
+      db
+        .prepare(
+          `SELECT name, dosage, frequency, route, status, notes
+           FROM medications
+           WHERE patient_id = ? AND status = 'active'
+           ORDER BY start_date DESC`,
+        )
+        .bind(patientId)
+        .all<MedicationRecord>(),
+    ]);
+
+    ctx.profile = patientResult ?? null;
+    ctx.recent_vitals = vitalsResult?.results ?? [];
+    ctx.active_medications = medsResult?.results ?? [];
+  } catch (err) {
+    console.error('Failed to load patient context:', err);
+  }
+
+  return ctx;
+}
+
+// ── Format patient context for AI prompt ────────────────────────────────────
+
+function formatPatientContextForPrompt(ctx: PatientContext): string {
+  const parts: string[] = [];
+
+  if (ctx.profile) {
+    const p = ctx.profile;
+    parts.push('=== PATIENT PROFILE ===');
+    parts.push(`Name: ${p.name} | Age: ${p.age ?? 'unknown'} | Gender: ${p.gender ?? 'unknown'} | Blood group: ${p.blood_group ?? 'unknown'}`);
+    if (p.medical_history) parts.push(`Medical history: ${p.medical_history}`);
+    if (p.allergies) parts.push(`Allergies: ${p.allergies}`);
+    if (p.chronic_conditions) parts.push(`Chronic conditions: ${p.chronic_conditions}`);
+    if (p.insurance_type) parts.push(`Insurance: ${p.insurance_type}${p.insurance_provider ? ` (${p.insurance_provider})` : ''}`);
+  }
+
+  if (ctx.recent_vitals.length > 0) {
+    parts.push('\n=== RECENT VITALS ===');
+    for (const v of ctx.recent_vitals) {
+      parts.push(`${v.type}: ${v.value} ${v.unit} (${v.recorded_at})`);
+    }
+  }
+
+  if (ctx.active_medications.length > 0) {
+    parts.push('\n=== ACTIVE MEDICATIONS ===');
+    for (const m of ctx.active_medications) {
+      parts.push(`${m.name} ${m.dosage} ${m.frequency} (${m.route})${m.notes ? ` — ${m.notes}` : ''}`);
+    }
+  }
+
+  return parts.join('\n');
+}
+
 // ── Common Indian condition → ICD-10/CPT mapping ────────────────────────────
 
 interface CodeMapping {
@@ -225,9 +350,13 @@ const CONDITION_MAP: CodeMapping[] = [
   },
 ];
 
-// ── Smart mock analysis based on diagnosis text ─────────────────────────────
+// ── Smart mock analysis based on diagnosis text + patient context ────────────
 
-function generateMockAnalysis(diagnosisText: string, claimedAmount?: number) {
+function generateMockAnalysis(
+  diagnosisText: string,
+  claimedAmount?: number,
+  patientCtx?: PatientContext,
+) {
   const lower = diagnosisText.toLowerCase();
   const matchedConditions: CodeMapping[] = [];
 
@@ -237,13 +366,38 @@ function generateMockAnalysis(diagnosisText: string, claimedAmount?: number) {
     }
   }
 
+  // Cross-reference with patient's chronic conditions from D1
+  const chronicLower = (patientCtx?.profile?.chronic_conditions ?? '').toLowerCase();
+  const historyLower = (patientCtx?.profile?.medical_history ?? '').toLowerCase();
+  const combinedPatientText = `${chronicLower} ${historyLower}`;
+
+  // Find additional conditions from patient profile not already in diagnosis
+  const comorbidConditions: CodeMapping[] = [];
+  if (combinedPatientText.length > 0) {
+    for (const condition of CONDITION_MAP) {
+      const alreadyMatched = matchedConditions.some(
+        mc => mc.keywords === condition.keywords,
+      );
+      if (
+        !alreadyMatched &&
+        condition.keywords.some(kw => combinedPatientText.includes(kw))
+      ) {
+        comorbidConditions.push(condition);
+      }
+    }
+  }
+
   // Default fallback if nothing matches
   if (matchedConditions.length === 0) {
     matchedConditions.push({
       keywords: [],
       icd10: [
         { code: 'R69', description: 'Illness, unspecified' },
-        { code: 'Z00.00', description: 'Encounter for general adult medical examination without abnormal findings' },
+        {
+          code: 'Z00.00',
+          description:
+            'Encounter for general adult medical examination without abnormal findings',
+        },
       ],
       cpt: [
         { code: '99213', description: 'Office visit, established patient, low complexity' },
@@ -253,15 +407,22 @@ function generateMockAnalysis(diagnosisText: string, claimedAmount?: number) {
     });
   }
 
-  // Collect all suggested codes
+  // Collect primary diagnosis codes
   const suggestedIcd10 = matchedConditions.flatMap(c => c.icd10);
   const suggestedCpt = matchedConditions.flatMap(c => c.cpt);
 
-  // Deduplicate
-  const uniqueIcd10 = Array.from(new Map(suggestedIcd10.map(c => [c.code, c])).values());
-  const uniqueCpt = Array.from(new Map(suggestedCpt.map(c => [c.code, c])).values());
+  // Add comorbidity ICD-10 codes (not CPT — those are for the primary condition)
+  const comorbidIcd10 = comorbidConditions.flatMap(c => c.icd10);
 
-  // Completeness scoring
+  // Deduplicate
+  const uniqueIcd10 = Array.from(
+    new Map([...suggestedIcd10, ...comorbidIcd10].map(c => [c.code, c])).values(),
+  );
+  const uniqueCpt = Array.from(
+    new Map(suggestedCpt.map(c => [c.code, c])).values(),
+  );
+
+  // ── Completeness scoring ──────────────────────────────────────────────────
   let completenessScore = 40; // Base score for having diagnosis text
   const suggestions: string[] = [];
 
@@ -270,30 +431,106 @@ function generateMockAnalysis(diagnosisText: string, claimedAmount?: number) {
   if (uniqueIcd10.length >= 2) completenessScore += 10;
   if (uniqueCpt.length >= 2) completenessScore += 10;
 
+  // Patient-context-aware scoring
+  if (patientCtx?.profile) completenessScore += 3; // patient linked
+  if (patientCtx?.recent_vitals.length) completenessScore += 2; // vitals available
+  if (patientCtx?.active_medications.length) completenessScore += 2; // medications documented
+
   // Check for common documentation completeness items
-  if (lower.includes('complication') || lower.includes('with')) completenessScore += 5;
-  if (lower.includes('stage') || lower.includes('type') || lower.includes('grade')) completenessScore += 5;
-  if (lower.includes('acute') || lower.includes('chronic')) completenessScore += 5;
+  if (lower.includes('complication') || lower.includes('with'))
+    completenessScore += 5;
+  if (lower.includes('stage') || lower.includes('type') || lower.includes('grade'))
+    completenessScore += 5;
+  if (lower.includes('acute') || lower.includes('chronic'))
+    completenessScore += 5;
 
   // Cap at 95 for mock
   completenessScore = Math.min(95, completenessScore);
 
-  // Generate suggestions
+  // ── Generate suggestions ──────────────────────────────────────────────────
+
   if (completenessScore < 60) {
-    suggestions.push('Add more specificity to diagnosis - include type, stage, or severity');
+    suggestions.push(
+      'Add more specificity to diagnosis — include type, stage, or severity',
+    );
   }
+
+  // Comorbidity suggestions from patient history
+  if (comorbidConditions.length > 0) {
+    const comorbNames = comorbidConditions
+      .map(c => c.keywords[0])
+      .join(', ');
+    suggestions.push(
+      `Patient history indicates comorbid conditions (${comorbNames}) not mentioned in the claim diagnosis. Consider adding relevant ICD-10 codes for completeness.`,
+    );
+  }
+
   if (!lower.includes('complication') && matchedConditions.length > 0) {
-    suggestions.push('Document any complications or comorbidities for accurate coding');
+    suggestions.push(
+      'Document any complications or comorbidities for accurate coding',
+    );
   }
+
+  // Allergy-based safety suggestions
+  const allergies = patientCtx?.profile?.allergies;
+  if (allergies && allergies.toLowerCase() !== 'none') {
+    suggestions.push(
+      `Patient has documented allergies: ${allergies}. Verify prescribed treatments do not conflict.`,
+    );
+  }
+
+  // Active medication cross-check
+  if (patientCtx?.active_medications && patientCtx.active_medications.length > 0) {
+    const medNames = patientCtx.active_medications
+      .map(m => `${m.name} ${m.dosage}`)
+      .join(', ');
+    suggestions.push(
+      `Patient is on active medications (${medNames}). Verify claim procedures/drugs do not duplicate or conflict with existing prescriptions.`,
+    );
+  }
+
+  // Vitals-based observations
+  if (patientCtx?.recent_vitals && patientCtx.recent_vitals.length > 0) {
+    const bpSystolic = patientCtx.recent_vitals.find(
+      v => v.type === 'bp_systolic',
+    );
+    const bloodSugar = patientCtx.recent_vitals.find(
+      v => v.type === 'blood_sugar',
+    );
+    const spo2 = patientCtx.recent_vitals.find(v => v.type === 'spo2');
+
+    if (bpSystolic && bpSystolic.value >= 140) {
+      suggestions.push(
+        `Latest BP systolic is ${bpSystolic.value} mmHg (elevated). Consider adding I10 (Essential hypertension) if not already coded.`,
+      );
+    }
+    if (bloodSugar && bloodSugar.value >= 126) {
+      suggestions.push(
+        `Latest blood sugar is ${bloodSugar.value} mg/dL (above normal). Ensure diabetes-related codes are included if applicable.`,
+      );
+    }
+    if (spo2 && spo2.value < 94) {
+      suggestions.push(
+        `SpO2 is ${spo2.value}% (low). Consider adding respiratory insufficiency codes if clinically relevant.`,
+      );
+    }
+  }
+
   if (claimedAmount) {
     const ranges = matchedConditions.map(c => c.typical_amount_range);
     const maxRange = Math.max(...ranges.map(r => r[1]));
     if (claimedAmount > maxRange * 1.2) {
-      suggestions.push(`Claimed amount (INR ${claimedAmount.toLocaleString('en-IN')}) exceeds typical range for this condition. Ensure supporting documentation justifies the amount.`);
+      suggestions.push(
+        `Claimed amount (INR ${claimedAmount.toLocaleString('en-IN')}) exceeds typical range for this condition. Ensure supporting documentation justifies the amount.`,
+      );
     }
   }
-  suggestions.push('Verify ICD-10 codes match the latest WHO ICD-10 2019 revision used by NHA');
-  suggestions.push('Ensure discharge summary includes all coded diagnoses');
+  suggestions.push(
+    'Verify ICD-10 codes match the latest WHO ICD-10 2019 revision used by NHA',
+  );
+  suggestions.push(
+    'Ensure discharge summary includes all coded diagnoses',
+  );
 
   // Ayushman Bharat package info
   const packages = matchedConditions
@@ -304,13 +541,17 @@ function generateMockAnalysis(diagnosisText: string, claimedAmount?: number) {
     }));
 
   return {
-    suggested_icd10_codes: uniqueIcd10,
-    suggested_cpt_codes: uniqueCpt,
+    icd_codes: uniqueIcd10,
+    cpt_codes: uniqueCpt,
     completeness_score: completenessScore,
     suggestions,
     ayushman_packages: packages.length > 0 ? packages : null,
-    confidence: matchedConditions[0]?.keywords.length > 0 ? 'high' : 'low',
-    analysis_source: 'rule_based_mock',
+    comorbidities_from_history: comorbidConditions.length > 0
+      ? comorbidConditions.map(c => c.keywords[0])
+      : null,
+    confidence:
+      matchedConditions[0]?.keywords.length > 0 ? 'high' : 'low',
+    analysis_source: 'rule_based_with_patient_context',
   };
 }
 
@@ -326,14 +567,23 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     let claimedAmount: number | undefined;
     let icd10Codes: string | null = null;
     let cptCodes: string | null = null;
+    let patientId: string | null = null;
 
     // Try to get from request body first
     try {
-      const body = await context.request.json() as Record<string, unknown>;
-      diagnosisText = (body.diagnosis as string) || (body.diagnosis_text as string) || null;
-      claimedAmount = body.claimed_amount ? Number(body.claimed_amount) : undefined;
-      icd10Codes = (body.diagnosis_codes as string) || (body.icd10_codes as string) || null;
-      cptCodes = (body.procedure_codes as string) || (body.cpt_codes as string) || null;
+      const body = (await context.request.json()) as Record<string, unknown>;
+      diagnosisText =
+        (body.diagnosis as string) || (body.diagnosis_text as string) || null;
+      claimedAmount = body.claimed_amount
+        ? Number(body.claimed_amount)
+        : undefined;
+      icd10Codes =
+        (body.diagnosis_codes as string) ||
+        (body.icd10_codes as string) ||
+        null;
+      cptCodes =
+        (body.procedure_codes as string) || (body.cpt_codes as string) || null;
+      patientId = (body.patient_id as string) || null;
     } catch {
       // Body might be empty; we'll try DB
     }
@@ -341,16 +591,21 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     // If not in body, try to get from D1
     if (!diagnosisText && context.env.DB) {
       try {
-        const claim = await context.env.DB.prepare(
-          'SELECT diagnosis, claimed_amount, diagnosis_codes, procedure_codes FROM claims WHERE id = ?'
-        ).bind(id).first<{
-          diagnosis: string;
-          claimed_amount: number;
-          diagnosis_codes: string;
-          procedure_codes: string;
-        }>();
+        const claim = await context.env.DB
+          .prepare(
+            'SELECT patient_id, diagnosis, claimed_amount, diagnosis_codes, procedure_codes FROM claims WHERE id = ?',
+          )
+          .bind(id)
+          .first<{
+            patient_id: string;
+            diagnosis: string;
+            claimed_amount: number;
+            diagnosis_codes: string;
+            procedure_codes: string;
+          }>();
 
         if (claim) {
+          patientId = claim.patient_id;
           diagnosisText = claim.diagnosis;
           claimedAmount = claim.claimed_amount;
           icd10Codes = claim.diagnosis_codes;
@@ -367,25 +622,51 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       claimedAmount = 45000;
     }
 
+    // ── Load patient context from D1 ──
+    let patientCtx: PatientContext = {
+      profile: null,
+      recent_vitals: [],
+      active_medications: [],
+    };
+
+    if (patientId && context.env.DB) {
+      patientCtx = await loadPatientContext(context.env.DB, patientId);
+    }
+
     // ── Try Claude API if available ──
     if (context.env.ANTHROPIC_API_KEY) {
       try {
-        const prompt = `You are a medical coding expert specializing in Indian healthcare claims processing, particularly for Ayushman Bharat (PM-JAY) and CGHS schemes.
+        const patientSection = formatPatientContextForPrompt(patientCtx);
 
-Analyze the following clinical information and provide coding suggestions:
+        const systemPrompt = `You are a medical coding expert specializing in Indian healthcare claims processing, particularly for Ayushman Bharat (PM-JAY), CGHS, and ECHS schemes.
+
+You have access to the patient's full clinical context. Use it to:
+1. Suggest the most accurate and specific ICD-10 codes, including comorbidities from the patient's history.
+2. Suggest appropriate CPT/procedure codes for the diagnosis.
+3. Flag any potential allergy or medication conflicts with the claimed treatment.
+4. Check whether the claimed amount aligns with PMJAY/CGHS package rates.
+5. Provide a completeness score (0-100) based on how well the claim documentation covers the clinical picture.
+
+${patientSection ? `\n${patientSection}\n` : ''}
+Always return valid JSON. Do not include markdown fences or commentary outside the JSON object.`;
+
+        const userPrompt = `Analyze this claim and provide coding suggestions:
 
 Diagnosis: ${diagnosisText}
-${icd10Codes ? `Current ICD-10 codes: ${icd10Codes}` : ''}
-${cptCodes ? `Current CPT codes: ${cptCodes}` : ''}
+${icd10Codes ? `Current ICD-10 codes on claim: ${icd10Codes}` : 'No ICD-10 codes provided on claim.'}
+${cptCodes ? `Current CPT/procedure codes on claim: ${cptCodes}` : 'No CPT codes provided on claim.'}
 ${claimedAmount ? `Claimed amount: INR ${claimedAmount.toLocaleString('en-IN')}` : ''}
 
-Respond in JSON format only (no markdown, no explanation outside JSON):
+Respond with this exact JSON structure:
 {
-  "suggested_icd10_codes": [{"code": "...", "description": "..."}],
-  "suggested_cpt_codes": [{"code": "...", "description": "..."}],
+  "icd_codes": [{"code": "...", "description": "..."}],
+  "cpt_codes": [{"code": "...", "description": "..."}],
   "completeness_score": <0-100>,
   "suggestions": ["..."],
   "ayushman_packages": [{"code": "...", "rate_range": "INR X - Y"}] or null,
+  "allergy_warnings": ["..."] or null,
+  "medication_conflicts": ["..."] or null,
+  "comorbidities_detected": ["..."] or null,
   "confidence": "high" | "medium" | "low"
 }`;
 
@@ -398,13 +679,14 @@ Respond in JSON format only (no markdown, no explanation outside JSON):
           },
           body: JSON.stringify({
             model: 'claude-sonnet-4-20250514',
-            max_tokens: 1024,
-            messages: [{ role: 'user', content: prompt }],
+            max_tokens: 1500,
+            system: systemPrompt,
+            messages: [{ role: 'user', content: userPrompt }],
           }),
         });
 
         if (response.ok) {
-          const result = await response.json() as {
+          const result = (await response.json()) as {
             content: { type: string; text: string }[];
           };
 
@@ -416,8 +698,13 @@ Respond in JSON format only (no markdown, no explanation outside JSON):
             const analysis = JSON.parse(jsonMatch[0]);
             return json({
               claim_id: id,
+              patient_id: patientId,
               diagnosis_text: diagnosisText,
-              analysis: { ...analysis, analysis_source: 'claude_ai' },
+              analysis: {
+                ...analysis,
+                analysis_source: 'claude_ai',
+              },
+              patient_context_available: !!patientCtx.profile,
             });
           }
         }
@@ -425,19 +712,31 @@ Respond in JSON format only (no markdown, no explanation outside JSON):
         // If Claude API fails, fall through to mock
         console.error('Claude API returned non-OK or unparseable response');
       } catch (aiErr) {
-        console.error('Claude API call failed, falling back to mock:', aiErr);
+        console.error(
+          'Claude API call failed, falling back to mock:',
+          aiErr,
+        );
       }
     }
 
-    // ── Smart mock fallback ──
-    const analysis = generateMockAnalysis(diagnosisText, claimedAmount);
+    // ── Smart mock fallback with patient context ──
+    const analysis = generateMockAnalysis(
+      diagnosisText,
+      claimedAmount,
+      patientCtx,
+    );
 
     return json({
       claim_id: id,
+      patient_id: patientId,
       diagnosis_text: diagnosisText,
       analysis,
+      patient_context_available: !!patientCtx.profile,
     });
   } catch (err) {
-    return json({ message: 'Failed to analyze claim', error: String(err) }, 500);
+    return json(
+      { message: 'Failed to analyze claim', error: String(err) },
+      500,
+    );
   }
 };
