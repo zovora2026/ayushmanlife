@@ -936,6 +936,33 @@ export default function Services() {
               ))}
             </div>
           </div>
+
+          {/* SLA Tier Summary */}
+          <Card header={<h3 className="font-display font-semibold text-text dark:text-text-dark">Service Level Agreement Tiers</h3>}>
+            <div className="space-y-3">
+              {[
+                { tier: 'Platinum (24x7)', response: '15 min', resolution: '2 hrs', uptime: '99.99%', clients: 12, color: 'border-l-violet-500' },
+                { tier: 'Gold (24x5)', response: '30 min', resolution: '4 hrs', uptime: '99.95%', clients: 28, color: 'border-l-amber-500' },
+                { tier: 'Silver (Business Hours)', response: '1 hr', resolution: '8 hrs', uptime: '99.9%', clients: 45, color: 'border-l-gray-400' },
+                { tier: 'Bronze (Best Effort)', response: '4 hrs', resolution: '24 hrs', uptime: '99.5%', clients: 67, color: 'border-l-amber-700' },
+              ].map(t => (
+                <div key={t.tier} className={`flex items-center gap-4 p-3 rounded-lg bg-gray-50 dark:bg-slate-800 border-l-4 ${t.color}`}>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-text dark:text-text-dark">{t.tier}</p>
+                    <div className="flex gap-4 text-xs text-muted mt-1">
+                      <span>Response: <span className="font-medium text-text dark:text-text-dark">{t.response}</span></span>
+                      <span>Resolution: <span className="font-medium text-text dark:text-text-dark">{t.resolution}</span></span>
+                      <span>Uptime: <span className="font-medium text-text dark:text-text-dark">{t.uptime}</span></span>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-bold text-primary">{t.clients}</p>
+                    <p className="text-[10px] text-muted">clients</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
         </div>
       )}
 

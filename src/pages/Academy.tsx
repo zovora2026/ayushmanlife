@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
-import { GraduationCap, Users, Award, Clock, BookOpen, Star, ChevronRight, BarChart3, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react'
+import { GraduationCap, Users, Award, Clock, BookOpen, Star, ChevronRight, BarChart3, CheckCircle, AlertTriangle, Loader2, Target, TrendingUp, Database, RefreshCw, Layers, Calendar, Rocket, Shield, ArrowRight, Zap, Activity } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { academy as academyAPI } from '../lib/api'
 
-const tabs = ['Dashboard', 'Learning Paths', 'Certifications', 'Apprenticeship', 'Go-Live Center', 'Skill Assessment']
+const tabs = ['Dashboard', 'Learning Paths', 'Certifications', 'Apprenticeship', 'Go-Live Center', 'Skill Assessment', 'ERP Services']
 
 interface LearningPathData {
   id: string
@@ -166,27 +166,116 @@ export default function Academy() {
       )}
 
       {activeTab === 'Learning Paths' && (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {learningPaths.map(lp => (
-            <div key={lp.id} className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-5 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-3">
-                <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">{lp.category}</span>
-                <DiffBadge d={lp.difficulty} />
+        <div className="space-y-6">
+          {/* Certification Stats Strip */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { label: 'Total Certified', value: '186', icon: Award, color: 'text-success' },
+              { label: 'In Progress', value: '94', icon: Loader2, color: 'text-primary' },
+              { label: 'Pass Rate', value: '91%', icon: Target, color: 'text-accent' },
+              { label: 'Avg Score', value: '84.2%', icon: TrendingUp, color: 'text-warning' },
+            ].map(s => (
+              <div key={s.label} className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-4 flex items-center gap-3">
+                <div className={cn('w-10 h-10 rounded-lg flex items-center justify-center bg-gray-50 dark:bg-slate-800', s.color)}>
+                  <s.icon className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="font-display font-bold text-xl text-text dark:text-text-dark">{s.value}</p>
+                  <p className="text-xs text-muted">{s.label}</p>
+                </div>
               </div>
-              <h3 className="font-display font-semibold text-text dark:text-text-dark mb-2">{lp.title}</h3>
-              <div className="flex items-center gap-4 text-xs text-muted mb-3">
-                <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" />{lp.modules} modules</span>
-                <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{lp.duration}</span>
-              </div>
-              <div className="w-full h-2 bg-gray-100 dark:bg-slate-700 rounded-full mb-2">
-                <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${(lp.completed / lp.modules) * 100}%` }} />
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted">{lp.completed}/{lp.modules} completed</span>
-                <span className="text-muted">{lp.enrolled} enrolled</span>
+            ))}
+          </div>
+
+          {/* Skill Competency Assessment */}
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-5">
+              <h3 className="font-display font-semibold text-text dark:text-text-dark mb-4 flex items-center gap-2">
+                <Activity className="w-5 h-5 text-primary" /> Competency Assessment
+              </h3>
+              <div className="space-y-4">
+                {[
+                  { area: 'Clinical Systems Knowledge', pct: 82, target: 90 },
+                  { area: 'Technical Architecture', pct: 71, target: 85 },
+                  { area: 'Project Management', pct: 88, target: 90 },
+                  { area: 'Regulatory Compliance', pct: 76, target: 80 },
+                  { area: 'Communication & Leadership', pct: 84, target: 85 },
+                ].map(c => (
+                  <div key={c.area}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm text-text dark:text-text-dark">{c.area}</span>
+                      <span className="text-xs text-muted">{c.pct}% / {c.target}% target</span>
+                    </div>
+                    <div className="relative w-full h-3 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                      <div className={cn('h-full rounded-full transition-all',
+                        c.pct >= c.target ? 'bg-success' : c.pct >= c.target - 10 ? 'bg-primary' : 'bg-warning'
+                      )} style={{ width: `${c.pct}%` }} />
+                      <div className="absolute top-0 bottom-0 w-0.5 bg-text/30 dark:bg-text-dark/30" style={{ left: `${c.target}%` }} title={`Target: ${c.target}%`} />
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
+
+            {/* Career Progression Pathway */}
+            <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-5">
+              <h3 className="font-display font-semibold text-text dark:text-text-dark mb-4 flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-primary" /> Career Progression Pathway
+              </h3>
+              <div className="space-y-3">
+                {[
+                  { level: 'Junior Analyst', req: '0-1 yrs exp, 1 certification, fundamentals complete', active: false, current: false },
+                  { level: 'Mid-Level Specialist', req: '2-3 yrs exp, 2 certifications, 3+ projects', active: false, current: true },
+                  { level: 'Senior Consultant', req: '4-6 yrs exp, 3 certifications, lead 2+ go-lives', active: true, current: false },
+                  { level: 'Lead / Architect', req: '7+ yrs exp, 4+ certifications, mentorship record', active: true, current: false },
+                ].map((p, i) => (
+                  <div key={p.level} className="relative">
+                    <div className={cn('p-3 rounded-lg border-2 transition-all',
+                      p.current ? 'border-primary bg-primary/5' :
+                      !p.active ? 'border-success/40 bg-success/5' : 'border-border dark:border-border-dark bg-gray-50 dark:bg-slate-800'
+                    )}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {!p.active && !p.current && <CheckCircle className="w-4 h-4 text-success shrink-0" />}
+                          {p.current && <Zap className="w-4 h-4 text-primary shrink-0" />}
+                          {p.active && !p.current && <Star className="w-4 h-4 text-muted shrink-0" />}
+                          <span className="text-sm font-semibold text-text dark:text-text-dark">{p.level}</span>
+                        </div>
+                        {p.current && <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">Current Level</span>}
+                        {!p.active && !p.current && <span className="px-2 py-0.5 rounded-full bg-success/10 text-success text-xs font-medium">Achieved</span>}
+                      </div>
+                      <p className="text-xs text-muted mt-1 ml-6">{p.req}</p>
+                    </div>
+                    {i < 3 && <div className="flex justify-center my-1"><ArrowRight className="w-4 h-4 text-muted rotate-90" /></div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Learning Path Cards */}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {learningPaths.map(lp => (
+              <div key={lp.id} className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-5 hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">{lp.category}</span>
+                  <DiffBadge d={lp.difficulty} />
+                </div>
+                <h3 className="font-display font-semibold text-text dark:text-text-dark mb-2">{lp.title}</h3>
+                <div className="flex items-center gap-4 text-xs text-muted mb-3">
+                  <span className="flex items-center gap-1"><BookOpen className="w-3 h-3" />{lp.modules} modules</span>
+                  <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{lp.duration}</span>
+                </div>
+                <div className="w-full h-2 bg-gray-100 dark:bg-slate-700 rounded-full mb-2">
+                  <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${(lp.completed / lp.modules) * 100}%` }} />
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted">{lp.completed}/{lp.modules} completed</span>
+                  <span className="text-muted">{lp.enrolled} enrolled</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -263,6 +352,31 @@ export default function Academy() {
 
       {activeTab === 'Go-Live Center' && (
         <div className="space-y-6">
+          {/* Days to Go-Live Countdown Banner */}
+          <div className="bg-gradient-to-r from-primary to-accent rounded-xl p-5 text-white">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-3">
+                <Rocket className="w-8 h-8" />
+                <div>
+                  <h3 className="font-display font-bold text-lg">Next Go-Live: City Care Multi-Speciality, Pune</h3>
+                  <p className="text-white/80 text-sm">Epic EHR Full Deployment — 05 Apr 2026</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-6">
+                {[
+                  { val: '6', unit: 'Days' },
+                  { val: '14', unit: 'Hours' },
+                  { val: '32', unit: 'Minutes' },
+                ].map(cd => (
+                  <div key={cd.unit} className="text-center">
+                    <p className="font-display font-bold text-3xl">{cd.val}</p>
+                    <p className="text-white/70 text-xs uppercase tracking-wider">{cd.unit}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { label: 'Active Projects', value: '8', icon: BarChart3, change: '+2 this month' },
@@ -373,6 +487,79 @@ export default function Academy() {
               </div>
             </div>
           </div>
+
+          {/* Detailed Readiness Tracker */}
+          <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-5">
+            <h3 className="font-display font-semibold text-text dark:text-text-dark mb-4 flex items-center gap-2">
+              <Target className="w-5 h-5 text-primary" /> Go-Live Readiness Checklist — City Care Pune
+            </h3>
+            <div className="space-y-3">
+              {[
+                { item: 'Staff Training', pct: 98, status: 'Complete', icon: GraduationCap },
+                { item: 'System Testing (UAT)', pct: 92, status: 'Final Review', icon: Shield },
+                { item: 'Data Migration', pct: 100, status: 'Verified', icon: Database },
+                { item: 'Integration Validation', pct: 85, status: 'In Progress', icon: RefreshCw },
+                { item: 'Go-Live Checklist', pct: 78, status: 'In Progress', icon: CheckCircle },
+              ].map(r => (
+                <div key={r.item} className="flex items-center gap-4 p-3 rounded-lg bg-gray-50 dark:bg-slate-800">
+                  <r.icon className="w-5 h-5 text-primary shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium text-text dark:text-text-dark">{r.item}</span>
+                      <div className="flex items-center gap-2">
+                        <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium',
+                          r.pct === 100 ? 'bg-success/10 text-success' :
+                          r.pct >= 90 ? 'bg-primary/10 text-primary' : 'bg-warning/10 text-warning'
+                        )}>{r.status}</span>
+                        <span className="text-sm font-bold text-text dark:text-text-dark">{r.pct}%</span>
+                      </div>
+                    </div>
+                    <div className="w-full h-2 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                      <div className={cn('h-full rounded-full transition-all',
+                        r.pct === 100 ? 'bg-success' : r.pct >= 90 ? 'bg-primary' : 'bg-warning'
+                      )} style={{ width: `${r.pct}%` }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Milestone Timeline */}
+          <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-5">
+            <h3 className="font-display font-semibold text-text dark:text-text-dark mb-5 flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-primary" /> Go-Live Milestone Timeline
+            </h3>
+            <div className="relative">
+              <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-slate-700" />
+              <div className="space-y-6">
+                {[
+                  { date: '01 Mar 2026', title: 'Environment Provisioning Complete', status: 'done' as const },
+                  { date: '15 Mar 2026', title: 'Data Migration & Validation Sign-off', status: 'done' as const },
+                  { date: '25 Mar 2026', title: 'End-User Training Complete', status: 'done' as const },
+                  { date: '02 Apr 2026', title: 'Dress Rehearsal & Final UAT', status: 'current' as const },
+                  { date: '05 Apr 2026', title: 'Go-Live & Hypercare Support Begins', status: 'upcoming' as const },
+                ].map((m, i) => (
+                  <div key={i} className="relative flex items-start gap-4 pl-10">
+                    <div className={cn('absolute left-2.5 w-3 h-3 rounded-full border-2 mt-1',
+                      m.status === 'done' ? 'bg-success border-success' :
+                      m.status === 'current' ? 'bg-primary border-primary animate-pulse' : 'bg-white dark:bg-surface-dark border-gray-300 dark:border-slate-600'
+                    )} />
+                    <div className="flex-1 p-3 rounded-lg bg-gray-50 dark:bg-slate-800">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-text dark:text-text-dark">{m.title}</p>
+                        <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium',
+                          m.status === 'done' ? 'bg-success/10 text-success' :
+                          m.status === 'current' ? 'bg-primary/10 text-primary' : 'bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-gray-400'
+                        )}>{m.status === 'done' ? 'Completed' : m.status === 'current' ? 'In Progress' : 'Upcoming'}</span>
+                      </div>
+                      <p className="text-xs text-muted mt-1">{m.date}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -423,6 +610,161 @@ export default function Academy() {
                   </button>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'ERP Services' && (
+        <div className="space-y-6">
+          {/* Workday HCM Integration Status */}
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-5 text-white">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-3">
+                <Layers className="w-8 h-8" />
+                <div>
+                  <h3 className="font-display font-bold text-lg">Workday HCM Integration</h3>
+                  <p className="text-white/80 text-sm">Healthcare-grade ERP platform — Connected & Syncing</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/20 text-sm font-medium">
+                  <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                  Connected
+                </span>
+                <span className="text-white/70 text-sm">Last sync: 2 min ago</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Integration Pipeline Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { label: 'Records Synced', value: '1.24M', icon: Database, change: '+12,450 today' },
+              { label: 'Last Full Sync', value: '08:45 AM', icon: RefreshCw, change: 'Today' },
+              { label: 'Error Rate', value: '0.02%', icon: AlertTriangle, change: 'Below threshold' },
+              { label: 'Uptime (30d)', value: '99.97%', icon: Activity, change: 'SLA: 99.9%' },
+            ].map(s => (
+              <div key={s.label} className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <s.icon className="w-5 h-5 text-primary" />
+                  <span className="text-xs text-success font-medium">{s.change}</span>
+                </div>
+                <p className="font-display font-bold text-2xl text-text dark:text-text-dark">{s.value}</p>
+                <p className="text-xs text-muted mt-1">{s.label}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* ERP Module Cards */}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              {
+                module: 'Finance & Accounting',
+                icon: BarChart3,
+                status: 'Active',
+                statusColor: 'bg-success/10 text-success',
+                desc: 'GL, AP/AR, revenue cycle, billing integrations',
+                metrics: [
+                  { label: 'Transactions/Day', value: '8,420' },
+                  { label: 'Auto-Reconciled', value: '96%' },
+                  { label: 'Pending Approvals', value: '14' },
+                ],
+              },
+              {
+                module: 'Human Resources',
+                icon: Users,
+                status: 'Active',
+                statusColor: 'bg-success/10 text-success',
+                desc: 'Employee records, payroll, benefits, credentialing',
+                metrics: [
+                  { label: 'Active Employees', value: '2,847' },
+                  { label: 'Payroll Accuracy', value: '99.8%' },
+                  { label: 'Open Positions', value: '34' },
+                ],
+              },
+              {
+                module: 'Supply Chain',
+                icon: RefreshCw,
+                status: 'Configuring',
+                statusColor: 'bg-warning/10 text-warning',
+                desc: 'Procurement, inventory, pharmacy supply, vendor mgmt',
+                metrics: [
+                  { label: 'POs This Month', value: '1,245' },
+                  { label: 'Vendors Active', value: '328' },
+                  { label: 'Stock Alerts', value: '7' },
+                ],
+              },
+              {
+                module: 'Planning & Analytics',
+                icon: TrendingUp,
+                status: 'Pilot',
+                statusColor: 'bg-accent/10 text-accent',
+                desc: 'Workforce planning, budgeting, financial forecasts',
+                metrics: [
+                  { label: 'Forecast Accuracy', value: '87%' },
+                  { label: 'Budget Variance', value: '-2.1%' },
+                  { label: 'Planning Cycles', value: 'Q2 2026' },
+                ],
+              },
+            ].map(m => (
+              <div key={m.module} className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-5 hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-3">
+                  <m.icon className="w-6 h-6 text-primary" />
+                  <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', m.statusColor)}>{m.status}</span>
+                </div>
+                <h3 className="font-display font-semibold text-text dark:text-text-dark mb-1">{m.module}</h3>
+                <p className="text-xs text-muted mb-4">{m.desc}</p>
+                <div className="space-y-2 border-t border-border dark:border-border-dark pt-3">
+                  {m.metrics.map(mt => (
+                    <div key={mt.label} className="flex items-center justify-between text-sm">
+                      <span className="text-muted">{mt.label}</span>
+                      <span className="font-semibold text-text dark:text-text-dark">{mt.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Integration Data Flow */}
+          <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-5">
+            <h3 className="font-display font-semibold text-text dark:text-text-dark mb-4 flex items-center gap-2">
+              <Layers className="w-5 h-5 text-primary" /> Integration Data Flow
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border dark:border-border-dark bg-gray-50 dark:bg-slate-800">
+                    {['Integration', 'Source', 'Destination', 'Frequency', 'Records', 'Status'].map(h => (
+                      <th key={h} className="text-left px-4 py-3 font-semibold text-muted text-xs uppercase tracking-wider">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { integration: 'Employee Master Sync', source: 'Workday HCM', dest: 'Epic EHR', freq: 'Real-time', records: '2,847', status: 'Active' },
+                    { integration: 'Payroll Export', source: 'Workday Payroll', dest: 'Bank Gateway', freq: 'Bi-weekly', records: '2,847', status: 'Active' },
+                    { integration: 'PO Requisitions', source: 'Epic Supply Chain', dest: 'Workday Finance', freq: 'Hourly', records: '~340/day', status: 'Active' },
+                    { integration: 'GL Journal Entries', source: 'Revenue Cycle', dest: 'Workday Finance', freq: 'Daily', records: '~1,200/day', status: 'Active' },
+                    { integration: 'Credential Verify', source: 'Workday HCM', dest: 'Compliance Engine', freq: 'Daily', records: '156', status: 'Active' },
+                    { integration: 'Budget Forecasts', source: 'Workday Planning', dest: 'BI Dashboard', freq: 'Weekly', records: '48 models', status: 'Pilot' },
+                  ].map((row, i) => (
+                    <tr key={i} className="border-b border-border dark:border-border-dark last:border-0 hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                      <td className="px-4 py-3 font-medium text-text dark:text-text-dark">{row.integration}</td>
+                      <td className="px-4 py-3 text-muted">{row.source}</td>
+                      <td className="px-4 py-3 text-muted">{row.dest}</td>
+                      <td className="px-4 py-3"><span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">{row.freq}</span></td>
+                      <td className="px-4 py-3 text-muted">{row.records}</td>
+                      <td className="px-4 py-3">
+                        <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium',
+                          row.status === 'Active' ? 'bg-success/10 text-success' : 'bg-accent/10 text-accent'
+                        )}>{row.status}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

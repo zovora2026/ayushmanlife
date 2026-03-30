@@ -582,6 +582,45 @@ export default function Payer() {
             columns={policyColumns}
             data={filteredPolicies as unknown as Record<string, unknown>[]}
           />
+
+          {/* Policy Lifecycle Management */}
+          <Card header={<h3 className="font-display font-semibold text-text dark:text-text-dark">Policy Lifecycle Management</h3>}>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+              {[
+                { stage: 'Proposal', count: 48, trend: '+12', color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                { stage: 'Underwriting', count: 23, trend: '-3', color: 'text-violet-500', bg: 'bg-violet-500/10' },
+                { stage: 'Issuance', count: 15, trend: '+8', color: 'text-teal-500', bg: 'bg-teal-500/10' },
+                { stage: 'Renewal', count: 67, trend: '+22', color: 'text-amber-500', bg: 'bg-amber-500/10' },
+              ].map(s => (
+                <div key={s.stage} className={`p-3 rounded-lg ${s.bg} text-center`}>
+                  <p className={`font-display font-bold text-xl ${s.color}`}>{s.count}</p>
+                  <p className="text-xs font-medium text-text dark:text-text-dark">{s.stage}</p>
+                  <p className="text-[10px] text-muted">{s.trend} this week</p>
+                </div>
+              ))}
+            </div>
+            <div className="space-y-2">
+              {[
+                { event: 'Auto-renewal triggered for PMJAY batch', time: '2 hours ago', type: 'Renewal' },
+                { event: 'Underwriting completed — HDFC ERGO policy HDFC-7891', time: '4 hours ago', type: 'Underwriting' },
+                { event: 'Endorsement processed — beneficiary name change', time: '6 hours ago', type: 'Endorsement' },
+                { event: 'Policy lapse warning sent to 7 beneficiaries', time: '1 day ago', type: 'Lapse Warning' },
+                { event: 'Portability request received — Star Health to ICICI', time: '1 day ago', type: 'Portability' },
+              ].map((e, i) => (
+                <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg bg-gray-50 dark:bg-slate-800">
+                  <span className={cn('px-2 py-0.5 rounded-full text-[10px] font-medium',
+                    e.type === 'Renewal' ? 'bg-teal-500/10 text-teal-600' :
+                    e.type === 'Underwriting' ? 'bg-violet-500/10 text-violet-600' :
+                    e.type === 'Endorsement' ? 'bg-blue-500/10 text-blue-600' :
+                    e.type === 'Lapse Warning' ? 'bg-error/10 text-error' :
+                    'bg-amber-500/10 text-amber-600'
+                  )}>{e.type}</span>
+                  <p className="flex-1 text-xs text-text dark:text-text-dark">{e.event}</p>
+                  <span className="text-[10px] text-muted shrink-0">{e.time}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
         </div>
       )}
 
@@ -771,6 +810,60 @@ export default function Payer() {
               </table>
             </div>
           </Card>
+
+          {/* TPA Performance Benchmarks */}
+          <div className="grid md:grid-cols-2 gap-6">
+            <Card header={<h3 className="font-display font-semibold text-text dark:text-text-dark">TPA Performance Benchmarks</h3>}>
+              <div className="space-y-3">
+                {TPA_DIRECTORY.map(t => (
+                  <div key={t.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-sm font-medium text-text dark:text-text-dark">{t.name}</p>
+                        <span className={cn('text-sm font-bold', getPerformanceColor(t.performanceScore))}>{t.performanceScore}%</span>
+                      </div>
+                      <div className="h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <div className={cn('h-full rounded-full', t.performanceScore >= 90 ? 'bg-success' : t.performanceScore >= 80 ? 'bg-warning' : 'bg-error')} style={{ width: `${t.performanceScore}%` }} />
+                      </div>
+                      <div className="flex gap-3 mt-1 text-[10px] text-muted">
+                        <span>{t.region}</span>
+                        <span>TAT: {t.avgTAT}</span>
+                        <span>Settlement: {t.settlementRatio}%</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            <Card header={<h3 className="font-display font-semibold text-text dark:text-text-dark">Empanelment Status</h3>}>
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                {[
+                  { label: 'Total Empanelled', value: '1,495', color: 'text-primary' },
+                  { label: 'New (This Quarter)', value: '47', color: 'text-success' },
+                  { label: 'De-empanelled', value: '12', color: 'text-error' },
+                ].map(s => (
+                  <div key={s.label} className="p-3 rounded-lg bg-gray-50 dark:bg-slate-800 text-center">
+                    <p className={cn('font-display font-bold text-lg', s.color)}>{s.value}</p>
+                    <p className="text-[10px] text-muted">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-2">
+                {[
+                  { event: 'MedAssist added 12 hospitals in Gujarat network', time: '1 day ago' },
+                  { event: 'SafeGuard under performance review — TAT > SLA', time: '2 days ago' },
+                  { event: 'PrimeCare upgraded to Tier 1 partner status', time: '3 days ago' },
+                  { event: 'Annual re-empanelment initiated for 45 TPAs', time: '1 week ago' },
+                ].map((e, i) => (
+                  <div key={i} className="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 dark:bg-slate-800">
+                    <p className="text-xs text-text dark:text-text-dark flex-1">{e.event}</p>
+                    <span className="text-[10px] text-muted shrink-0 ml-3">{e.time}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
         </div>
       )}
 
@@ -868,6 +961,67 @@ export default function Payer() {
               </table>
             </div>
           </Card>
+
+          {/* Provider Network Insights */}
+          <div className="grid md:grid-cols-2 gap-6">
+            <Card header={<h3 className="font-display font-semibold text-text dark:text-text-dark">Geographic Distribution</h3>}>
+              <div className="space-y-3">
+                {[
+                  { region: 'North India', hospitals: 342, beds: 18500, utilization: 84, growth: '+12%' },
+                  { region: 'South India', hospitals: 287, beds: 15200, utilization: 88, growth: '+8%' },
+                  { region: 'West India', hospitals: 198, beds: 12400, utilization: 81, growth: '+15%' },
+                  { region: 'East India', hospitals: 124, beds: 8900, utilization: 72, growth: '+22%' },
+                  { region: 'Central India', hospitals: 89, beds: 5600, utilization: 68, growth: '+18%' },
+                ].map(r => (
+                  <div key={r.region} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-sm font-medium text-text dark:text-text-dark">{r.region}</p>
+                        <span className="text-xs text-success font-medium">{r.growth}</span>
+                      </div>
+                      <div className="flex gap-4 text-xs text-muted">
+                        <span>{r.hospitals} hospitals</span>
+                        <span>{r.beds.toLocaleString()} beds</span>
+                        <span>{r.utilization}% utilized</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            <Card header={<h3 className="font-display font-semibold text-text dark:text-text-dark">Credentialing Pipeline</h3>}>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                {[
+                  { label: 'Pending Review', value: '24', color: 'text-warning' },
+                  { label: 'In Verification', value: '18', color: 'text-blue-500' },
+                  { label: 'Approved', value: '156', color: 'text-success' },
+                  { label: 'Avg Process Time', value: '5.2d', color: 'text-primary' },
+                ].map(s => (
+                  <div key={s.label} className="p-3 rounded-lg bg-gray-50 dark:bg-slate-800 text-center">
+                    <p className={cn('font-display font-bold text-lg', s.color)}>{s.value}</p>
+                    <p className="text-[10px] text-muted">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-2">
+                {[
+                  { hospital: 'Medanta Ranchi', stage: 'Document Review', days: 3 },
+                  { hospital: 'KIMS Hyderabad', stage: 'Site Inspection', days: 7 },
+                  { hospital: 'Rainbow Chennai', stage: 'Final Approval', days: 1 },
+                  { hospital: 'Aster Bangalore', stage: 'Document Review', days: 5 },
+                ].map((h, i) => (
+                  <div key={i} className="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 dark:bg-slate-800">
+                    <div>
+                      <p className="text-xs font-medium text-text dark:text-text-dark">{h.hospital}</p>
+                      <p className="text-[10px] text-muted">{h.stage}</p>
+                    </div>
+                    <span className="text-xs text-muted">{h.days}d ago</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
         </div>
       )}
 

@@ -35,6 +35,20 @@ import {
   BatteryMedium,
   BatteryLow,
   Smartphone,
+  MapPin,
+  FileText,
+  RefreshCw,
+  XCircle,
+  CalendarCheck,
+  Wifi,
+  Camera,
+  Mic,
+  ClipboardList,
+  ThumbsUp,
+  Zap,
+  Shield,
+  TrendingUp,
+  Package,
 } from 'lucide-react'
 import { useChatStore } from '../store/chatStore'
 import { patients as patientsAPI } from '../lib/api'
@@ -166,6 +180,8 @@ const defaultVitals = [
 
 function ChatBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === 'user'
+  // Simulated AI confidence based on message length and content
+  const aiConfidence = !isUser ? Math.min(98, Math.max(75, 85 + (message.content.length % 13))) : 0
 
   return (
     <div className={cn('flex gap-2.5', isUser ? 'flex-row-reverse' : 'flex-row')}>
@@ -176,9 +192,24 @@ function ChatBubble({ message }: { message: ChatMessage }) {
       <div className={cn('max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed',
         isUser ? 'rounded-tr-md bg-primary text-white' : 'rounded-tl-md bg-gray-100 text-text dark:bg-gray-800 dark:text-text-dark')}>
         <div className="whitespace-pre-wrap">{message.content}</div>
-        <p className={cn('mt-1.5 text-[10px]', isUser ? 'text-white/60' : 'text-muted')}>
-          {new Date(message.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
-        </p>
+        <div className={cn('mt-1.5 flex items-center gap-2', isUser ? 'justify-end' : 'justify-between')}>
+          <p className={cn('text-[10px]', isUser ? 'text-white/60' : 'text-muted')}>
+            {new Date(message.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
+          </p>
+          {!isUser && (
+            <span className={cn(
+              'inline-flex items-center gap-0.5 text-[9px] font-medium rounded-full px-1.5 py-0.5',
+              aiConfidence >= 90
+                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                : aiConfidence >= 80
+                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                  : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+            )}>
+              <Zap className="h-2 w-2" />
+              {aiConfidence}% conf.
+            </span>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -233,6 +264,35 @@ export default function VCare() {
   const [scDuration, setScDuration] = useState('')
   const [scSeverity, setScSeverity] = useState(0)
   const [scNotes, setScNotes] = useState('')
+
+  // Appointment Booking Enhancement state
+  const [aptRescheduleIdx, setAptRescheduleIdx] = useState<number | null>(null)
+
+  // Medication Adherence Enhancement state
+  const [weeklyAdherence] = useState<Record<string, ('taken' | 'missed' | 'upcoming')[]>>({
+    'Metformin 500mg': ['taken', 'taken', 'missed', 'taken', 'taken', 'taken', 'upcoming'],
+    'Amlodipine 5mg': ['taken', 'taken', 'taken', 'taken', 'missed', 'taken', 'upcoming'],
+    'Atorvastatin 10mg': ['taken', 'missed', 'taken', 'taken', 'taken', 'taken', 'upcoming'],
+    'Aspirin 75mg': ['taken', 'taken', 'taken', 'missed', 'taken', 'taken', 'upcoming'],
+  })
+
+  // Telemedicine Enhancement state
+  const [teleWaitingStatus] = useState<'waiting' | 'ready' | 'in-progress'>('waiting')
+  const [telePreCheckCamera, setTelePreCheckCamera] = useState(false)
+  const [telePreCheckMic, setTelePreCheckMic] = useState(false)
+  const [telePreCheckInternet, setTelePreCheckInternet] = useState(false)
+
+  // Patient Feedback Enhancement state
+  const [npsScore] = useState(72)
+
+  // AI Health Query Enhancement state
+  const aiQuerySuggestions = [
+    'What are my BP trends?',
+    'Side effects of Metformin?',
+    'Diabetes diet tips',
+    'When is my next checkup?',
+    'How to lower cholesterol?',
+  ]
 
   const resetSymptomChecker = () => {
     setScStep(1)
@@ -319,7 +379,13 @@ export default function VCare() {
               <Bot className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h2 className="font-display font-semibold text-text dark:text-text-dark">V-Care AI Assistant</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="font-display font-semibold text-text dark:text-text-dark">V-Care AI Assistant</h2>
+                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-0.5 text-[10px] font-bold text-green-700 dark:text-green-400">
+                  <Shield className="h-2.5 w-2.5" />
+                  24/7 Available
+                </span>
+              </div>
               <div className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
                 <span className="text-xs text-success font-medium">Online</span>
@@ -337,6 +403,21 @@ export default function VCare() {
           {messages.map((msg) => <ChatBubble key={msg.id} message={msg} />)}
           {isTyping && <TypingIndicator />}
           <div ref={messagesEndRef} />
+        </div>
+
+        {/* AI Health Query Suggestions Strip */}
+        <div className="border-t border-border px-5 py-2 dark:border-border-dark">
+          <p className="text-[10px] font-medium text-muted mb-1.5 flex items-center gap-1">
+            <Brain className="h-3 w-3 text-primary" /> Quick Health Queries
+          </p>
+          <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+            {aiQuerySuggestions.map((q) => (
+              <button key={q} onClick={() => sendMessage(q)}
+                className="shrink-0 rounded-full bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 px-3 py-1 text-[11px] font-medium text-primary transition-all hover:from-primary/20 hover:to-accent/20 hover:shadow-sm dark:border-primary/30">
+                {q}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2 border-t border-border px-5 py-2.5 dark:border-border-dark">
@@ -793,6 +874,38 @@ export default function VCare() {
                 <div className="mt-1 flex items-center gap-1.5 text-xs text-muted">
                   <Clock className="h-3 w-3" /><span>{apt.date} &middot; {apt.time}</span>
                 </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <button
+                    onClick={() => setAptRescheduleIdx(aptRescheduleIdx === i ? null : i)}
+                    className="flex items-center gap-1 rounded-md border border-primary/30 bg-primary/5 px-2 py-1 text-[10px] font-medium text-primary transition-colors hover:bg-primary/10"
+                  >
+                    <RefreshCw className="h-2.5 w-2.5" /> Reschedule
+                  </button>
+                  <button
+                    onClick={() => setPatientApts(prev => prev.filter((_, idx) => idx !== i))}
+                    className="flex items-center gap-1 rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-2 py-1 text-[10px] font-medium text-red-600 dark:text-red-400 transition-colors hover:bg-red-100 dark:hover:bg-red-900/30"
+                  >
+                    <XCircle className="h-2.5 w-2.5" /> Cancel
+                  </button>
+                  <span className="flex items-center gap-1 text-[10px] text-muted ml-auto">
+                    <CalendarCheck className="h-2.5 w-2.5" /> Persist to calendar
+                  </span>
+                </div>
+                {aptRescheduleIdx === i && (
+                  <div className="mt-2 rounded-lg border border-primary/20 bg-primary/5 p-2.5 space-y-2">
+                    <p className="text-[10px] font-medium text-primary">Select new date & time:</p>
+                    <div className="flex gap-2">
+                      <input
+                        type="date"
+                        className="flex-1 rounded-md border border-border dark:border-border-dark bg-background dark:bg-background-dark text-text dark:text-text-dark text-[10px] px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                        onChange={(e) => {
+                          setPatientApts(prev => prev.map((a, idx) => idx === i ? { ...a, date: e.target.value } : a))
+                          setAptRescheduleIdx(null)
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
@@ -800,14 +913,63 @@ export default function VCare() {
 
         <Card header={<div id="book-appointment-card" className="flex items-center gap-2"><CalendarPlus className="h-4 w-4 text-primary" /><h3 className="font-display font-semibold text-text dark:text-text-dark">Book Appointment</h3></div>}>
           {bookingConfirmed ? (
-            <div className="text-center py-3">
-              <CheckCircle className="h-10 w-10 text-success mx-auto mb-2" />
-              <p className="text-sm font-semibold text-text dark:text-text-dark">Appointment Confirmed!</p>
-              <div className="mt-3 rounded-lg bg-gray-50 dark:bg-white/5 p-3 text-left space-y-1">
-                <p className="text-xs text-muted">Department: <span className="font-medium text-text dark:text-text-dark">{bookingDept}</span></p>
-                <p className="text-xs text-muted">Date: <span className="font-medium text-text dark:text-text-dark">{bookingDate}</span></p>
-                <p className="text-xs text-muted">Time: <span className="font-medium text-text dark:text-text-dark">{bookingTime}</span></p>
+            <div className="py-3">
+              <div className="text-center">
+                <CheckCircle className="h-10 w-10 text-success mx-auto mb-2" />
+                <p className="text-sm font-semibold text-text dark:text-text-dark">Appointment Confirmed!</p>
               </div>
+              <div className="mt-3 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/10 p-3 text-left space-y-2">
+                <div className="flex items-start gap-2">
+                  <Stethoscope className="h-3.5 w-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-[10px] text-muted">Doctor</p>
+                    <p className="text-xs font-medium text-text dark:text-text-dark">
+                      {bookingDept === 'Cardiology' ? 'Dr. Anil Kapoor' : bookingDept === 'General Medicine' ? 'Dr. Meera Joshi' : bookingDept === 'Pulmonology' ? 'Dr. Kavita Nair' : 'Dr. Priya Sharma'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Calendar className="h-3.5 w-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-[10px] text-muted">Date & Time</p>
+                    <p className="text-xs font-medium text-text dark:text-text-dark">{bookingDate} at {bookingTime}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <MapPin className="h-3.5 w-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-[10px] text-muted">Location</p>
+                    <p className="text-xs font-medium text-text dark:text-text-dark">{bookingDept} Dept, Floor 3, AyushmanLife Hospital</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Preparation Instructions */}
+              <div className="mt-3 rounded-lg bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 p-3">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-1.5 flex items-center gap-1">
+                  <FileText className="h-3 w-3" /> Preparation Instructions
+                </p>
+                <ul className="space-y-1">
+                  {[
+                    'Bring previous reports & prescriptions',
+                    'Fast for 8 hours if blood work is expected',
+                    'Arrive 15 minutes early for registration',
+                    'Carry insurance card & valid ID',
+                  ].map((inst, idx) => (
+                    <li key={idx} className="flex items-start gap-1.5 text-[11px] text-blue-700 dark:text-blue-300">
+                      <CheckCircle className="h-3 w-3 shrink-0 mt-0.5 text-blue-500" />
+                      <span>{inst}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Export to Calendar */}
+              <div className="mt-3 flex items-center justify-center gap-1.5 text-[10px] text-muted">
+                <CalendarCheck className="h-3 w-3" />
+                <span>Persist to calendar — exported to Google Calendar & iCal</span>
+              </div>
+
               <button
                 onClick={() => {
                   setBookingConfirmed(false)
@@ -880,21 +1042,127 @@ export default function VCare() {
           )}
         </Card>
 
-        <Card header={<div className="flex items-center gap-2"><Pill className="h-4 w-4 text-primary" /><h3 className="font-display font-semibold text-text dark:text-text-dark">Active Medications</h3></div>} padding="none">
+        <Card header={
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2">
+              <Pill className="h-4 w-4 text-primary" />
+              <h3 className="font-display font-semibold text-text dark:text-text-dark">Active Medications</h3>
+            </div>
+            {/* Weekly Adherence Score Badge */}
+            {(() => {
+              const allStatuses = Object.values(weeklyAdherence).flat()
+              const taken = allStatuses.filter(s => s === 'taken').length
+              const total = allStatuses.filter(s => s !== 'upcoming').length
+              const score = total > 0 ? Math.round((taken / total) * 100) : 0
+              return (
+                <span className={cn(
+                  'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold',
+                  score >= 85 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    : score >= 70 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                      : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                )}>
+                  <TrendingUp className="h-2.5 w-2.5" />
+                  {score}% this week
+                </span>
+              )
+            })()}
+          </div>
+        } padding="none">
           <ul className="divide-y divide-border dark:divide-border-dark">
             {patientMeds.map((med, i) => (
               <li key={i} className="px-5 py-3">
                 <p className="text-sm font-semibold text-text dark:text-text-dark">{med.name}</p>
                 <p className="mt-0.5 text-xs text-muted">{med.dosage} &middot; {med.timing}</p>
+
+                {/* Weekly Adherence Tracker Grid */}
+                {weeklyAdherence[med.name] && (
+                  <div className="mt-2 flex items-center gap-1">
+                    {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, dayIdx) => {
+                      const status = weeklyAdherence[med.name]?.[dayIdx] || 'upcoming'
+                      return (
+                        <div key={dayIdx} className="flex flex-col items-center gap-0.5">
+                          <span className="text-[8px] text-muted">{day}</span>
+                          <div className={cn(
+                            'h-4 w-4 rounded-sm flex items-center justify-center',
+                            status === 'taken' ? 'bg-green-100 dark:bg-green-900/30' :
+                              status === 'missed' ? 'bg-red-100 dark:bg-red-900/30' :
+                                'bg-gray-100 dark:bg-gray-700'
+                          )}>
+                            {status === 'taken' && <CheckCircle className="h-2.5 w-2.5 text-green-600 dark:text-green-400" />}
+                            {status === 'missed' && <XCircle className="h-2.5 w-2.5 text-red-500 dark:text-red-400" />}
+                            {status === 'upcoming' && <Clock className="h-2.5 w-2.5 text-gray-400" />}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </li>
             ))}
           </ul>
+
+          {/* Refill Reminders */}
+          <div className="px-5 py-3 border-t border-border dark:border-border-dark">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted mb-2 flex items-center gap-1">
+              <Package className="h-3 w-3 text-warning" /> Refill Reminders
+            </p>
+            <div className="space-y-2">
+              {[
+                { med: 'Metformin 500mg', daysLeft: 5, pharmacy: 'MedPlus, Saket' },
+                { med: 'Atorvastatin 10mg', daysLeft: 12, pharmacy: 'Apollo Pharmacy, Lajpat Nagar' },
+              ].map((refill, idx) => (
+                <div key={idx} className={cn(
+                  'rounded-lg border p-2 flex items-center gap-2',
+                  refill.daysLeft <= 7
+                    ? 'border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/10'
+                    : 'border-border dark:border-border-dark bg-gray-50 dark:bg-white/5'
+                )}>
+                  <Pill className={cn('h-3.5 w-3.5 shrink-0', refill.daysLeft <= 7 ? 'text-orange-500' : 'text-muted')} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-medium text-text dark:text-text-dark truncate">{refill.med}</p>
+                    <p className="text-[10px] text-muted flex items-center gap-1">
+                      <MapPin className="h-2.5 w-2.5" /> {refill.pharmacy}
+                    </p>
+                  </div>
+                  <span className={cn(
+                    'text-[10px] font-bold shrink-0',
+                    refill.daysLeft <= 7 ? 'text-orange-600 dark:text-orange-400' : 'text-muted'
+                  )}>
+                    {refill.daysLeft}d left
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         </Card>
 
         <Card header={<div className="flex items-center gap-2"><Video className="h-4 w-4 text-primary" /><h3 className="font-display font-semibold text-text dark:text-text-dark">Telemedicine</h3></div>}>
+          {/* Video Consultation Card */}
           {teleLink ? (
             <div className="space-y-3">
-              <p className="text-xs text-success font-medium">Video call link generated!</p>
+              <div className="rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/10 p-3">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+                    <Stethoscope className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-text dark:text-text-dark">Dr. Anil Kapoor</p>
+                    <p className="text-[10px] text-muted">Cardiology</p>
+                  </div>
+                  <span className={cn(
+                    'ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold',
+                    teleWaitingStatus === 'ready' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      : teleWaitingStatus === 'in-progress' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                        : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                  )}>
+                    <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" />
+                    {teleWaitingStatus === 'ready' ? 'Doctor Ready' : teleWaitingStatus === 'in-progress' ? 'In Progress' : 'Waiting Room'}
+                  </span>
+                </div>
+                <button className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition-colors">
+                  <Video className="h-4 w-4" /> Join Call
+                </button>
+              </div>
               <div className="p-2.5 rounded-lg bg-gray-50 dark:bg-white/5 text-xs font-mono text-muted break-all">{teleLink}</div>
               <div className="flex gap-2">
                 <button onClick={() => navigator.clipboard.writeText(teleLink)} className="flex-1 py-2 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">Copy Link</button>
@@ -906,10 +1174,81 @@ export default function VCare() {
               <Video className="h-4 w-4" /> Start Video Call
             </button>
           )}
+
+          {/* Pre-Consultation Checklist */}
+          <div className="mt-3 rounded-lg border border-border dark:border-border-dark bg-gray-50 dark:bg-white/5 p-3">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted mb-2 flex items-center gap-1">
+              <ClipboardList className="h-3 w-3 text-primary" /> Pre-Consultation Checklist
+            </p>
+            <div className="space-y-1.5">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={telePreCheckCamera} onChange={() => setTelePreCheckCamera(!telePreCheckCamera)} className="h-3.5 w-3.5 rounded border-gray-300 text-primary focus:ring-primary/20" />
+                <Camera className={cn('h-3 w-3', telePreCheckCamera ? 'text-green-500' : 'text-muted')} />
+                <span className={cn('text-[11px]', telePreCheckCamera ? 'text-green-600 dark:text-green-400 font-medium' : 'text-text dark:text-text-dark')}>Camera working</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={telePreCheckMic} onChange={() => setTelePreCheckMic(!telePreCheckMic)} className="h-3.5 w-3.5 rounded border-gray-300 text-primary focus:ring-primary/20" />
+                <Mic className={cn('h-3 w-3', telePreCheckMic ? 'text-green-500' : 'text-muted')} />
+                <span className={cn('text-[11px]', telePreCheckMic ? 'text-green-600 dark:text-green-400 font-medium' : 'text-text dark:text-text-dark')}>Microphone working</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={telePreCheckInternet} onChange={() => setTelePreCheckInternet(!telePreCheckInternet)} className="h-3.5 w-3.5 rounded border-gray-300 text-primary focus:ring-primary/20" />
+                <Wifi className={cn('h-3 w-3', telePreCheckInternet ? 'text-green-500' : 'text-muted')} />
+                <span className={cn('text-[11px]', telePreCheckInternet ? 'text-green-600 dark:text-green-400 font-medium' : 'text-text dark:text-text-dark')}>Internet speed adequate</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Session History */}
+          <div className="mt-3">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted mb-2 flex items-center gap-1">
+              <Clock className="h-3 w-3" /> Recent Sessions
+            </p>
+            <div className="space-y-2">
+              {[
+                { date: '22 Mar 2026', doctor: 'Dr. Anil Kapoor', duration: '18 min', dept: 'Cardiology' },
+                { date: '15 Mar 2026', doctor: 'Dr. Meera Joshi', duration: '25 min', dept: 'Internal Medicine' },
+                { date: '02 Mar 2026', doctor: 'Dr. Kavita Nair', duration: '12 min', dept: 'Pulmonology' },
+              ].map((session, idx) => (
+                <div key={idx} className="rounded-lg border border-border dark:border-border-dark bg-white dark:bg-surface-dark p-2.5 flex items-center gap-2.5">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                    <Video className="h-3 w-3 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-medium text-text dark:text-text-dark truncate">{session.doctor}</p>
+                    <p className="text-[10px] text-muted">{session.date} &middot; {session.duration}</p>
+                  </div>
+                  <button className="text-[10px] text-primary font-medium hover:underline flex items-center gap-0.5 shrink-0">
+                    <FileText className="h-2.5 w-2.5" /> Notes
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <p className="mt-2.5 text-[10px] text-muted text-center">Secure, HIPAA-aligned video consultation</p>
         </Card>
 
-        <Card header={<div className="flex items-center gap-2"><MessageCircle className="h-4 w-4 text-primary" /><h3 className="font-display font-semibold text-text dark:text-text-dark">Patient Feedback</h3></div>}>
+        <Card header={
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2">
+              <MessageCircle className="h-4 w-4 text-primary" />
+              <h3 className="font-display font-semibold text-text dark:text-text-dark">Patient Feedback</h3>
+            </div>
+            {/* NPS Score Display */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-muted">NPS</span>
+              <span className={cn(
+                'inline-flex items-center justify-center h-6 w-10 rounded-full text-[10px] font-bold',
+                npsScore >= 50 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                  : npsScore >= 0 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+              )}>
+                {npsScore}
+              </span>
+            </div>
+          </div>
+        }>
           {feedbackSent ? (
             <div className="text-center py-2">
               <CheckCircle className="h-8 w-8 text-success mx-auto mb-2" />
@@ -918,12 +1257,20 @@ export default function VCare() {
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="flex items-center justify-center gap-1">
-                {[1,2,3,4,5].map(n => (
-                  <button key={n} onClick={() => setFeedbackRating(n)} className="p-0.5">
-                    <Star className={cn('h-6 w-6 transition-colors', n <= feedbackRating ? 'text-warning fill-warning' : 'text-gray-300 dark:text-gray-600')} />
-                  </button>
-                ))}
+              {/* Star Rating - Visual */}
+              <div className="flex flex-col items-center gap-1">
+                <div className="flex items-center gap-1">
+                  {[1,2,3,4,5].map(n => (
+                    <button key={n} onClick={() => setFeedbackRating(n)} className="p-0.5">
+                      <Star className={cn('h-6 w-6 transition-colors', n <= feedbackRating ? 'text-warning fill-warning' : 'text-gray-300 dark:text-gray-600')} />
+                    </button>
+                  ))}
+                </div>
+                {feedbackRating > 0 && (
+                  <span className="text-[10px] font-medium text-muted">
+                    {feedbackRating === 1 ? 'Poor' : feedbackRating === 2 ? 'Fair' : feedbackRating === 3 ? 'Good' : feedbackRating === 4 ? 'Very Good' : 'Excellent'}
+                  </span>
+                )}
               </div>
               <textarea value={feedbackText} onChange={e => setFeedbackText(e.target.value)} placeholder="Share your experience..." rows={2} className="w-full px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-background dark:bg-background-dark text-text dark:text-text-dark text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
               <button onClick={() => { if (feedbackRating > 0) setFeedbackSent(true) }} disabled={feedbackRating === 0} className={cn('w-full py-2 rounded-lg text-xs font-medium transition-colors', feedbackRating > 0 ? 'bg-primary text-white hover:bg-primary/90' : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800')}>
@@ -931,6 +1278,41 @@ export default function VCare() {
               </button>
             </div>
           )}
+
+          {/* Recent Feedback Cards */}
+          <div className="mt-4 border-t border-border dark:border-border-dark pt-3">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted mb-2">Recent Feedback</p>
+            <div className="space-y-2">
+              {[
+                { rating: 5, comment: 'Dr. Kapoor was very thorough with the cardiac assessment. Excellent follow-up care.', date: '25 Mar 2026', responded: true },
+                { rating: 4, comment: 'Good telemedicine experience. Minor audio lag but overall helpful consultation.', date: '18 Mar 2026', responded: true },
+                { rating: 3, comment: 'Long wait time at pharmacy for medication refill. Doctors are good though.', date: '10 Mar 2026', responded: false },
+              ].map((fb, idx) => (
+                <div key={idx} className="rounded-lg border border-border dark:border-border-dark bg-gray-50 dark:bg-white/5 p-2.5">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-0.5">
+                      {[1,2,3,4,5].map(s => (
+                        <Star key={s} className={cn('h-3 w-3', s <= fb.rating ? 'text-warning fill-warning' : 'text-gray-300 dark:text-gray-600')} />
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] text-muted">{fb.date}</span>
+                      {fb.responded ? (
+                        <span className="inline-flex items-center gap-0.5 text-[9px] font-medium text-green-600 dark:text-green-400">
+                          <ThumbsUp className="h-2 w-2" /> Responded
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-0.5 text-[9px] font-medium text-yellow-600 dark:text-yellow-400">
+                          <Clock className="h-2 w-2" /> Pending
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-text dark:text-text-dark leading-relaxed">{fb.comment}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </Card>
 
         <Card header={<div className="flex items-center gap-2"><CheckSquare className="h-4 w-4 text-primary" /><h3 className="font-display font-semibold text-text dark:text-text-dark">Today's Adherence</h3></div>}>

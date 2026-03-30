@@ -5,6 +5,7 @@ import {
   Layers, Cloud, Shield, Cpu, Database, Globe, Zap, ArrowRight,
   CheckCircle, Server, Lock, RefreshCw, Settings, BarChart3,
   Monitor, TrendingUp, Users, FileText, Activity, Workflow, Star,
+  Rocket, GitBranch, Box, Gauge,
 } from 'lucide-react'
 
 const architecture = [
@@ -375,6 +376,101 @@ export default function Platform() {
                   </ul>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Technical Transformation */}
+          <div className="mt-20">
+            <h2 className="font-display font-bold text-2xl text-text dark:text-text-dark text-center mb-4">
+              Technical Transformation
+            </h2>
+            <p className="text-muted text-center mb-12 max-w-3xl mx-auto">
+              End-to-end digital transformation for healthcare organizations — from legacy modernization to AI-native architecture.
+            </p>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+              {[
+                { icon: Rocket, value: '18', label: 'Transformations Delivered', color: 'text-violet-500' },
+                { icon: GitBranch, value: '94%', label: 'On-Time Delivery', color: 'text-teal-500' },
+                { icon: Gauge, value: '3.2x', label: 'Avg Efficiency Gain', color: 'text-blue-500' },
+                { icon: TrendingUp, value: '₹120Cr', label: 'Client Value Created', color: 'text-amber-500' },
+              ].map(s => (
+                <div key={s.label} className="p-5 rounded-xl bg-white dark:bg-surface-dark border border-border dark:border-border-dark text-center">
+                  <s.icon className={`w-6 h-6 mx-auto mb-2 ${s.color}`} />
+                  <p className="font-display font-bold text-2xl text-text dark:text-text-dark">{s.value}</p>
+                  <p className="text-xs text-muted mt-1">{s.label}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[
+                { icon: Box, title: 'Legacy Modernization', color: 'text-violet-500', bg: 'bg-violet-500/10', desc: 'Migrate monolithic HIS/EMR to microservices architecture with zero data loss and minimal downtime.' },
+                { icon: Cpu, title: 'AI Integration', color: 'text-blue-500', bg: 'bg-blue-500/10', desc: 'Embed AI/ML into clinical workflows — from diagnosis assistance to predictive resource planning.' },
+                { icon: Database, title: 'Data Lake & Warehouse', color: 'text-teal-500', bg: 'bg-teal-500/10', desc: 'Unified healthcare data lake with FHIR R4, HL7, and custom connectors for real-time analytics.' },
+                { icon: Workflow, title: 'Process Automation', color: 'text-amber-500', bg: 'bg-amber-500/10', desc: 'RPA and intelligent automation for billing, scheduling, discharge summaries, and insurance pre-auth.' },
+                { icon: Shield, title: 'Zero Trust Architecture', color: 'text-rose-500', bg: 'bg-rose-500/10', desc: 'Implement zero-trust security model with identity-based access, micro-segmentation, and continuous verification.' },
+                { icon: RefreshCw, title: 'DevOps & CI/CD', color: 'text-indigo-500', bg: 'bg-indigo-500/10', desc: 'Automated deployment pipelines with healthcare-specific testing, HIPAA compliance gates, and rollback capability.' },
+              ].map(card => (
+                <div key={card.title} className="p-6 rounded-xl bg-white dark:bg-surface-dark border border-border dark:border-border-dark">
+                  <div className={`w-12 h-12 rounded-xl ${card.bg} flex items-center justify-center mb-4`}>
+                    <card.icon className={`w-6 h-6 ${card.color}`} />
+                  </div>
+                  <h4 className="font-display font-semibold text-text dark:text-text-dark mb-2">{card.title}</h4>
+                  <p className="text-sm text-muted">{card.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Cloud Services Deep Dive */}
+          <div className="mt-20">
+            <h2 className="font-display font-bold text-2xl text-text dark:text-text-dark text-center mb-4">
+              Cloud Services for Healthcare
+            </h2>
+            <p className="text-muted text-center mb-12 max-w-3xl mx-auto">
+              AWS, Azure, and GCP managed services tailored for healthcare compliance, performance, and cost optimization.
+            </p>
+
+            <div className="grid md:grid-cols-3 gap-6 mb-10">
+              {[
+                { provider: 'AWS', badge: 'Advanced Partner', services: ['EC2 HIPAA-eligible', 'HealthLake (FHIR)', 'SageMaker Health AI', 'S3 PHI Storage'], color: 'border-t-amber-500' },
+                { provider: 'Microsoft Azure', badge: 'Gold Partner', services: ['Azure Health Data Services', 'Azure API for FHIR', 'Power BI Healthcare', 'Azure Sentinel SIEM'], color: 'border-t-blue-500' },
+                { provider: 'Google Cloud', badge: 'Technology Partner', services: ['Cloud Healthcare API', 'Vertex AI for Health', 'BigQuery Analytics', 'Anthos Hybrid Cloud'], color: 'border-t-teal-500' },
+              ].map(p => (
+                <div key={p.provider} className={`p-6 rounded-xl bg-white dark:bg-surface-dark border border-border dark:border-border-dark border-t-4 ${p.color}`}>
+                  <h3 className="font-display font-semibold text-lg text-text dark:text-text-dark mb-1">{p.provider}</h3>
+                  <span className="text-xs text-primary font-medium">{p.badge}</span>
+                  <ul className="mt-4 space-y-2">
+                    {p.services.map(s => (
+                      <li key={s} className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-primary shrink-0" />
+                        <span className="text-sm text-muted">{s}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-6 rounded-2xl bg-gray-50 dark:bg-surface-dark border border-border dark:border-border-dark">
+              <h3 className="font-display font-semibold text-text dark:text-text-dark mb-4 flex items-center gap-2">
+                <Server className="w-5 h-5 text-primary" /> Managed Cloud Operations
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                  { label: '24x7 NOC Monitoring', value: '99.99%', sub: 'Uptime SLA' },
+                  { label: 'Incident Response', value: '<15 min', sub: 'MTTD (Avg)' },
+                  { label: 'Cost Optimization', value: '35%', sub: 'Avg Savings' },
+                  { label: 'Compliance Audits', value: 'Monthly', sub: 'Auto-generated' },
+                ].map(s => (
+                  <div key={s.label} className="text-center p-3">
+                    <p className="font-display font-bold text-xl text-primary">{s.value}</p>
+                    <p className="text-sm font-medium text-text dark:text-text-dark mt-1">{s.label}</p>
+                    <p className="text-xs text-muted">{s.sub}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
