@@ -33,7 +33,7 @@ import {
 } from 'lucide-react'
 import { cn, formatDate } from '../lib/utils'
 import { tickets as ticketsAPI } from '../lib/api'
-import type { Ticket } from '../lib/api'
+import type { Ticket, KBArticle, TicketAnalytics } from '../lib/api'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { Stat } from '../components/ui/Stat'
@@ -650,11 +650,69 @@ export default function Services() {
   const [insBreachCount, setInsBreachCount] = useState(0)
   const [insCategoryBreakdown, setInsCategoryBreakdown] = useState<{ category: string; count: number; color: string }[]>([])
 
+  // Knowledge Base from D1
+  const [kbArticles, setKbArticles] = useState<KBArticle[]>([])
+  const [kbCategories, setKbCategories] = useState<Array<{ category: string; count: number }>>([])
+  const [kbSelectedCategory, setKbSelectedCategory] = useState<string>('')
+
+  // Ticket creation form
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [newTicket, setNewTicket] = useState({ title: '', description: '', category: 'it_support', priority: 'medium' })
+  const [creating, setCreating] = useState(false)
+
+  // Create ticket handler
+  async function handleCreateTicket() {
+    if (!newTicket.title || !newTicket.description) return
+    setCreating(true)
+    try {
+      const triage = triageTicket(newTicket.title, newTicket.description)
+      await ticketsAPI.create({
+        title: newTicket.title,
+        description: newTicket.description,
+        category: newTicket.category || triage.category,
+        priority: newTicket.priority || triage.priority,
+      })
+      setNewTicket({ title: '', description: '', category: 'it_support', priority: 'medium' })
+      setShowCreateForm(false)
+      // Reload tickets
+      const res = await ticketsAPI.list()
+      if (res?.tickets?.length) {
+        setRawTickets(res.tickets)
+        setTicketData(res.tickets.map((t: Ticket) => ({
+          id: t.ticket_number || t.id,
+          title: t.title,
+          priority: (t.priority?.charAt(0).toUpperCase() + t.priority?.slice(1)) as TicketData['priority'],
+          status: (t.status === 'in-progress' ? 'In Progress'
+            : t.status === 'open' ? 'Open'
+            : t.status === 'resolved' ? 'Resolved'
+            : t.status === 'closed' ? 'Closed'
+            : t.status === 'escalated' ? 'Open'
+            : t.status?.charAt(0).toUpperCase() + t.status?.slice(1)) as TicketData['status'],
+          assignee: (t as any).assigned_to_name || t.assigned_to || '',
+          createdDate: t.created_at ?? '',
+          slaDeadline: t.created_at && t.sla_hours
+            ? new Date(new Date(t.created_at).getTime() + (t.sla_hours * 3600000)).toISOString()
+            : t.created_at ?? '',
+          category: t.category,
+        })))
+      }
+    } catch { /* keep existing */ }
+    setCreating(false)
+  }
+
   useEffect(() => {
     let mounted = true
     async function load() {
       try {
-        const res = await ticketsAPI.list()
+        // Load tickets, KB, and analytics in parallel
+        const [res, kbRes] = await Promise.all([
+          ticketsAPI.list(),
+          ticketsAPI.kb(kbSelectedCategory ? { category: kbSelectedCategory } : {}),
+        ])
+        if (mounted && kbRes) {
+          setKbArticles(kbRes.articles || [])
+          setKbCategories(kbRes.categories || [])
+        }
         if (mounted && res?.tickets?.length) {
           const tickets = res.tickets
           setRawTickets(tickets)
@@ -669,7 +727,7 @@ export default function Services() {
               : t.status === 'closed' ? 'Closed'
               : t.status === 'escalated' ? 'Open'
               : t.status?.charAt(0).toUpperCase() + t.status?.slice(1)) as TicketData['status'],
-            assignee: t.assigned_to ?? '',
+            assignee: (t as any).assigned_to_name || t.assigned_to || 'Unassigned',
             createdDate: t.created_at ?? '',
             slaDeadline: t.created_at && t.sla_hours
               ? new Date(new Date(t.created_at).getTime() + (t.sla_hours * 3600000)).toISOString()
@@ -853,18 +911,20 @@ export default function Services() {
     [ticketFilter, ticketData],
   )
 
-  const filteredArticles = useMemo(
-    () =>
-      kbSearch
-        ? KB_ARTICLES.filter(
-            (a) =>
-              a.title.toLowerCase().includes(kbSearch.toLowerCase()) ||
-              a.category.toLowerCase().includes(kbSearch.toLowerCase()) ||
-              a.description.toLowerCase().includes(kbSearch.toLowerCase()),
-          )
-        : KB_ARTICLES,
-    [kbSearch],
-  )
+  const filteredArticles = useMemo(() => {
+    const articles = kbArticles.length > 0 ? kbArticles : KB_ARTICLES.map(a => ({
+      id: String(a.id), title: a.title, category: a.category, content: a.description,
+      tags: '', views: a.views, helpful_count: 0, created_at: a.updated,
+    }))
+    if (!kbSearch) return articles
+    const term = kbSearch.toLowerCase()
+    return articles.filter(a =>
+      a.title.toLowerCase().includes(term) ||
+      a.category.toLowerCase().includes(term) ||
+      a.content.toLowerCase().includes(term) ||
+      (a.tags || '').toLowerCase().includes(term)
+    )
+  }, [kbSearch, kbArticles])
 
   const ticketColumns = [
     { key: 'id', label: 'ID' },
@@ -933,10 +993,10 @@ export default function Services() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: 'Healthcare Clients', value: '45+', sub: 'Hospitals & clinics' },
-          { label: 'Insurance Clients', value: '18+', sub: 'Payers, TPAs & insurers' },
-          { label: 'SLA Compliance', value: `${slaCompliance}%`, sub: rawTickets.length > 0 ? `From ${rawTickets.length} D1 tickets` : 'Across all clients' },
-          { label: 'Avg Resolution', value: `${avgResolutionHrs} hrs`, sub: rawTickets.length > 0 ? 'Computed from D1' : 'P1 incidents' },
+          { label: 'Total Tickets', value: rawTickets.length > 0 ? String(rawTickets.length) : '20', sub: rawTickets.length > 0 ? 'From D1 database' : 'Loading...' },
+          { label: 'Open Tickets', value: String(openTicketCount), sub: `${breachCount} SLA breaches` },
+          { label: 'SLA Compliance', value: `${slaCompliance}%`, sub: rawTickets.length > 0 ? `From ${rawTickets.length} D1 tickets` : 'Calculating...' },
+          { label: 'Avg Resolution', value: `${avgResolutionHrs} hrs`, sub: rawTickets.length > 0 ? 'Computed from D1' : 'Calculating...' },
         ].map(s => (
           <div key={s.label} className="rounded-lg bg-white dark:bg-surface-dark border border-border dark:border-border-dark px-3 py-2.5">
             <p className="font-display font-bold text-lg text-primary">{s.value}</p>
@@ -1024,6 +1084,90 @@ export default function Services() {
               ))}
             </div>
           </Card>
+
+          {/* Create Ticket */}
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => setShowCreateForm(!showCreateForm)}
+              className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
+            >
+              {showCreateForm ? <XCircle className="h-4 w-4" /> : <ListTodo className="h-4 w-4" />}
+              {showCreateForm ? 'Cancel' : 'New Ticket'}
+            </button>
+          </div>
+
+          {showCreateForm && (
+            <Card header={<h3 className="font-semibold text-gray-900 dark:text-gray-100">Submit IT Support Ticket</h3>}>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title</label>
+                  <input
+                    type="text"
+                    value={newTicket.title}
+                    onChange={e => setNewTicket(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="e.g., EMR system slow during peak hours"
+                    className="w-full rounded-lg border border-border dark:border-border-dark bg-white dark:bg-surface-dark px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                  <textarea
+                    value={newTicket.description}
+                    onChange={e => setNewTicket(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Describe the issue in detail..."
+                    rows={3}
+                    className="w-full rounded-lg border border-border dark:border-border-dark bg-white dark:bg-surface-dark px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
+                    <select
+                      value={newTicket.category}
+                      onChange={e => setNewTicket(prev => ({ ...prev, category: e.target.value }))}
+                      className="w-full rounded-lg border border-border dark:border-border-dark bg-white dark:bg-surface-dark px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="it_support">IT Support</option>
+                      <option value="claims">Claims</option>
+                      <option value="biomedical">Biomedical</option>
+                      <option value="facilities">Facilities</option>
+                      <option value="pharmacy">Pharmacy</option>
+                      <option value="quality">Quality</option>
+                      <option value="hr">HR</option>
+                      <option value="patient_relations">Patient Relations</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Priority</label>
+                    <select
+                      value={newTicket.priority}
+                      onChange={e => setNewTicket(prev => ({ ...prev, priority: e.target.value }))}
+                      className="w-full rounded-lg border border-border dark:border-border-dark bg-white dark:bg-surface-dark px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="critical">Critical (4hr SLA)</option>
+                      <option value="high">High (24hr SLA)</option>
+                      <option value="medium">Medium (48hr SLA)</option>
+                      <option value="low">Low (72hr SLA)</option>
+                    </select>
+                  </div>
+                </div>
+                {newTicket.title && (
+                  <div className="p-2.5 rounded-lg bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-400 flex items-center gap-2">
+                    <Bot className="h-3.5 w-3.5" />
+                    <span>AI Triage suggestion: <span className="font-bold">{triageTicket(newTicket.title, newTicket.description).priority.toUpperCase()}</span> priority, <span className="font-bold">{triageTicket(newTicket.title, newTicket.description).category}</span> category</span>
+                  </div>
+                )}
+                <button
+                  onClick={handleCreateTicket}
+                  disabled={creating || !newTicket.title || !newTicket.description}
+                  className="flex items-center gap-2 rounded-lg bg-success px-4 py-2 text-sm font-medium text-white hover:bg-success/90 disabled:opacity-50 transition-colors"
+                >
+                  {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                  {creating ? 'Submitting...' : 'Submit Ticket'}
+                </button>
+              </div>
+            </Card>
+          )}
 
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-2">
@@ -1204,14 +1348,15 @@ export default function Services() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <Input
               icon={<Search className="h-4 w-4" />}
-              placeholder="Search articles, categories..."
+              placeholder="Search articles, categories, tags..."
               value={kbSearch}
               onChange={(e) => setKbSearch(e.target.value)}
               className="max-w-md"
             />
             <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
               <BookOpen className="h-4 w-4 text-primary" />
-              <span><span className="font-bold text-gray-900 dark:text-gray-100">{kbTotalArticles}</span> total articles across <span className="font-bold text-gray-900 dark:text-gray-100">{KB_CATEGORIES.length}</span> categories</span>
+              <span><span className="font-bold text-gray-900 dark:text-gray-100">{filteredArticles.length}</span> articles across <span className="font-bold text-gray-900 dark:text-gray-100">{kbCategories.length > 0 ? kbCategories.length : KB_CATEGORIES.length}</span> categories</span>
+              {kbArticles.length > 0 && <Badge variant="success" size="sm">D1</Badge>}
             </div>
           </div>
           {kbSearch && (
@@ -1220,19 +1365,25 @@ export default function Services() {
             </p>
           )}
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            {KB_CATEGORIES.map((cat) => (
-              <Card key={cat.name} className="text-center transition-shadow hover:shadow-md">
-                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary dark:bg-primary/20">
-                  {cat.icon}
-                </div>
-                <p className="mt-2 font-semibold text-gray-900 dark:text-gray-100">
-                  {cat.name}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {cat.count} articles
-                </p>
-              </Card>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setKbSelectedCategory('')}
+              className={cn('rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
+                !kbSelectedCategory ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10'
+              )}
+            >
+              All
+            </button>
+            {(kbCategories.length > 0 ? kbCategories : KB_CATEGORIES.map(c => ({ category: c.name, count: c.count }))).map((cat) => (
+              <button
+                key={cat.category}
+                onClick={() => setKbSelectedCategory(kbSelectedCategory === cat.category ? '' : cat.category)}
+                className={cn('rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
+                  kbSelectedCategory === cat.category ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-400 dark:hover:bg-white/10'
+                )}
+              >
+                {cat.category} ({cat.count})
+              </button>
             ))}
           </div>
 
@@ -1241,7 +1392,7 @@ export default function Services() {
               Articles
             </h3>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredArticles.map((article) => (
+              {(kbSelectedCategory ? filteredArticles.filter(a => a.category === kbSelectedCategory) : filteredArticles).map((article) => (
                 <Card
                   key={article.id}
                   className="flex flex-col transition-shadow hover:shadow-md"
@@ -1254,14 +1405,26 @@ export default function Services() {
                       {article.category}
                     </Badge>
                   </div>
-                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
-                    {article.description}
+                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 line-clamp-3">
+                    {article.content}
                   </p>
+                  {(article as any).tags && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {((article as any).tags as string).split(',').slice(0, 4).map((tag: string) => (
+                        <span key={tag} className="rounded bg-gray-100 dark:bg-white/5 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400">
+                          {tag.trim()}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <div className="mt-auto flex items-center justify-between pt-3 text-xs text-gray-400 dark:text-gray-500">
-                    <span>Updated {formatDate(article.updated)}</span>
                     <span className="flex items-center gap-1">
                       <Eye className="h-3 w-3" />
-                      {article.views}
+                      {article.views} views
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3" />
+                      {(article as any).helpful_count || 0} helpful
                     </span>
                   </div>
                 </Card>

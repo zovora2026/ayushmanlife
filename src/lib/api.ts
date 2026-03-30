@@ -119,11 +119,15 @@ export const analytics = {
 // Tickets
 export const tickets = {
   list: (params?: Record<string, string>) =>
-    fetchAPI<{ tickets: Ticket[] }>(`/tickets?${new URLSearchParams(params || {})}`),
+    fetchAPI<{ tickets: Ticket[]; total: number }>(`/tickets?${new URLSearchParams(params || {})}`),
   create: (data: Partial<Ticket>) =>
     fetchAPI<{ ticket: Ticket }>('/tickets', { method: 'POST', body: JSON.stringify(data) }),
   update: (id: string, data: Partial<Ticket>) =>
     fetchAPI<{ ticket: Ticket }>(`/tickets/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  analytics: () =>
+    fetchAPI<TicketAnalytics>('/tickets/analytics'),
+  kb: (params?: Record<string, string>) =>
+    fetchAPI<{ articles: KBArticle[]; total: number; categories: Array<{ category: string; count: number }> }>(`/tickets/kb?${new URLSearchParams(params || {})}`),
 };
 
 // Payer
@@ -400,12 +404,37 @@ export interface Ticket {
   priority: string;
   status: string;
   assigned_to?: string;
+  assigned_to_name?: string;
   created_by?: string;
+  created_by_name?: string;
   sla_hours?: number;
   sla_breached?: number;
   resolution?: string;
   created_at?: string;
+  updated_at?: string;
   resolved_at?: string;
+}
+
+export interface KBArticle {
+  id: string;
+  title: string;
+  category: string;
+  content: string;
+  tags?: string;
+  views: number;
+  helpful_count: number;
+  created_at?: string;
+}
+
+export interface TicketAnalytics {
+  total_tickets: number;
+  by_status: Array<{ status: string; count: number }>;
+  by_priority: Array<{ priority: string; count: number }>;
+  by_category: Array<{ category: string; count: number }>;
+  sla_compliance: { total: number; breached: number; compliant: number; compliance_pct: number };
+  avg_resolution_hours: number;
+  recent_activity: Array<Ticket>;
+  daily_trend: Array<{ date: string; count: number }>;
 }
 
 export interface Policy {

@@ -12,7 +12,7 @@
 ```
 Frontend: React 19 + TypeScript 5.9 + Vite 8 + Tailwind CSS 4
 Backend:  Cloudflare Pages Functions (35 API routes)
-Database: Cloudflare D1 (ayushmanlife-db) — 22 tables, ~4520 rows, APAC region
+Database: Cloudflare D1 (ayushmanlife-db) — 23 tables, ~4535 rows, APAC region
 Auth:     Cookie-based D1 sessions + SHA-256 password hashing
 AI:       Claude API integration in Claims analysis (ICD-10/CPT coding)
 Deploy:   Cloudflare Pages (wrangler pages deploy)
@@ -138,7 +138,35 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 - WORKING: Projects table with assigned_count, budget, timeline, status from D1
 - NOT YET: Geolocation matching (mentioned in spec but not implemented), consultant self-service portal, Gantt/timeline view, timesheet integration
 - PARTIALLY FAKE: Recruitment Pipeline tab still has hardcoded pipeline stages, Skill Certifications tab works from D1 but has limited UI
-### Build 5: AMS Portal (APP 5) — NOT STARTED
+### Build 5: AMS Portal (APP 5) — COMPLETE ✅
+
+**Definition of done**: Hospital staff can submit IT support tickets, tickets get auto-categorized, SLA timers run, knowledge base is searchable, and managers see compliance dashboards.
+
+**E2E Test Results** (verified via API calls on ayushmanlife-516.pages.dev):
+1. Tickets GET: 20 tickets from D1 with JOINs for assignee names, 8 categories, filterable by status/priority/category ✅
+2. Ticket POST: Creates ticket with auto-SLA (critical=4h, high=24h, medium=48h, low=72h), persists to D1 ✅
+3. Ticket PUT: Update status/priority/assignee/resolution, auto-sets resolved_at timestamp ✅
+4. Knowledge Base GET: 15 D1 articles across 5 categories (EMR/EHR, ABDM/PMJAY, Infrastructure, Security, Service Desk) ✅
+5. KB Search: Full-text search across title, content, tags — "password" returns 2 matching articles ✅
+6. KB Category Filter: Filter by category (e.g., ABDM/PMJAY returns 4 articles) ✅
+7. Analytics GET: SLA compliance 90% (18/20), avg resolution 10 hrs, status/priority/category breakdowns ✅
+8. AI Triage: Auto-suggests priority and category based on ticket title/description keywords ✅
+9. Frontend: 5-tab layout (Tickets, SLA Dashboard, Knowledge Base, Insurance Ops, ServiceNow) with real D1 data ✅
+
+**Honest Assessment Questions**:
+1. Can a real user complete the primary workflow? **YES** — Staff can create tickets (with AI-suggested category/priority), view ticket list with SLA timers, search knowledge base, and managers see SLA compliance dashboard. All from D1.
+2. Does data persist correctly? **YES** — Tickets save to D1 with SLA hours, status transitions update timestamps, KB articles stored and searchable in D1.
+3. Is the UI professional enough for a hospital environment? **YES** — Clean ticket table with priority badges, SLA countdown timers, searchable KB with category filters, AI triage banner.
+4. Would someone pay ₹1,000/month for this specific app? **MAYBE** — Ticket creation/tracking and searchable KB are genuinely useful. SLA compliance dashboard is practical. But missing: email/SMS notifications, ticket comments thread, attachment uploads, auto-assignment rules.
+5. What's the most embarrassing thing about it? Insurance Operations tab still shows mostly hardcoded system health data and insurance ticket queue. ServiceNow tab has hardcoded module metrics. No notification system — SLA breaches are visible but don't alert anyone. No ticket comments or threading.
+
+**What's actually working vs what's fake**:
+- WORKING: Ticket CRUD (create/read/update), SLA computation from D1, KB search with category filter, analytics (status/priority/category breakdowns, SLA compliance)
+- WORKING: AI triage auto-categorization based on keywords, ticket creation form with real D1 persistence
+- WORKING: KB articles with tags, views, helpful counts from D1
+- PARTIALLY FAKE: Insurance Operations tab (system health monitors, automated workflows are hardcoded display)
+- PARTIALLY FAKE: ServiceNow tab (module metrics are mostly static, activity table is hardcoded)
+- NOT YET: Ticket comments, attachments, email notifications, auto-assignment, RBAC
 ### Build 6: CareerPath (APP 6) — NOT STARTED
 ### Build 7: Claims Adjudication (APP 10) — NOT STARTED
 ### Build 8: Fraud Detection (APP 11) — NOT STARTED
@@ -152,4 +180,4 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 
 ---
 
-## Progress: 4/15 apps complete
+## Progress: 5/15 apps complete

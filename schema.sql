@@ -315,6 +315,19 @@ CREATE TABLE IF NOT EXISTS project_assignments (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Knowledge Base for AMS Portal
+CREATE TABLE IF NOT EXISTS knowledge_base (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  category TEXT NOT NULL,
+  content TEXT NOT NULL,
+  tags TEXT,
+  views INTEGER DEFAULT 0,
+  helpful_count INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires_at);
@@ -341,3 +354,4 @@ CREATE INDEX IF NOT EXISTS idx_audit_entity ON audit_log(entity_type, entity_id)
 CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
 CREATE INDEX IF NOT EXISTS idx_assignments_project ON project_assignments(project_id);
 CREATE INDEX IF NOT EXISTS idx_assignments_consultant ON project_assignments(consultant_id);
+CREATE INDEX IF NOT EXISTS idx_kb_category ON knowledge_base(category);
