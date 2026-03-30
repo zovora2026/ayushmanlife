@@ -22,6 +22,7 @@ const Payer = lazy(() => import('./pages/Payer'))
 const Academy = lazy(() => import('./pages/Academy'))
 const DataGovernance = lazy(() => import('./pages/DataGovernance'))
 const Admin = lazy(() => import('./pages/Admin'))
+const ClientPortal = lazy(() => import('./pages/ClientPortal'))
 
 function LoadingSpinner() {
   return (
@@ -137,6 +138,7 @@ export default function App() {
               <Route path="/academy" element={<Academy />} />
               <Route path="/data-governance" element={<DataGovernance />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/client-portal" element={<ClientPortal />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

@@ -197,6 +197,24 @@ export const workforce = {
     fetchAPI<{ matches: ConsultantMatch[]; total: number }>(`/workforce/match?${new URLSearchParams(params || {})}`),
 };
 
+// Projects (Client Portal)
+export const projects = {
+  getDetail: (id: string) =>
+    fetchAPI<ProjectDetail>(`/projects/${id}`),
+  milestones: (projectId: string) =>
+    fetchAPI<{ milestones: ProjectMilestone[]; summary: Record<string, number> }>(`/projects/milestones?project_id=${projectId}`),
+  createMilestone: (data: Partial<ProjectMilestone>) =>
+    fetchAPI<{ milestone: ProjectMilestone }>('/projects/milestones', { method: 'POST', body: JSON.stringify(data) }),
+  documents: (projectId: string) =>
+    fetchAPI<{ documents: ProjectDocument[] }>(`/projects/documents?project_id=${projectId}`),
+  createDocument: (data: Partial<ProjectDocument>) =>
+    fetchAPI<{ document: ProjectDocument }>('/projects/documents', { method: 'POST', body: JSON.stringify(data) }),
+  messages: (projectId: string) =>
+    fetchAPI<{ messages: ProjectMessage[] }>(`/projects/messages?project_id=${projectId}`),
+  sendMessage: (data: { project_id: string; sender_name: string; message: string; sender_role?: string; message_type?: string }) =>
+    fetchAPI<{ message: ProjectMessage }>('/projects/messages', { method: 'POST', body: JSON.stringify(data) }),
+};
+
 // Academy
 export const academy = {
   paths: () => fetchAPI<{ paths: LearningPath[] }>('/academy/paths'),
@@ -806,6 +824,57 @@ export interface ProjectAssignment {
   project_name?: string;
   client_hospital?: string;
   project_city?: string;
+}
+
+// Client Portal types
+export interface ProjectMilestone {
+  id: string;
+  project_id: string;
+  title: string;
+  description?: string;
+  target_date?: string;
+  actual_date?: string;
+  status: string;
+  rag_status: string;
+  percentage_complete: number;
+  owner?: string;
+  created_at?: string;
+}
+
+export interface ProjectDocument {
+  id: string;
+  project_id: string;
+  document_type: string;
+  title: string;
+  filename?: string;
+  description?: string;
+  version: string;
+  uploaded_by?: string;
+  uploader_name?: string;
+  status: string;
+  created_at?: string;
+}
+
+export interface ProjectMessage {
+  id: string;
+  project_id: string;
+  sender_id?: string;
+  sender_name: string;
+  sender_role: string;
+  message: string;
+  message_type: string;
+  created_at?: string;
+  read_at?: string;
+}
+
+export interface ProjectDetail {
+  project: Project & { active_team_size: number };
+  team: (ProjectAssignment & { consultant_name?: string; department?: string; email?: string })[];
+  milestones_summary: { total: number; completed: number; in_progress: number; not_started: number; red: number; amber: number; green: number; avg_completion: number };
+  budget: { budgeted: number; actual_spend: number; projected_total: number; variance: number; burn_rate_pct: number; avg_daily_rate: number };
+  documents_count: { total: number; sows: number; status_reports: number };
+  recent_messages: ProjectMessage[];
+  currency: string;
 }
 
 export interface ConsultantMatch {

@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, MessageSquareHeart, FileCheck, TrendingUp, Database,
-  Headphones, Users, Building2, GraduationCap, Lightbulb, Settings,
+  Headphones, Users, Building2, Briefcase, GraduationCap, Lightbulb, Settings,
   ChevronLeft, ChevronRight, Heart, LogOut,
 } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
@@ -11,7 +11,7 @@ import type { LucideIcon } from 'lucide-react'
 
 const iconMap: Record<string, LucideIcon> = {
   LayoutDashboard, MessageSquareHeart, FileCheck, TrendingUp, Database,
-  Headphones, Users, Building2, GraduationCap, Lightbulb, Settings,
+  Headphones, Users, Building2, Briefcase, GraduationCap, Lightbulb, Settings,
 }
 
 interface NavGroup {
@@ -40,6 +40,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'Managed Services', href: '/services', icon: 'Headphones' },
       { label: 'Workforce', href: '/workforce', icon: 'Users' },
+      { label: 'Client Portal', href: '/client-portal', icon: 'Briefcase' },
     ],
   },
   {

@@ -315,6 +315,46 @@ CREATE TABLE IF NOT EXISTS project_assignments (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Client Portal: Milestones, Documents, Messages
+CREATE TABLE IF NOT EXISTS project_milestones (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL REFERENCES projects(id),
+  title TEXT NOT NULL,
+  description TEXT,
+  target_date DATE,
+  actual_date DATE,
+  status TEXT DEFAULT 'on_track',
+  rag_status TEXT DEFAULT 'green',
+  percentage_complete INTEGER DEFAULT 0,
+  owner TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS project_documents (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL REFERENCES projects(id),
+  document_type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  filename TEXT,
+  description TEXT,
+  version TEXT DEFAULT '1.0',
+  uploaded_by TEXT REFERENCES users(id),
+  status TEXT DEFAULT 'current',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS project_messages (
+  id TEXT PRIMARY KEY,
+  project_id TEXT NOT NULL REFERENCES projects(id),
+  sender_id TEXT REFERENCES users(id),
+  sender_name TEXT,
+  sender_role TEXT DEFAULT 'team',
+  message TEXT NOT NULL,
+  message_type TEXT DEFAULT 'update',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  read_at DATETIME
+);
+
 -- Learning Modules, Assessments, Submissions for CareerPath
 CREATE TABLE IF NOT EXISTS learning_modules (
   id TEXT PRIMARY KEY,
@@ -474,3 +514,6 @@ CREATE TABLE IF NOT EXISTS premium_collections (
 );
 CREATE INDEX IF NOT EXISTS idx_premium_scheme ON premium_collections(payer_scheme);
 CREATE INDEX IF NOT EXISTS idx_premium_month ON premium_collections(month);
+CREATE INDEX IF NOT EXISTS idx_milestones_project ON project_milestones(project_id);
+CREATE INDEX IF NOT EXISTS idx_documents_project ON project_documents(project_id);
+CREATE INDEX IF NOT EXISTS idx_messages_project ON project_messages(project_id);
