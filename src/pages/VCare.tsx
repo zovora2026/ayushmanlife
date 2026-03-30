@@ -19,6 +19,7 @@ import {
   MessageCircle,
   CheckSquare,
   CheckCircle,
+  CalendarPlus,
 } from 'lucide-react'
 import { useChatStore } from '../store/chatStore'
 import { patients as patientsAPI } from '../lib/api'
@@ -102,6 +103,10 @@ export default function VCare() {
   const [feedbackText, setFeedbackText] = useState('')
   const [feedbackSent, setFeedbackSent] = useState(false)
   const [medsTaken, setMedsTaken] = useState<Record<number, boolean>>({})
+  const [bookingDept, setBookingDept] = useState('Cardiology')
+  const [bookingDate, setBookingDate] = useState('')
+  const [bookingTime, setBookingTime] = useState('')
+  const [bookingConfirmed, setBookingConfirmed] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -276,6 +281,88 @@ export default function VCare() {
               </li>
             ))}
           </ul>
+        </Card>
+
+        <Card header={<div className="flex items-center gap-2"><CalendarPlus className="h-4 w-4 text-primary" /><h3 className="font-display font-semibold text-text dark:text-text-dark">Book Appointment</h3></div>}>
+          {bookingConfirmed ? (
+            <div className="text-center py-3">
+              <CheckCircle className="h-10 w-10 text-success mx-auto mb-2" />
+              <p className="text-sm font-semibold text-text dark:text-text-dark">Appointment Confirmed!</p>
+              <div className="mt-3 rounded-lg bg-gray-50 dark:bg-white/5 p-3 text-left space-y-1">
+                <p className="text-xs text-muted">Department: <span className="font-medium text-text dark:text-text-dark">{bookingDept}</span></p>
+                <p className="text-xs text-muted">Date: <span className="font-medium text-text dark:text-text-dark">{bookingDate}</span></p>
+                <p className="text-xs text-muted">Time: <span className="font-medium text-text dark:text-text-dark">{bookingTime}</span></p>
+              </div>
+              <button
+                onClick={() => {
+                  setBookingConfirmed(false)
+                  setBookingDate('')
+                  setBookingTime('')
+                  setBookingDept('Cardiology')
+                }}
+                className="mt-3 w-full py-2 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors"
+              >
+                Book Another
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[10px] font-medium uppercase tracking-wider text-muted mb-1">Department</label>
+                <select
+                  value={bookingDept}
+                  onChange={(e) => setBookingDept(e.target.value)}
+                  className="w-full rounded-lg border border-border dark:border-border-dark bg-background dark:bg-background-dark text-text dark:text-text-dark text-xs px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                >
+                  {['Cardiology', 'General Medicine', 'Orthopedics', 'Neurology', 'Pulmonology', 'Gynecology', 'ENT'].map((dept) => (
+                    <option key={dept} value={dept}>{dept}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-medium uppercase tracking-wider text-muted mb-1">Date</label>
+                <input
+                  type="date"
+                  value={bookingDate}
+                  onChange={(e) => setBookingDate(e.target.value)}
+                  className="w-full rounded-lg border border-border dark:border-border-dark bg-background dark:bg-background-dark text-text dark:text-text-dark text-xs px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-medium uppercase tracking-wider text-muted mb-1">Time Slot</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['9:00 AM', '10:00 AM', '11:00 AM', '2:00 PM', '3:00 PM', '4:00 PM'].map((slot) => (
+                    <button
+                      key={slot}
+                      onClick={() => setBookingTime(slot)}
+                      className={cn(
+                        'rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors',
+                        bookingTime === slot
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-border dark:border-border-dark text-muted hover:border-primary/40 hover:text-primary'
+                      )}
+                    >
+                      {slot}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  if (bookingDate && bookingTime) setBookingConfirmed(true)
+                }}
+                disabled={!bookingDate || !bookingTime}
+                className={cn(
+                  'w-full py-2.5 rounded-lg text-sm font-medium transition-colors',
+                  bookingDate && bookingTime
+                    ? 'bg-primary text-white hover:bg-primary/90'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
+                )}
+              >
+                Book Now
+              </button>
+            </div>
+          )}
         </Card>
 
         <Card header={<div className="flex items-center gap-2"><Pill className="h-4 w-4 text-primary" /><h3 className="font-display font-semibold text-text dark:text-text-dark">Active Medications</h3></div>} padding="none">

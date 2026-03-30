@@ -16,6 +16,15 @@ import {
   Meh,
   Frown,
   Loader2,
+  Brain,
+  HeartPulse,
+  Stethoscope,
+  Wind,
+  UserX,
+  ClockAlert,
+  ShieldAlert,
+  MapPin,
+  CalendarX,
 } from 'lucide-react'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
@@ -259,6 +268,106 @@ export default function Analytics() {
       {activeTab === 'risk' && (
         loading ? <LoadingSpinner /> : (
         <div className="space-y-6">
+          {/* AI Risk Predictions Section */}
+          <Card className="border-2 border-primary/20 bg-gradient-to-r from-primary/5 via-white to-primary/5 dark:from-primary/10 dark:via-surface-dark dark:to-primary/10">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                <Brain className="h-6 w-6 text-primary" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="mb-1 flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                    AI Risk Predictions
+                  </h3>
+                  <Badge variant="info" size="sm" dot>Live</Badge>
+                </div>
+                <p className="text-sm font-medium text-error">
+                  AI has identified 12 high-risk patients requiring immediate intervention
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+              {/* Patient 1 — Sunita Devi */}
+              <div className="rounded-lg border-2 border-error/30 bg-error/5 p-4 dark:bg-error/10">
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <HeartPulse className="h-4 w-4 text-error" />
+                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100">Sunita Devi</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">(Age 67)</span>
+                  </div>
+                  <span className="inline-flex items-center justify-center rounded-full bg-error px-2.5 py-1 text-xs font-bold text-white">
+                    85/100
+                  </span>
+                </div>
+                <p className="mb-1 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                  Cardiovascular risk score: 85/100
+                </p>
+                <p className="mb-1 text-xs text-gray-600 dark:text-gray-400">
+                  Predicted 30-day readmission probability: <span className="font-semibold text-error">42%</span>
+                </p>
+                <p className="mb-3 text-xs text-primary font-medium">
+                  Recommend: Cardiology consult within 48 hours.
+                </p>
+                <Button size="sm" variant="danger" icon={<Stethoscope className="h-3.5 w-3.5" />}>
+                  Take Action
+                </Button>
+              </div>
+
+              {/* Patient 2 — Rajesh Kumar */}
+              <div className="rounded-lg border-2 border-warning/30 bg-warning/5 p-4 dark:bg-warning/10">
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-warning" />
+                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100">Rajesh Kumar</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">(Age 58)</span>
+                  </div>
+                  <span className="inline-flex items-center justify-center rounded-full bg-warning px-2.5 py-1 text-xs font-bold text-white">
+                    72/100
+                  </span>
+                </div>
+                <p className="mb-1 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                  Diabetes complication risk: 72/100
+                </p>
+                <p className="mb-1 text-xs text-gray-600 dark:text-gray-400">
+                  HbA1c trending upward over last 3 visits.
+                </p>
+                <p className="mb-3 text-xs text-primary font-medium">
+                  Recommend: Endocrinology review, medication adjustment.
+                </p>
+                <Button size="sm" variant="primary" icon={<Stethoscope className="h-3.5 w-3.5" />}>
+                  Take Action
+                </Button>
+              </div>
+
+              {/* Patient 3 — Meera Iyer */}
+              <div className="rounded-lg border-2 border-warning/30 bg-warning/5 p-4 dark:bg-warning/10">
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Wind className="h-4 w-4 text-warning" />
+                    <span className="text-sm font-bold text-gray-900 dark:text-gray-100">Meera Iyer</span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">(Age 45)</span>
+                  </div>
+                  <span className="inline-flex items-center justify-center rounded-full bg-warning px-2.5 py-1 text-xs font-bold text-white">
+                    68/100
+                  </span>
+                </div>
+                <p className="mb-1 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                  COPD exacerbation risk: 68/100
+                </p>
+                <p className="mb-1 text-xs text-gray-600 dark:text-gray-400">
+                  SpO2 declining trend over past 2 weeks.
+                </p>
+                <p className="mb-3 text-xs text-primary font-medium">
+                  Recommend: Pulmonology follow-up, medication adherence check.
+                </p>
+                <Button size="sm" variant="primary" icon={<Stethoscope className="h-3.5 w-3.5" />}>
+                  Take Action
+                </Button>
+              </div>
+            </div>
+          </Card>
+
           {/* Risk Distribution Cards */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Card className="border-l-4 border-l-error">
@@ -369,6 +478,88 @@ export default function Analytics() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </Card>
+
+          {/* Churn Prediction Summary */}
+          <Card className="border-2 border-warning/20 bg-gradient-to-r from-warning/5 via-white to-warning/5 dark:from-warning/10 dark:via-surface-dark dark:to-warning/10">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-warning/10">
+                <UserX className="h-6 w-6 text-warning" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="mb-1 flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                    Churn Prediction Summary
+                  </h3>
+                  <Badge variant="warning" size="sm" dot>AI Forecast</Badge>
+                </div>
+                <p className="text-sm font-medium text-warning">
+                  AI predicts 23 patients at risk of leaving in the next 90 days. Estimated revenue impact: ₹18.5L
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {/* Reason 1 — Wait Time */}
+              <div className="rounded-lg border border-error/30 bg-error/5 p-4 dark:bg-error/10">
+                <div className="mb-2 flex items-center gap-2">
+                  <ClockAlert className="h-5 w-5 text-error" />
+                  <span className="text-sm font-bold text-gray-900 dark:text-gray-100">Wait Time Dissatisfaction</span>
+                </div>
+                <div className="mb-2 flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-error">8</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">patients</span>
+                </div>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  Avg wait time: <span className="font-semibold">45 min</span>
+                </p>
+              </div>
+
+              {/* Reason 2 — Insurance Claim Delays */}
+              <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 dark:bg-warning/10">
+                <div className="mb-2 flex items-center gap-2">
+                  <ShieldAlert className="h-5 w-5 text-warning" />
+                  <span className="text-sm font-bold text-gray-900 dark:text-gray-100">Insurance Claim Delays</span>
+                </div>
+                <div className="mb-2 flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-warning">6</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">patients</span>
+                </div>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  Avg resolution: <span className="font-semibold">12 days</span>
+                </p>
+              </div>
+
+              {/* Reason 3 — Follow-up Gap */}
+              <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 dark:bg-warning/10">
+                <div className="mb-2 flex items-center gap-2">
+                  <CalendarX className="h-5 w-5 text-warning" />
+                  <span className="text-sm font-bold text-gray-900 dark:text-gray-100">Follow-up Gap</span>
+                </div>
+                <div className="mb-2 flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-warning">5</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">patients</span>
+                </div>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  No visit in <span className="font-semibold">60+ days</span>
+                </p>
+              </div>
+
+              {/* Reason 4 — Competitor Proximity */}
+              <div className="rounded-lg border border-border bg-gray-50/50 p-4 dark:border-border-dark dark:bg-white/[0.02]">
+                <div className="mb-2 flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                  <span className="text-sm font-bold text-gray-900 dark:text-gray-100">Competitor Proximity</span>
+                </div>
+                <div className="mb-2 flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-gray-700 dark:text-gray-300">4</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">patients</span>
+                </div>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  Nearby facility <span className="font-semibold">opened recently</span>
+                </p>
+              </div>
             </div>
           </Card>
 

@@ -538,6 +538,20 @@ export default function Payer() {
       {/* ── Policy Manager ────────────────────────────────────────── */}
       {activeTab === 'policies' && (
         <div className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            {[
+              { label: 'Active Policies', value: '1,247', color: 'text-success' },
+              { label: 'New This Month', value: '48', color: 'text-primary' },
+              { label: 'Renewals Due', value: '23', color: 'text-warning' },
+              { label: 'Lapsed', value: '7', color: 'text-error' },
+              { label: 'Renewal Rate', value: '89%', color: 'text-accent' },
+            ].map(s => (
+              <div key={s.label} className="rounded-lg bg-white dark:bg-surface-dark border border-border dark:border-border-dark px-3 py-2.5">
+                <p className={cn('font-display font-bold text-lg', s.color)}>{s.value}</p>
+                <p className="text-[10px] text-muted font-medium">{s.label}</p>
+              </div>
+            ))}
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             <Filter className="h-4 w-4 text-gray-400" />
             {SCHEME_FILTERS.map((f) => (
