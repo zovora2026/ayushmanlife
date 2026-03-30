@@ -253,6 +253,51 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     let assistantContent: string;
 
+    // Load patient context from D1 for Claude
+    let patientContext = '';
+    if (db) {
+      try {
+        // Get patient_id from conversation
+        const conv = await db.prepare(
+          `SELECT patient_id FROM chat_conversations WHERE id = ?`
+        ).bind(conversationId).first() as { patient_id?: string } | null;
+        const patientId = conv?.patient_id || 'pat-001';
+
+        const patient = await db.prepare(
+          `SELECT name, age, gender, blood_group, insurance_type, insurance_provider, medical_history, allergies, chronic_conditions, risk_score FROM patients WHERE id = ?`
+        ).bind(patientId).first();
+
+        if (patient) {
+          const p = patient as Record<string, unknown>;
+          patientContext = `\n\nCurrent Patient Context:
+- Name: ${p.name}, Age: ${p.age}, Gender: ${p.gender}, Blood Group: ${p.blood_group}
+- Insurance: ${p.insurance_type} (${p.insurance_provider || 'Self-pay'})
+- Medical History: ${p.medical_history || 'None recorded'}
+- Allergies: ${p.allergies || 'None known'}
+- Chronic Conditions: ${p.chronic_conditions || 'None'}
+- Risk Score: ${p.risk_score}/1.0`;
+
+          // Get recent vitals
+          const { results: vitals } = await db.prepare(
+            `SELECT type, value, unit, recorded_at FROM vitals WHERE patient_id = ? ORDER BY recorded_at DESC LIMIT 6`
+          ).bind(patientId).all();
+          if (vitals && vitals.length > 0) {
+            patientContext += '\n- Recent Vitals: ' + vitals.map((v: Record<string, unknown>) => `${v.type}: ${v.value}${v.unit}`).join(', ');
+          }
+
+          // Get current medications
+          const { results: meds } = await db.prepare(
+            `SELECT name, dosage, frequency FROM medications WHERE patient_id = ? AND status = 'active'`
+          ).bind(patientId).all();
+          if (meds && meds.length > 0) {
+            patientContext += '\n- Current Medications: ' + meds.map((m: Record<string, unknown>) => `${m.name} ${m.dosage} (${m.frequency})`).join(', ');
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load patient context:', e);
+      }
+    }
+
     // Try calling Claude API if key is available
     if (context.env.ANTHROPIC_API_KEY) {
       try {
@@ -273,7 +318,9 @@ Guidelines:
 - For emergencies, always direct to call 108 (Ambulance) or 112 (Emergency)
 - Use INR (₹) for any cost references
 - Reference Indian medical guidelines (ICMR, NMC) where appropriate
-- Support multilingual patients — respond in the language the patient uses if possible`;
+- Support multilingual patients — respond in the language the patient uses if possible
+- When patient context is available, personalize your responses based on their medical history, conditions, and medications
+- Flag any drug interactions or allergy concerns based on patient data` + patientContext;
 
         const messages = conversationHistory.map((msg) => ({
           role: msg.role as 'user' | 'assistant',

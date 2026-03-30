@@ -23,10 +23,10 @@ import { Card } from '../components/ui/Card'
 import { Stat } from '../components/ui/Stat'
 import { Badge } from '../components/ui/Badge'
 import { Chart } from '../components/ui/Chart'
-import { analytics, appointments as aptAPI } from '../lib/api'
+import { analytics, appointments as aptAPI, claims as claimsAPI } from '../lib/api'
 import { demoAppointments, demoActivities, chartData } from '../lib/mock-data'
 import { cn, formatDate, getRelativeTime, getStatusColor } from '../lib/utils'
-import type { DashboardKPIs, Appointment } from '../lib/api'
+import type { DashboardKPIs, Appointment, ClaimStats, RevenueData } from '../lib/api'
 
 const activityDotColors: Record<string, string> = {
   claim: 'bg-accent',
@@ -47,22 +47,28 @@ export default function Dashboard() {
   const { user } = useAuthStore()
   const [kpis, setKpis] = useState<DashboardKPIs | null>(null)
   const [upcomingApts, setUpcomingApts] = useState<Appointment[]>([])
+  const [claimStats, setClaimStats] = useState<ClaimStats | null>(null)
+  const [revenueData, setRevenueData] = useState<RevenueData | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let mounted = true
     async function load() {
       try {
-        const [dashData, aptData] = await Promise.all([
+        const [dashData, aptData, statsData, revData] = await Promise.all([
           analytics.dashboard(),
           aptAPI.list({ status: 'scheduled', limit: '5' }),
+          claimsAPI.stats().catch(() => null),
+          analytics.revenue().catch(() => null),
         ])
         if (mounted) {
           setKpis(dashData)
           setUpcomingApts(aptData.appointments || [])
+          if (statsData) setClaimStats(statsData)
+          if (revData) setRevenueData(revData)
         }
       } catch {
-        // API unavailable — use fallback
+        // API unavailable — use fallback mock data
       }
       if (mounted) setLoading(false)
     }
@@ -150,11 +156,11 @@ export default function Dashboard() {
       {/* Operational Status Strip */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
         {[
-          { label: 'Bed Occupancy', value: '82%', sub: '328 / 400 beds', color: 'text-warning' },
-          { label: 'ER Wait Time', value: '14 min', sub: 'Avg today', color: 'text-success' },
+          { label: 'Bed Occupancy', value: kpis?.bed_occupancy ? `${kpis.bed_occupancy}%` : '82%', sub: kpis?.bed_occupancy ? `${Math.round(kpis.bed_occupancy * 4)} / 400 beds` : '328 / 400 beds', color: 'text-warning' },
+          { label: 'ER Wait Time', value: kpis?.avg_wait_time ? `${kpis.avg_wait_time} min` : '14 min', sub: 'Avg today', color: 'text-success' },
           { label: 'Staff On Duty', value: '186', sub: '24 doctors, 92 nurses', color: 'text-primary' },
           { label: 'OT Utilization', value: '73%', sub: '8 / 11 active', color: 'text-accent' },
-          { label: 'Pending Discharges', value: '12', sub: '4 awaiting billing', color: 'text-secondary' },
+          { label: 'Pending Discharges', value: claimStats ? String(claimStats.pending_count) : '12', sub: claimStats ? `${claimStats.under_review_count ?? 0} under review` : '4 awaiting billing', color: 'text-secondary' },
         ].map(s => (
           <div key={s.label} className="rounded-lg bg-white dark:bg-surface-dark border border-border dark:border-border-dark px-4 py-3">
             <p className={cn('font-display font-bold text-lg', s.color)}>{s.value}</p>
@@ -195,13 +201,19 @@ export default function Dashboard() {
           }
           padding="sm"
         >
-          <Chart
-            type="line"
-            data={chartData.patientVisits}
-            dataKeys={['visits', 'claims']}
-            xAxisKey="name"
-            height={280}
-          />
+          {loading ? (
+            <div className="flex items-center justify-center h-[280px]">
+              <Loader2 className="w-5 h-5 animate-spin text-muted" />
+            </div>
+          ) : (
+            <Chart
+              type="line"
+              data={chartData.patientVisits}
+              dataKeys={['visits', 'claims']}
+              xAxisKey="name"
+              height={280}
+            />
+          )}
         </Card>
 
         <Card
@@ -215,13 +227,26 @@ export default function Dashboard() {
           }
           padding="sm"
         >
-          <Chart
-            type="bar"
-            data={chartData.departmentRevenue.slice(0, 5)}
-            dataKeys={['revenue']}
-            xAxisKey="name"
-            height={280}
-          />
+          {loading ? (
+            <div className="flex items-center justify-center h-[280px]">
+              <Loader2 className="w-5 h-5 animate-spin text-muted" />
+            </div>
+          ) : (
+            <Chart
+              type="bar"
+              data={
+                revenueData?.by_department?.length
+                  ? revenueData.by_department.slice(0, 5).map(d => ({
+                      name: d.department,
+                      revenue: (d as unknown as Record<string, number>).revenue ?? d.amount ?? 0,
+                    }))
+                  : chartData.departmentRevenue.slice(0, 5)
+              }
+              dataKeys={['revenue']}
+              xAxisKey="name"
+              height={280}
+            />
+          )}
         </Card>
       </div>
 

@@ -243,6 +243,9 @@ export interface ClaimStats {
   pending_count: number;
   approved_count: number;
   rejected_count: number;
+  submitted_count?: number;
+  under_review_count?: number;
+  draft_count?: number;
   total_amount: number;
   approved_amount: number;
   avg_processing_days: number;

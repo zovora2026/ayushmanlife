@@ -38,7 +38,7 @@ import { Tabs } from '../components/ui/Tabs'
 import { Button } from '../components/ui/Button'
 import { demoPatients, chartData } from '../lib/mock-data'
 import { analytics } from '../lib/api'
-import type { PatientRiskData, OperationsData, SatisfactionData, RevenueData, ChurnData } from '../lib/api'
+import type { DashboardKPIs, PatientRiskData, OperationsData, SatisfactionData, RevenueData, ChurnData } from '../lib/api'
 import { cn, formatCurrency, getRiskColor } from '../lib/utils'
 
 const analyticsTabs = [
@@ -115,6 +115,7 @@ export default function Analytics() {
   const [activeTab, setActiveTab] = useState('overview')
 
   // ── API state ──
+  const [dashboardData, setDashboardData] = useState<DashboardKPIs | null>(null)
   const [riskData, setRiskData] = useState<PatientRiskData | null>(null)
   const [churnData, setChurnData] = useState<ChurnData | null>(null)
   const [opsData, setOpsData] = useState<OperationsData | null>(null)
@@ -125,6 +126,17 @@ export default function Analytics() {
   // Fetch data when the active tab changes
   useEffect(() => {
     let mounted = true
+
+    async function loadOverview() {
+      setLoading(true)
+      try {
+        const dash = await analytics.dashboard()
+        if (mounted) setDashboardData(dash)
+      } catch {
+        // API unavailable — keep mock fallback
+      }
+      if (mounted) setLoading(false)
+    }
 
     async function loadRisk() {
       setLoading(true)
@@ -176,7 +188,8 @@ export default function Analytics() {
       if (mounted) setLoading(false)
     }
 
-    if (activeTab === 'risk' || activeTab === 'churn') loadRisk()
+    if (activeTab === 'overview') loadOverview()
+    else if (activeTab === 'risk' || activeTab === 'churn') loadRisk()
     else if (activeTab === 'operations') loadOperations()
     else if (activeTab === 'satisfaction') loadSatisfaction()
     else if (activeTab === 'revenue') loadRevenue()
@@ -192,7 +205,7 @@ export default function Analytics() {
         name: p.name,
         age: p.age ?? 0,
         riskScore: p.risk_score ?? 0,
-        conditions: p.chronic_conditions ? p.chronic_conditions.split(',').map((s) => s.trim()) : [],
+        conditions: Array.isArray((p as unknown as Record<string, unknown>).conditions) ? (p as unknown as Record<string, unknown>).conditions as string[] : p.chronic_conditions ? p.chronic_conditions.split(',').map((s) => s.trim()) : [],
         insuranceType: p.insurance_type ?? 'N/A',
       }))
     : demoPatients.map((p) => ({
@@ -219,7 +232,7 @@ export default function Analytics() {
   const npsScore = satData ? satData.nps_score : 78
   const npsLabel = npsScore >= 70 ? 'Excellent' : npsScore >= 50 ? 'Good' : 'Needs Work'
   const satDeptChart = satData
-    ? satData.by_department.map((d) => ({ name: d.department, score: d.score }))
+    ? satData.by_department.map((d) => ({ name: d.department, score: d.score ?? (d as Record<string, unknown>).avg_rating ?? 0 }))
     : (chartData.departmentSatisfaction as Record<string, unknown>[])
   const satFeedback = satData
     ? satData.recent_feedback.map((f, i) => ({ id: i + 1, rating: f.rating, comment: f.comment, department: f.department, date: f.date }))
@@ -231,13 +244,13 @@ export default function Analytics() {
   const revDeptTable = revData
     ? revData.by_department.map((d) => ({
         name: d.department,
-        revenue: d.amount,
-        target: d.amount, // API doesn't provide target — use amount as target (100%)
+        revenue: d.amount ?? (d as Record<string, unknown>).revenue ?? 0,
+        target: d.amount ?? (d as Record<string, unknown>).revenue ?? 0, // API doesn't provide target — use amount as target (100%)
         growth: 0,
       }))
     : departmentRevenueTable
   const revByPayer = revData
-    ? revData.by_payer.map((p) => ({ name: p.payer, revenue: p.amount }))
+    ? revData.by_payer.map((p) => ({ name: p.payer, revenue: p.amount ?? (p as Record<string, unknown>).revenue ?? 0 }))
     : (chartData.payerMix as Record<string, unknown>[])
   const revByMonth = revData
     ? revData.monthly.map((m) => ({ name: m.month, revenue: m.revenue, target: m.revenue }))
@@ -272,12 +285,13 @@ export default function Analytics() {
 
       {/* ── Overview Tab ── */}
       {activeTab === 'overview' && (
+        loading ? <LoadingSpinner /> : (
         <div className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <Stat label="Total Patients" value="12,847" change={8.2} changeLabel="vs last month" icon={<Users className="h-5 w-5" />} />
-            <Stat label="Claims Processed" value="1,247" change={12.5} changeLabel="vs last month" icon={<FileCheck className="h-5 w-5" />} />
-            <Stat label="Satisfaction" value="94.2%" change={3.1} changeLabel="vs last month" icon={<Heart className="h-5 w-5" />} />
-            <Stat label="Revenue (MTD)" value={'\u20B92.4 Cr'} change={-2.3} changeLabel="vs last month" icon={<IndianRupee className="h-5 w-5" />} />
+            <Stat label="Total Patients" value={dashboardData ? dashboardData.total_patients.toLocaleString('en-IN') : '12,847'} change={8.2} changeLabel="vs last month" icon={<Users className="h-5 w-5" />} />
+            <Stat label="Claims Processed" value={dashboardData ? dashboardData.claims_this_month.toLocaleString('en-IN') : '1,247'} change={12.5} changeLabel="vs last month" icon={<FileCheck className="h-5 w-5" />} />
+            <Stat label="Satisfaction" value={dashboardData ? `${dashboardData.satisfaction_score}` : '94.2%'} change={3.1} changeLabel="vs last month" icon={<Heart className="h-5 w-5" />} />
+            <Stat label="Revenue (MTD)" value={dashboardData ? `\u20B9${(dashboardData.monthly_revenue / 10000000).toFixed(1)} Cr` : '\u20B92.4 Cr'} change={-2.3} changeLabel="vs last month" icon={<IndianRupee className="h-5 w-5" />} />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -343,19 +357,19 @@ export default function Analytics() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted">Bed Occupancy</span>
-                  <span className="text-lg font-bold text-primary">84%</span>
+                  <span className="text-lg font-bold text-primary">{dashboardData ? `${dashboardData.bed_occupancy}%` : '84%'}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted">Avg Wait Time</span>
-                  <span className="text-lg font-bold text-success">12 min</span>
+                  <span className="text-lg font-bold text-success">{dashboardData ? `${dashboardData.avg_wait_time} min` : '12 min'}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted">Staff Utilization</span>
-                  <span className="text-lg font-bold text-primary">78%</span>
+                  <span className="text-lg font-bold text-primary">{dashboardData ? `${dashboardData.appointments_today}` : '78%'}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted">NPS Score</span>
-                  <span className="text-lg font-bold text-success">78</span>
+                  <span className="text-lg font-bold text-success">{dashboardData ? `${dashboardData.satisfaction_score}` : '78'}</span>
                 </div>
               </div>
             </Card>
@@ -365,6 +379,7 @@ export default function Analytics() {
             <Chart type="bar" data={chartData.payerMix as Record<string, unknown>[]} dataKeys={['revenue']} xAxisKey="name" height={260} />
           </Card>
         </div>
+        )
       )}
 
       {/* ── Patient Risk Tab ── */}

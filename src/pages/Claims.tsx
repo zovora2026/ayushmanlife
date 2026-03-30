@@ -18,7 +18,7 @@ import { Stat } from '../components/ui/Stat'
 import { Chart } from '../components/ui/Chart'
 import { Button } from '../components/ui/Button'
 import { claims as claimsAPI } from '../lib/api'
-import type { Claim as APIClaim, ClaimStats } from '../lib/api'
+import type { ClaimStats } from '../lib/api'
 import { demoClaims, chartData } from '../lib/mock-data'
 import { cn, formatCurrency, formatDate, getStatusColor } from '../lib/utils'
 
@@ -64,27 +64,43 @@ function NewClaimModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
-    const newClaim: DisplayClaim = {
-      id: `CLM-2026-${String(Math.floor(Math.random() * 9000) + 1000)}`,
-      patientName: form.patientName,
-      department: form.department,
-      amount: Number(form.amount) || 0,
-      payer: form.payer,
-      status: 'draft',
-      date: new Date().toISOString(),
-      diagnosis: form.diagnosis,
-    }
     try {
-      await claimsAPI.create({
+      const res = await claimsAPI.create({
+        patient_id: `pat-${Date.now()}`,
         patient_name: form.patientName,
         diagnosis: form.diagnosis,
         claimed_amount: Number(form.amount) || 0,
         payer_name: form.payer,
         payer_scheme: form.department,
       })
-    } catch { /* mock fallback */ }
-    setSubmitting(false)
-    onSubmit(newClaim)
+      const c = res.claim
+      const created: DisplayClaim = {
+        id: c.claim_number || c.id,
+        patientName: c.patient_name || form.patientName,
+        department: c.payer_scheme || form.department,
+        amount: c.claimed_amount,
+        payer: c.payer_name || c.payer_scheme || form.payer,
+        status: c.status,
+        date: c.created_at || new Date().toISOString(),
+        diagnosis: c.diagnosis,
+      }
+      setSubmitting(false)
+      onSubmit(created)
+    } catch {
+      // Fallback: build display claim locally
+      const fallback: DisplayClaim = {
+        id: `CLM-2026-${String(Math.floor(Math.random() * 9000) + 1000)}`,
+        patientName: form.patientName,
+        department: form.department,
+        amount: Number(form.amount) || 0,
+        payer: form.payer,
+        status: 'draft',
+        date: new Date().toISOString(),
+        diagnosis: form.diagnosis,
+      }
+      setSubmitting(false)
+      onSubmit(fallback)
+    }
   }
 
   return (
@@ -167,7 +183,8 @@ export default function Claims() {
           claimsAPI.stats(),
         ])
         if (mounted) {
-          setClaimsList((listData.claims || []).map((c: APIClaim) => ({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          setClaimsList((listData.claims || []).map((c: any) => ({
             id: c.claim_number || c.id,
             patientName: c.patient_name || 'Patient',
             department: c.payer_scheme || '',
@@ -175,7 +192,7 @@ export default function Claims() {
             payer: c.payer_name || c.payer_scheme,
             status: c.status,
             date: c.created_at || c.submitted_at || '',
-            diagnosis: c.diagnosis,
+            diagnosis: c.diagnosis || c.diagnosis_text || '',
           })))
           setStats(statsData)
         }
