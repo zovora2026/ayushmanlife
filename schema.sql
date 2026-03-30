@@ -695,3 +695,48 @@ CREATE INDEX IF NOT EXISTS idx_compliance_framework ON compliance_checks(framewo
 CREATE INDEX IF NOT EXISTS idx_infra_status ON infra_services(status);
 CREATE INDEX IF NOT EXISTS idx_costs_month ON cloud_costs(month);
 CREATE INDEX IF NOT EXISTS idx_costs_provider ON cloud_costs(provider);
+
+-- Enhancement Governance (Build 14)
+CREATE TABLE IF NOT EXISTS enhancement_requests (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  description TEXT,
+  department TEXT NOT NULL,
+  requested_by TEXT REFERENCES users(id),
+  requester_name TEXT,
+  request_type TEXT NOT NULL DEFAULT 'enhancement',
+  emr_module TEXT,
+  priority_score INTEGER DEFAULT 0,
+  clinical_impact INTEGER DEFAULT 0,
+  operational_impact INTEGER DEFAULT 0,
+  regulatory_impact INTEGER DEFAULT 0,
+  effort_estimate TEXT,
+  effort_hours INTEGER,
+  status TEXT NOT NULL DEFAULT 'submitted',
+  assigned_to TEXT REFERENCES users(id),
+  assignee_name TEXT,
+  sprint TEXT,
+  target_date TEXT,
+  completed_at DATETIME,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS governance_reviews (
+  id TEXT PRIMARY KEY,
+  request_id TEXT NOT NULL REFERENCES enhancement_requests(id),
+  committee TEXT NOT NULL,
+  reviewer_id TEXT REFERENCES users(id),
+  reviewer_name TEXT,
+  decision TEXT NOT NULL DEFAULT 'pending',
+  priority_override INTEGER,
+  comments TEXT,
+  meeting_date TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_enhancement_status ON enhancement_requests(status);
+CREATE INDEX IF NOT EXISTS idx_enhancement_dept ON enhancement_requests(department);
+CREATE INDEX IF NOT EXISTS idx_enhancement_type ON enhancement_requests(request_type);
+CREATE INDEX IF NOT EXISTS idx_governance_request ON governance_reviews(request_id);
+CREATE INDEX IF NOT EXISTS idx_governance_committee ON governance_reviews(committee);

@@ -1300,3 +1300,88 @@ export interface UnderwritingRequest {
   created_at: string;
   decided_at?: string;
 }
+
+// Enhancement Governance
+export const governance = {
+  getDashboard: () => fetchAPI<GovernanceDashboard>('/governance/dashboard'),
+  getRequests: (params?: { status?: string; department?: string; type?: string }) => {
+    const sp = new URLSearchParams();
+    if (params?.status) sp.set('status', params.status);
+    if (params?.department) sp.set('department', params.department);
+    if (params?.type) sp.set('type', params.type);
+    const qs = sp.toString();
+    return fetchAPI<{ requests: EnhancementRequest[]; total: number }>(`/governance/requests${qs ? `?${qs}` : ''}`);
+  },
+  createRequest: (data: { title: string; description?: string; department: string; requested_by?: string; requester_name?: string; request_type?: string; emr_module?: string; clinical_impact?: number; operational_impact?: number; regulatory_impact?: number; effort_estimate?: string; effort_hours?: number }) =>
+    fetchAPI<{ request: EnhancementRequest }>('/governance/requests', { method: 'POST', body: JSON.stringify(data) }),
+  updateRequest: (data: { id: string; status?: string; assigned_to?: string; assignee_name?: string; sprint?: string; target_date?: string; priority_score?: number; effort_estimate?: string; effort_hours?: number }) =>
+    fetchAPI<{ request: EnhancementRequest }>('/governance/requests', { method: 'PUT', body: JSON.stringify(data) }),
+  getReviews: (params?: { request_id?: string; committee?: string; decision?: string }) => {
+    const sp = new URLSearchParams();
+    if (params?.request_id) sp.set('request_id', params.request_id);
+    if (params?.committee) sp.set('committee', params.committee);
+    if (params?.decision) sp.set('decision', params.decision);
+    const qs = sp.toString();
+    return fetchAPI<{ reviews: GovernanceReview[]; total: number; by_committee: Record<string, { total: number; approved: number; pending: number; deferred: number }> }>(`/governance/reviews${qs ? `?${qs}` : ''}`);
+  },
+  createReview: (data: { request_id: string; committee: string; reviewer_id?: string; reviewer_name?: string; decision: string; priority_override?: number; comments?: string; meeting_date?: string }) =>
+    fetchAPI<{ review: GovernanceReview }>('/governance/reviews', { method: 'POST', body: JSON.stringify(data) }),
+}
+
+export interface GovernanceDashboard {
+  total: number;
+  completed: number;
+  avg_priority_score: number;
+  total_effort_hours: number;
+  by_status: Record<string, number>;
+  by_department: Record<string, number>;
+  by_type: Record<string, number>;
+  by_module: Record<string, number>;
+  backlog_aging: { id: string; title: string; status: string; priority_score: number; age_days: number }[];
+  sprints: { sprint: string; count: number; completed: number; total_hours: number }[];
+  review_summary: Record<string, number>;
+}
+
+export interface EnhancementRequest {
+  id: string;
+  title: string;
+  description?: string;
+  department: string;
+  requested_by?: string;
+  requester_name?: string;
+  request_type: string;
+  emr_module?: string;
+  priority_score: number;
+  clinical_impact: number;
+  operational_impact: number;
+  regulatory_impact: number;
+  effort_estimate?: string;
+  effort_hours?: number;
+  status: string;
+  assigned_to?: string;
+  assignee_name?: string;
+  sprint?: string;
+  target_date?: string;
+  completed_at?: string;
+  created_at: string;
+  updated_at: string;
+  review_count?: number;
+  approved_count?: number;
+}
+
+export interface GovernanceReview {
+  id: string;
+  request_id: string;
+  request_title?: string;
+  department?: string;
+  request_status?: string;
+  request_priority?: number;
+  committee: string;
+  reviewer_id?: string;
+  reviewer_name?: string;
+  decision: string;
+  priority_override?: number;
+  comments?: string;
+  meeting_date?: string;
+  created_at: string;
+}

@@ -26,6 +26,7 @@ const ClientPortal = lazy(() => import('./pages/ClientPortal'))
 const TestManagement = lazy(() => import('./pages/TestManagement'))
 const SecurityDashboard = lazy(() => import('./pages/SecurityDashboard'))
 const InsuranceCore = lazy(() => import('./pages/InsuranceCore'))
+const EnhancementGovernance = lazy(() => import('./pages/EnhancementGovernance'))
 
 function LoadingSpinner() {
   return (
@@ -145,6 +146,7 @@ export default function App() {
               <Route path="/test-management" element={<TestManagement />} />
               <Route path="/security" element={<SecurityDashboard />} />
               <Route path="/insurance-core" element={<InsuranceCore />} />
+              <Route path="/enhancement-governance" element={<EnhancementGovernance />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
