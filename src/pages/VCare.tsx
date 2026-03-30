@@ -521,7 +521,7 @@ export default function VCare() {
                       type="checkbox"
                       checked={scSymptoms.includes(symptom)}
                       onChange={() => toggleSymptom(symptom)}
-                      className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary/20"
+                      className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary/20"
                     />
                     <span className="text-xs font-medium text-text dark:text-text-dark">{symptom}</span>
                   </label>
@@ -1182,17 +1182,17 @@ export default function VCare() {
             </p>
             <div className="space-y-1.5">
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={telePreCheckCamera} onChange={() => setTelePreCheckCamera(!telePreCheckCamera)} className="h-3.5 w-3.5 rounded border-gray-300 text-primary focus:ring-primary/20" />
+                <input type="checkbox" checked={telePreCheckCamera} onChange={() => setTelePreCheckCamera(!telePreCheckCamera)} className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary/20" />
                 <Camera className={cn('h-3 w-3', telePreCheckCamera ? 'text-green-500' : 'text-muted')} />
                 <span className={cn('text-[11px]', telePreCheckCamera ? 'text-green-600 dark:text-green-400 font-medium' : 'text-text dark:text-text-dark')}>Camera working</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={telePreCheckMic} onChange={() => setTelePreCheckMic(!telePreCheckMic)} className="h-3.5 w-3.5 rounded border-gray-300 text-primary focus:ring-primary/20" />
+                <input type="checkbox" checked={telePreCheckMic} onChange={() => setTelePreCheckMic(!telePreCheckMic)} className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary/20" />
                 <Mic className={cn('h-3 w-3', telePreCheckMic ? 'text-green-500' : 'text-muted')} />
                 <span className={cn('text-[11px]', telePreCheckMic ? 'text-green-600 dark:text-green-400 font-medium' : 'text-text dark:text-text-dark')}>Microphone working</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={telePreCheckInternet} onChange={() => setTelePreCheckInternet(!telePreCheckInternet)} className="h-3.5 w-3.5 rounded border-gray-300 text-primary focus:ring-primary/20" />
+                <input type="checkbox" checked={telePreCheckInternet} onChange={() => setTelePreCheckInternet(!telePreCheckInternet)} className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary/20" />
                 <Wifi className={cn('h-3 w-3', telePreCheckInternet ? 'text-green-500' : 'text-muted')} />
                 <span className={cn('text-[11px]', telePreCheckInternet ? 'text-green-600 dark:text-green-400 font-medium' : 'text-text dark:text-text-dark')}>Internet speed adequate</span>
               </label>
@@ -1319,7 +1319,7 @@ export default function VCare() {
           <div className="space-y-2">
             {patientMeds.map((med, i) => (
               <label key={i} className="flex items-center gap-2.5 cursor-pointer">
-                <input type="checkbox" checked={!!medsTaken[i]} onChange={() => setMedsTaken(prev => ({...prev, [i]: !prev[i]}))} className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary/20" />
+                <input type="checkbox" checked={!!medsTaken[i]} onChange={() => setMedsTaken(prev => ({...prev, [i]: !prev[i]}))} className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary/20" />
                 <span className={cn('text-xs', medsTaken[i] ? 'text-muted line-through' : 'text-text dark:text-text-dark font-medium')}>{med.name}</span>
               </label>
             ))}
