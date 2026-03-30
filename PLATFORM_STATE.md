@@ -328,4 +328,60 @@ To enable live V-Care AI (instead of mock responses):
 - **CI/CD**: `.github/workflows/deploy.yml` → auto-deploy on push to `main`
 - **Total source files**: 54 TypeScript/TSX files
 - **Total lines of code**: ~9,200
-- **Production bundle**: 72KB CSS + 223KB JS core + lazy-loaded chunks (gzipped: ~72KB + ~113KB charts)
+- **Production bundle**: 73KB CSS + 224KB JS core + lazy-loaded chunks (gzipped: ~72KB + ~113KB charts)
+- **Cloudflare Account ID**: `30bba541d6851253a3af3e91e04fb4ec`
+
+---
+
+## 12. Changelog
+
+### 2026-03-30 — Landing Page Layout Cleanup
+
+**Problem**: Landing page had cluttered layout — text overlapping, inconsistent spacing between sections, misaligned cards, and typography sizing issues.
+
+**Fixes applied to all 10 landing components + Footer**:
+
+| Component | Changes |
+|-----------|---------|
+| **Hero** | Increased padding to `py-32 md:py-40`, centered with `max-w-4xl`, stats row changed to `flex justify-center gap-12`, floating icons hidden on mobile, title sizing `text-5xl md:text-7xl` with `tracking-tight` |
+| **Features** | Grid changed to `lg:grid-cols-5` (5 per row), added `min-h-[240px]` for card alignment, `shadow-sm hover:shadow-md`, flex-col for equal heights |
+| **PlatformPreview** | Section padding `py-20`, container has `shadow-lg`, content area `min-h-[320px]`, tabs scrollable on mobile |
+| **ServiceStack** | Outer `max-w-7xl`, accordion `max-w-4xl mx-auto`, consistent section padding |
+| **HowItWorks** | Padding `py-20`, `max-w-5xl` centered, `grid-cols-1 md:grid-cols-3 gap-8`, step descriptions constrained with `max-w-xs mx-auto` |
+| **Testimonials** | Metrics `grid-cols-2 md:grid-cols-5 gap-8`, cards `p-8 rounded-xl shadow-sm hover:shadow-md` |
+| **Pricing** | Cards inside `max-w-5xl`, `items-start`, `flex-col` for equal heights, popular card `md:scale-105` (not always) |
+| **Partners** | `flex flex-wrap justify-center gap-8` replacing rigid grid |
+| **CTA** | Inner container `max-w-2xl`, outer `max-w-7xl`, consistent padding |
+| **Footer** | Padding `py-12 md:py-16`, grid `grid-cols-2 md:grid-cols-5` |
+
+**Global consistency enforced**:
+- Every `<section>` has `py-16 md:py-24` (or specific overrides like py-20, py-32)
+- All content inside `max-w-7xl mx-auto px-4 sm:px-6 lg:px-8`
+- Section headings: `text-3xl md:text-4xl tracking-tight`
+- Body text: `leading-relaxed`
+- Google Fonts confirmed: Plus Jakarta Sans (headings), DM Sans (body), JetBrains Mono (code)
+
+**Current design state**: All landing sections have consistent spacing, no text overlap, cards properly aligned, responsive at 375px/768px/1280px breakpoints.
+
+### 2026-03-30 — Cloudflare Pages Deployment
+
+- Created Cloudflare Pages project `ayushmanlife`
+- First production deploy: https://ayushmanlife.pages.dev (61 files, HTTP 200 verified)
+- Custom domains added via API: `ayushmanlife.in`, `www.ayushmanlife.in` (SSL pending)
+- GitHub Actions CI/CD workflow created (`.github/workflows/deploy.yml`)
+- Fixed `wrangler.toml` — removed unsupported `[build]` section for Pages compatibility
+
+### 2026-03-30 — Mobile Responsiveness
+
+- DashboardLayout: added mobile hamburger toggle, sidebar hidden on mobile with dark overlay
+- PlatformPreview: responsive grids (2-col mobile, 4-col desktop), VCare stacks vertically
+- App.tsx: added ErrorBoundary and ScrollToTop for production resilience
+
+### 2026-03-30 — Platform v2.0 Initial Build
+
+- Complete React + TypeScript + Tailwind CSS 4 platform built from scratch
+- 18 pages, 13 UI components, 9 landing sections, 4 layout components
+- 54 source files, ~9,200 lines of code
+- All modules with realistic Indian healthcare demo data
+- Mock AI engine for V-Care chat (no API key required)
+- Cloudflare Pages Function for optional live AI (/api/chat)
