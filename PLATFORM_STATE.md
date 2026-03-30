@@ -1,6 +1,6 @@
 # AyushmanLife Platform State — Honest Assessment
 
-> Last updated: 2026-03-30T16:00:00+05:30
+> Last updated: 2026-03-30T15:35:00+05:30
 > Git repository: [zovora2026/ayushmanlife](https://github.com/zovora2026/ayushmanlife) (main branch)
 > Live URL: https://ayushmanlife-516.pages.dev → https://ayushmanlife.in
 > Assessment criteria: APPLICATION_BUILD_LIST.md + HONEST_BUILD.md (replaces old benchmark)
@@ -11,8 +11,8 @@
 
 ```
 Frontend: React 19 + TypeScript 5.9 + Vite 8 + Tailwind CSS 4
-Backend:  Cloudflare Pages Functions (59 API routes)
-Database: Cloudflare D1 (ayushmanlife-db) — 42 tables, ~5100 rows, APAC region
+Backend:  Cloudflare Pages Functions (63 API routes)
+Database: Cloudflare D1 (ayushmanlife-db) — 45 tables, ~5150 rows, APAC region
 Auth:     Cookie-based D1 sessions + SHA-256 password hashing
 AI:       Claude API integration in Claims analysis (ICD-10/CPT coding)
 Deploy:   Cloudflare Pages (wrangler pages deploy)
@@ -372,10 +372,40 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 - WORKING: Incident creation/resolution with timestamps, compliance filtering by framework
 - NOT YET: Real-time monitoring integration (Grafana/CloudWatch), automated vulnerability scanning, billing API integration, alert notifications, compliance report PDF export, automated remediation
 - PARTIALLY FAKE: Infrastructure CPU/memory values are static, cloud costs are seeded not from billing APIs
-### Build 13: Insurance Core Platform (APP 9) — NOT STARTED
+### Build 13: Insurance Core Platform (APP 9) — COMPLETE ✅
+
+**Definition of done**: Insurance product catalog with scheme-based filtering, policy lifecycle management, endorsement processing with approval workflow, and underwriting with automated risk scoring.
+
+**E2E Test Results** (verified via API calls on ayushmanlife-516.pages.dev):
+1. Products GET: 12 products across 4 schemes (ayushman_bharat 1, cghs 2, echs 1, private 8), 7 categories ✅
+2. Policies GET: 20 policies, summary by status (20 active), by scheme (AB 4, CGHS 2, ECHS 2, Private 12), ₹1.68Cr coverage, ₹2.6L premium ✅
+3. Underwriting GET: 12 requests, 4 pending (sorted first), by decision (4 approved, 3 approved_with_loading, 1 declined, 4 pending), by risk (6 standard, 3 substandard, 2 high_risk, 1 preferred) ✅
+4. Endorsements GET: 10 endorsements with policy_number JOINs, types include sum_insured_change, nominee_change, address_change, add_member, rider_addition, cancellation, renewal, portability ✅
+5. Policy POST: Created pol-XXXXX with auto policy_number, status=active ✅
+6. Policy PUT: Updated status to cancelled with end_date ✅
+7. Underwriting POST: Created with auto risk scoring — Diabetes + smoker + BMI 32 → score 90 (high_risk), decision=pending ✅
+8. Underwriting PUT: Updated decision to declined with remarks and underwriter_id, decided_at auto-set ✅
+9. Endorsement POST: Created nominee_change endorsement, status=pending ✅
+10. Endorsement PUT: Approved with approved_by, approved_at auto-set ✅
+11. Frontend: 4-tab page (Products, Policies, Underwriting, Endorsements) with product cards, policy table with filters, underwriting cards with risk scoring and approve/decline buttons, endorsement approval workflow ✅
+
+**Honest Assessment Questions**:
+1. Can a real user complete the primary workflow? **YES** — Insurance operations team can browse product catalog by scheme/category, manage policies (create/cancel), process underwriting requests with auto risk scoring (approve/decline/approve with loading), and handle endorsements with approval workflow. All from D1.
+2. Does data persist correctly? **YES** — Products, policies, endorsements, and underwriting requests all save to D1 with proper FKs. Risk scoring auto-computes on POST (base 30 + pre_existing 25 + smoker 20 + BMI>30 15 + BMI>35 10). Endorsement approval sets approved_at/approved_by. Underwriting decision sets decided_at.
+3. Is the UI professional enough for a hospital environment? **YES** — Product cards with scheme badges and coverage details, policy table with scheme/status filters, underwriting cards with risk category color coding and inline approve/decline buttons, endorsement pending queue with approve/reject actions.
+4. Would someone pay ₹1,000/month for this specific app? **MAYBE** — The underwriting risk scoring with auto-categorization is genuinely useful. Policy lifecycle management covers the basics. Endorsement approval workflow is practical. Missing: premium calculation engine, policy document generation, renewal automation, agent/broker management, regulatory compliance (IRDAI Form A/B).
+5. What's the most embarrassing thing about it? Risk scoring is simplistic (4 additive factors, no actuarial tables). No premium calculation — premium_amount is just a flat input, not computed from product rates × risk factors. Products have premium_min/max fields but these aren't used in policy creation. No policy document PDF generation. No renewal reminders or automation. Endorsement premium_impact doesn't actually update the policy premium.
+
+**What's actually working vs what's fake**:
+- WORKING: Product catalog (12 products across 4 government/private schemes with coverage rules, exclusions, waiting periods, age limits)
+- WORKING: Policy CRUD with patient JOINs, scheme/status filtering, summary statistics
+- WORKING: Underwriting with auto risk scoring on creation, decision workflow (approve/decline/approve_with_loading), pending queue sorted first
+- WORKING: Endorsement lifecycle (create→pending→approved/rejected) with approval audit trail
+- NOT YET: Premium calculation engine, policy document generation, renewal automation, agent/broker management, IRDAI regulatory forms, claim-to-policy linkage in underwriting, actuarial risk tables
+- PARTIALLY FAKE: Premium amounts are flat inputs, endorsement premium_impact doesn't cascade to policy premium
 ### Build 14: EMR Enhancement Governance (APP 3) — NOT STARTED
 ### Build 15: EMR Change Management (APP 4) — NOT STARTED
 
 ---
 
-## Progress: 12/15 apps complete
+## Progress: 13/15 apps complete

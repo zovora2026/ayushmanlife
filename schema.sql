@@ -628,6 +628,67 @@ CREATE TABLE IF NOT EXISTS cloud_costs (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Insurance Core Platform
+CREATE TABLE IF NOT EXISTS insurance_products (
+  id TEXT PRIMARY KEY,
+  product_name TEXT NOT NULL,
+  product_code TEXT UNIQUE NOT NULL,
+  scheme TEXT NOT NULL,
+  category TEXT NOT NULL,
+  coverage_amount REAL NOT NULL,
+  premium_range_min REAL,
+  premium_range_max REAL,
+  coverage_rules TEXT,
+  exclusions TEXT,
+  waiting_period_days INTEGER DEFAULT 30,
+  max_age INTEGER DEFAULT 65,
+  min_age INTEGER DEFAULT 18,
+  co_pay_pct REAL DEFAULT 0,
+  room_rent_limit REAL,
+  status TEXT DEFAULT 'active',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS policy_endorsements (
+  id TEXT PRIMARY KEY,
+  policy_id TEXT NOT NULL REFERENCES policies(id),
+  endorsement_type TEXT NOT NULL,
+  description TEXT NOT NULL,
+  old_value TEXT,
+  new_value TEXT,
+  effective_date DATE NOT NULL,
+  premium_impact REAL DEFAULT 0,
+  status TEXT DEFAULT 'pending',
+  approved_by TEXT REFERENCES users(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  approved_at DATETIME
+);
+
+CREATE TABLE IF NOT EXISTS underwriting_requests (
+  id TEXT PRIMARY KEY,
+  policy_id TEXT REFERENCES policies(id),
+  patient_id TEXT REFERENCES patients(id),
+  product_id TEXT REFERENCES insurance_products(id),
+  request_type TEXT NOT NULL,
+  risk_category TEXT DEFAULT 'standard',
+  risk_score REAL,
+  medical_history TEXT,
+  pre_existing_conditions TEXT,
+  bmi REAL,
+  smoker INTEGER DEFAULT 0,
+  decision TEXT DEFAULT 'pending',
+  premium_loading REAL DEFAULT 0,
+  remarks TEXT,
+  underwriter_id TEXT REFERENCES users(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  decided_at DATETIME
+);
+
+CREATE INDEX IF NOT EXISTS idx_products_scheme ON insurance_products(scheme);
+CREATE INDEX IF NOT EXISTS idx_endorsements_policy ON policy_endorsements(policy_id);
+CREATE INDEX IF NOT EXISTS idx_underwriting_patient ON underwriting_requests(patient_id);
+CREATE INDEX IF NOT EXISTS idx_underwriting_status ON underwriting_requests(decision);
+
 CREATE INDEX IF NOT EXISTS idx_incidents_status ON security_incidents(status);
 CREATE INDEX IF NOT EXISTS idx_incidents_severity ON security_incidents(severity);
 CREATE INDEX IF NOT EXISTS idx_compliance_framework ON compliance_checks(framework);

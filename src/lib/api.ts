@@ -253,6 +253,30 @@ export const security = {
   costs: () => fetchAPI<CloudCosts>('/security/costs'),
 };
 
+// Insurance
+export const insurance = {
+  products: (scheme?: string) =>
+    fetchAPI<{ products: InsuranceProduct[]; total: number; by_scheme: Record<string, number>; by_category: Record<string, number> }>(`/insurance/products${scheme ? `?scheme=${scheme}` : ''}`),
+  policies: (params?: Record<string, string>) =>
+    fetchAPI<{ policies: InsurancePolicy[]; total: number; summary: { by_status: Record<string, number>; by_scheme: Record<string, number>; total_coverage: number; total_premium: number } }>(`/insurance/policies?${new URLSearchParams(params || {})}`),
+  createPolicy: (data: Partial<InsurancePolicy>) =>
+    fetchAPI<{ policy: InsurancePolicy }>('/insurance/policies', { method: 'POST', body: JSON.stringify(data) }),
+  updatePolicy: (data: { id: string; status?: string; end_date?: string }) =>
+    fetchAPI<{ policy: InsurancePolicy }>('/insurance/policies', { method: 'PUT', body: JSON.stringify(data) }),
+  endorsements: (params?: Record<string, string>) =>
+    fetchAPI<{ endorsements: PolicyEndorsement[]; total: number }>(`/insurance/endorsements?${new URLSearchParams(params || {})}`),
+  createEndorsement: (data: Partial<PolicyEndorsement>) =>
+    fetchAPI<{ endorsement: PolicyEndorsement }>('/insurance/endorsements', { method: 'POST', body: JSON.stringify(data) }),
+  updateEndorsement: (data: { id: string; status: string; approved_by?: string }) =>
+    fetchAPI<{ endorsement: PolicyEndorsement }>('/insurance/endorsements', { method: 'PUT', body: JSON.stringify(data) }),
+  underwriting: (decision?: string) =>
+    fetchAPI<{ requests: UnderwritingRequest[]; total: number; summary: { by_decision: Record<string, number>; by_risk: Record<string, number> } }>(`/insurance/underwriting${decision ? `?decision=${decision}` : ''}`),
+  createUnderwriting: (data: Partial<UnderwritingRequest>) =>
+    fetchAPI<{ request: UnderwritingRequest }>('/insurance/underwriting', { method: 'POST', body: JSON.stringify(data) }),
+  updateUnderwriting: (data: { id: string; decision: string; premium_loading?: number; remarks?: string; underwriter_id?: string }) =>
+    fetchAPI<{ request: UnderwritingRequest }>('/insurance/underwriting', { method: 'PUT', body: JSON.stringify(data) }),
+};
+
 // Academy
 export const academy = {
   paths: () => fetchAPI<{ paths: LearningPath[] }>('/academy/paths'),
@@ -1191,4 +1215,88 @@ export interface SecurityDashboard {
     currency: string;
   };
   dr_readiness_score: number;
+}
+
+// Insurance Core
+export interface InsuranceProduct {
+  id: string;
+  product_name: string;
+  product_code: string;
+  scheme: string;
+  category: string;
+  coverage_amount: number;
+  premium_range_min?: number;
+  premium_range_max?: number;
+  coverage_rules?: string;
+  exclusions?: string;
+  waiting_period_days: number;
+  max_age: number;
+  min_age: number;
+  co_pay_pct: number;
+  room_rent_limit?: number;
+  status: string;
+}
+
+export interface InsurancePolicy {
+  id: string;
+  policy_number: string;
+  scheme: string;
+  provider_name: string;
+  holder_name: string;
+  holder_id?: string;
+  patient_id?: string;
+  patient_name?: string;
+  coverage_amount?: number;
+  premium_amount?: number;
+  start_date: string;
+  end_date?: string;
+  status: string;
+  benefits?: string;
+  created_at: string;
+}
+
+export interface PolicyEndorsement {
+  id: string;
+  policy_id: string;
+  policy_number?: string;
+  holder_name?: string;
+  scheme?: string;
+  endorsement_type: string;
+  description: string;
+  old_value?: string;
+  new_value?: string;
+  effective_date: string;
+  premium_impact: number;
+  status: string;
+  approved_by?: string;
+  approved_by_name?: string;
+  created_at: string;
+  approved_at?: string;
+}
+
+export interface UnderwritingRequest {
+  id: string;
+  policy_id?: string;
+  policy_number?: string;
+  patient_id?: string;
+  patient_name?: string;
+  patient_age?: number;
+  product_id?: string;
+  product_name?: string;
+  product_scheme?: string;
+  product_coverage?: number;
+  request_type: string;
+  risk_category: string;
+  risk_score?: number;
+  medical_history?: string;
+  pre_existing_conditions?: string;
+  bmi?: number;
+  smoker: number;
+  decision: string;
+  premium_loading: number;
+  remarks?: string;
+  underwriter_id?: string;
+  underwriter_name?: string;
+  created_at: string;
+  decided_at?: string;
 }
