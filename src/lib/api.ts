@@ -279,11 +279,19 @@ export interface ChatMessage {
 }
 
 export interface SymptomCheckResult {
-  triage_level: string;
-  possible_conditions: { name: string; probability: string }[];
-  recommendations: string[];
-  book_appointment: boolean;
-  emergency: boolean;
+  assessment: {
+    triage_level: string;
+    triage_color: string;
+    possible_conditions: { name: string; likelihood: string; description: string }[];
+    recommendations: string[];
+    seek_care_within: string;
+    emergency_signs: string[];
+    disclaimer: string;
+  };
+  symptoms: string[];
+  duration: string;
+  severity: string;
+  assessed_at: string;
 }
 
 export interface DashboardKPIs {

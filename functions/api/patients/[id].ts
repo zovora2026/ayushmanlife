@@ -136,16 +136,16 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       ).bind(id).all(),
 
       context.env.DB.prepare(
-        'SELECT * FROM claims WHERE patient_id = ? ORDER BY filed_date DESC LIMIT 5'
+        'SELECT * FROM claims WHERE patient_id = ? ORDER BY created_at DESC LIMIT 5'
       ).bind(id).all(),
     ]);
 
     return json({
       patient,
-      recent_vitals: vitalsResult.results,
-      active_medications: medsResult.results,
-      upcoming_appointments: appointmentsResult.results,
-      recent_claims: claimsResult.results,
+      vitals: vitalsResult.results,
+      medications: medsResult.results,
+      appointments: appointmentsResult.results,
+      claims: claimsResult.results,
     });
   } catch (err) {
     return json({ message: 'Failed to fetch patient', error: String(err) }, 500);

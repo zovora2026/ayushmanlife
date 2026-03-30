@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import {
   Send,
   Trash2,
@@ -14,10 +14,8 @@ import {
   Pill,
   Clock,
   Loader2,
-  Video,
   Star,
   MessageCircle,
-  CheckSquare,
   CheckCircle,
   CalendarPlus,
   Stethoscope,
@@ -29,31 +27,17 @@ import {
   ArrowRight,
   ShieldCheck,
   Phone,
-  Watch,
-  Bluetooth,
-  BluetoothOff,
-  BatteryMedium,
-  BatteryLow,
-  Smartphone,
-  MapPin,
   FileText,
-  RefreshCw,
   XCircle,
-  CalendarCheck,
-  Wifi,
-  Camera,
-  Mic,
-  ClipboardList,
-  ThumbsUp,
   Zap,
   Shield,
   TrendingUp,
-  Package,
+  IndianRupee,
 } from 'lucide-react'
 import { useChatStore } from '../store/chatStore'
-import { patients as patientsAPI, analytics as analyticsAPI } from '../lib/api'
+import { patients as patientsAPI, appointments as appointmentsAPI, claims as claimsAPI, chat as chatAPI, analytics as analyticsAPI } from '../lib/api'
 import type { ChatMessage } from '../types'
-import type { Vital, Medication, Appointment, SatisfactionData } from '../lib/api'
+import type { Vital, Medication, Appointment, Claim, Patient, SatisfactionData } from '../lib/api'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { cn } from '../lib/utils'
@@ -61,8 +45,8 @@ import { cn } from '../lib/utils'
 const quickReplies = [
   'Book Appointment',
   'Check Symptoms',
-  'Medication Reminder',
-  'Talk to Doctor',
+  'My Medications',
+  'Claim Status',
 ]
 
 // --- Symptom Checker Data ---
@@ -100,89 +84,27 @@ const severityLabels: Record<number, { label: string; color: string }> = {
   5: { label: 'Critical', color: 'bg-red-500' },
 }
 
-function getTriageResult(severity: number) {
-  if (severity <= 2) {
-    return {
-      level: 'Self-Care',
-      color: 'text-green-600',
-      bgColor: 'bg-green-50 dark:bg-green-900/20',
-      borderColor: 'border-green-200 dark:border-green-800',
-      iconColor: 'text-green-500',
-      advice: 'Your symptoms suggest a mild condition that can likely be managed at home.',
-      steps: [
-        'Rest and stay hydrated',
-        'Over-the-counter medications as appropriate',
-        'Monitor symptoms for any changes',
-        'Consult a doctor if symptoms persist beyond 5 days',
-      ],
-      showBooking: false,
-    }
-  }
-  if (severity === 3) {
-    return {
-      level: 'Routine',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-      borderColor: 'border-blue-200 dark:border-blue-800',
-      iconColor: 'text-blue-500',
-      advice: 'Your symptoms warrant medical attention. Please book an appointment within 1 week.',
-      steps: [
-        'Schedule a consultation with your doctor',
-        'Keep a symptom diary until your appointment',
-        'Take prescribed medications as directed',
-        'Avoid activities that worsen symptoms',
-      ],
-      showBooking: true,
-    }
-  }
-  if (severity === 4) {
-    return {
-      level: 'Urgent',
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50 dark:bg-orange-900/20',
-      borderColor: 'border-orange-200 dark:border-orange-800',
-      iconColor: 'text-orange-500',
-      advice: 'Your symptoms require prompt medical attention. See a doctor within 24 hours.',
-      steps: [
-        'Visit your nearest clinic or hospital today',
-        'Do not ignore worsening symptoms',
-        'Bring a list of current medications',
-        'Have someone accompany you if possible',
-      ],
-      showBooking: true,
-    }
-  }
-  return {
-    level: 'Emergency',
-    color: 'text-red-600',
-    bgColor: 'bg-red-50 dark:bg-red-900/20',
-    borderColor: 'border-red-200 dark:border-red-800',
-    iconColor: 'text-red-500',
-    advice: 'Your symptoms indicate a potentially serious condition. Seek emergency care immediately.',
-    steps: [
-      'Call 108 (Emergency Ambulance) immediately',
-      'Go to the nearest Emergency Room',
-      'Do NOT drive yourself — ask for help',
-      'Bring your ID and insurance documents',
-    ],
-    showBooking: false,
-  }
-}
-
 const defaultVitals = [
-  { label: 'Blood Pressure', value: '128/82', unit: 'mmHg', icon: Activity, color: 'text-error' },
-  { label: 'Heart Rate', value: '72', unit: 'bpm', icon: Heart, color: 'text-pink-500' },
-  { label: 'SpO2', value: '98', unit: '%', icon: Droplets, color: 'text-accent' },
-  { label: 'Blood Glucose', value: '118', unit: 'mg/dL', icon: Activity, color: 'text-warning' },
-  { label: 'Temperature', value: '36.6', unit: '\u00B0C', icon: Thermometer, color: 'text-secondary' },
-  { label: 'Weight', value: '78', unit: 'kg', icon: Weight, color: 'text-success' },
+  { label: 'Blood Pressure', value: '—', unit: 'mmHg', icon: Activity, color: 'text-error' },
+  { label: 'Heart Rate', value: '—', unit: 'bpm', icon: Heart, color: 'text-pink-500' },
+  { label: 'SpO2', value: '—', unit: '%', icon: Droplets, color: 'text-accent' },
+  { label: 'Blood Glucose', value: '—', unit: 'mg/dL', icon: Activity, color: 'text-warning' },
+  { label: 'Temperature', value: '—', unit: '°F', icon: Thermometer, color: 'text-secondary' },
+  { label: 'Weight', value: '—', unit: 'kg', icon: Weight, color: 'text-success' },
 ]
+
+const claimStatusColors: Record<string, string> = {
+  draft: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+  submitted: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  under_review: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+  approved: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  rejected: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  paid: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  appealed: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+}
 
 function ChatBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === 'user'
-  // Simulated AI confidence based on message length and content
-  const aiConfidence = !isUser ? Math.min(98, Math.max(75, 85 + (message.content.length % 13))) : 0
-
   return (
     <div className={cn('flex gap-2.5', isUser ? 'flex-row-reverse' : 'flex-row')}>
       <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
@@ -192,24 +114,9 @@ function ChatBubble({ message }: { message: ChatMessage }) {
       <div className={cn('max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed',
         isUser ? 'rounded-tr-md bg-primary text-white' : 'rounded-tl-md bg-gray-100 text-text dark:bg-gray-800 dark:text-text-dark')}>
         <div className="whitespace-pre-wrap">{message.content}</div>
-        <div className={cn('mt-1.5 flex items-center gap-2', isUser ? 'justify-end' : 'justify-between')}>
-          <p className={cn('text-[10px]', isUser ? 'text-white/60' : 'text-muted')}>
-            {new Date(message.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
-          </p>
-          {!isUser && (
-            <span className={cn(
-              'inline-flex items-center gap-0.5 text-[9px] font-medium rounded-full px-1.5 py-0.5',
-              aiConfidence >= 90
-                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                : aiConfidence >= 80
-                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                  : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-            )}>
-              <Zap className="h-2 w-2" />
-              {aiConfidence}% conf.
-            </span>
-          )}
-        </div>
+        <p className={cn('mt-1.5 text-[10px]', isUser ? 'text-white/60 text-right' : 'text-muted')}>
+          {new Date(message.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })}
+        </p>
       </div>
     </div>
   )
@@ -232,31 +139,48 @@ function TypingIndicator() {
   )
 }
 
+// Triage result component for symptom checker API response
+interface TriageCondition {
+  name: string
+  likelihood: string
+  description: string
+}
+interface TriageAssessment {
+  triage_level: string
+  triage_color: string
+  possible_conditions: TriageCondition[]
+  recommendations: string[]
+  seek_care_within: string
+  emergency_signs: string[]
+  disclaimer: string
+}
+
 export default function VCare() {
   const { messages, isTyping, sendMessage, clearChat, loadConversation } = useChatStore()
   const [input, setInput] = useState('')
   const [patientVitals, setPatientVitals] = useState(defaultVitals)
-  const [patientMeds, setPatientMeds] = useState<{ name: string; dosage: string; timing: string }[]>([
-    { name: 'Metformin 500mg', dosage: '1 tablet', timing: 'After breakfast & dinner' },
-    { name: 'Amlodipine 5mg', dosage: '1 tablet', timing: 'Morning' },
-    { name: 'Atorvastatin 10mg', dosage: '1 tablet', timing: 'Bedtime' },
-    { name: 'Aspirin 75mg', dosage: '1 tablet', timing: 'After lunch' },
-  ])
-  const [patientApts, setPatientApts] = useState([
-    { date: '30 Mar 2026', doctor: 'Dr. Anil Kapoor', department: 'Cardiology', time: '10:00 AM' },
-    { date: '02 Apr 2026', doctor: 'Dr. Meera Joshi', department: 'Internal Medicine', time: '10:30 AM' },
-    { date: '10 Apr 2026', doctor: 'Dr. Kavita Nair', department: 'Pulmonology', time: '11:00 AM' },
-  ])
+  const [patientMeds, setPatientMeds] = useState<Medication[]>([])
+  const [patientApts, setPatientApts] = useState<Appointment[]>([])
+  const [patientClaims, setPatientClaims] = useState<Claim[]>([])
+  const [patientProfile, setPatientProfile] = useState<Patient | null>(null)
   const [contextLoading, setContextLoading] = useState(true)
-  const [teleLink, setTeleLink] = useState('')
+
+  // Feedback state
   const [feedbackRating, setFeedbackRating] = useState(0)
   const [feedbackText, setFeedbackText] = useState('')
   const [feedbackSent, setFeedbackSent] = useState(false)
-  const [medsTaken, setMedsTaken] = useState<Record<number, boolean>>({})
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false)
+  const [npsScore, setNpsScore] = useState(0)
+  const [satisfactionData, setSatisfactionData] = useState<SatisfactionData | null>(null)
+
+  // Appointment booking state
   const [bookingDept, setBookingDept] = useState('Cardiology')
   const [bookingDate, setBookingDate] = useState('')
   const [bookingTime, setBookingTime] = useState('')
   const [bookingConfirmed, setBookingConfirmed] = useState(false)
+  const [bookingLoading, setBookingLoading] = useState(false)
+  const [bookingError, setBookingError] = useState('')
+
   // Symptom Checker state
   const [scStep, setScStep] = useState(1)
   const [scSystem, setScSystem] = useState<BodySystem | null>(null)
@@ -264,61 +188,18 @@ export default function VCare() {
   const [scDuration, setScDuration] = useState('')
   const [scSeverity, setScSeverity] = useState(0)
   const [scNotes, setScNotes] = useState('')
+  const [scLoading, setScLoading] = useState(false)
+  const [scResult, setScResult] = useState<TriageAssessment | null>(null)
 
-  // Appointment Booking Enhancement state
-  const [aptRescheduleIdx, setAptRescheduleIdx] = useState<number | null>(null)
-
-  // Medication Adherence Enhancement state — built from real D1 data
-  const [weeklyAdherence, setWeeklyAdherence] = useState<Record<string, ('taken' | 'missed' | 'upcoming')[]>>({
-    'Metformin 500mg': ['taken', 'taken', 'missed', 'taken', 'taken', 'taken', 'upcoming'],
-    'Amlodipine 5mg': ['taken', 'taken', 'taken', 'taken', 'missed', 'taken', 'upcoming'],
-    'Atorvastatin 10mg': ['taken', 'missed', 'taken', 'taken', 'taken', 'taken', 'upcoming'],
-    'Aspirin 75mg': ['taken', 'taken', 'taken', 'missed', 'taken', 'taken', 'upcoming'],
-  })
-
-  // Medication Adherence Enhancement — computed metrics
-  const [overallAdherenceScore, setOverallAdherenceScore] = useState(0)
-  const [refillAlertCount, setRefillAlertCount] = useState(0)
-
-  // Telemedicine Enhancement state
-  const [teleRecordingConsent, setTeleRecordingConsent] = useState(false)
-  const [teleProviderAvailable, setTeleProviderAvailable] = useState(true)
-  const [teleWaitingStatus] = useState<'waiting' | 'ready' | 'in-progress'>('waiting')
-  const [telePreCheckCamera, setTelePreCheckCamera] = useState(false)
-  const [telePreCheckMic, setTelePreCheckMic] = useState(false)
-  const [telePreCheckInternet, setTelePreCheckInternet] = useState(false)
-  const [teleSessionId, setTeleSessionId] = useState('')
-  const [teleSessions, setTeleSessions] = useState<{ id: string; date: string; doctor: string; duration: string; dept: string }[]>([
-    { id: 'TELE-a3f1b2', date: '22 Mar 2026', doctor: 'Dr. Anil Kapoor', duration: '18 min', dept: 'Cardiology' },
-    { id: 'TELE-c7d9e4', date: '15 Mar 2026', doctor: 'Dr. Meera Joshi', duration: '25 min', dept: 'Internal Medicine' },
-    { id: 'TELE-f5a8b1', date: '02 Mar 2026', doctor: 'Dr. Kavita Nair', duration: '12 min', dept: 'Pulmonology' },
-  ])
-
-  // Patient Feedback Enhancement state — fetched from /api/analytics/satisfaction
-  const [npsScore, setNpsScore] = useState(72)
-  const [satisfactionData, setSatisfactionData] = useState<SatisfactionData | null>(null)
-  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false)
-
-  // Health Monitoring — real vitals trend data from D1
+  // Vitals trend
   const [vitalsTrend, setVitalsTrend] = useState<{
     bp: { value: number; date: string }[]
     hr: { value: number; date: string }[]
     spo2: { value: number; date: string }[]
-  }>({
-    bp: [],
-    hr: [],
-    spo2: [],
-  })
+  }>({ bp: [], hr: [], spo2: [] })
   const [vitalsLoading, setVitalsLoading] = useState(true)
 
-  // AI Health Query Enhancement state
-  const aiQuerySuggestions = [
-    'What are my BP trends?',
-    'Side effects of Metformin?',
-    'Diabetes diet tips',
-    'When is my next checkup?',
-    'How to lower cholesterol?',
-  ]
+  const PATIENT_ID = 'pat-001'
 
   const resetSymptomChecker = () => {
     setScStep(1)
@@ -327,6 +208,7 @@ export default function VCare() {
     setScDuration('')
     setScSeverity(0)
     setScNotes('')
+    setScResult(null)
   }
 
   const toggleSymptom = (symptom: string) => {
@@ -338,23 +220,22 @@ export default function VCare() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  useEffect(() => {
-    loadConversation()
-    const patientId = 'pat-001'
-
-    // Load patient context from API
-    async function loadContext() {
-      try {
-        const { vitals, medications, appointments } = await patientsAPI.get(patientId)
-        if (vitals && vitals.length > 0) {
+  const loadData = useCallback(async () => {
+    try {
+      // Load patient profile and context
+      const patientData = await patientsAPI.get(PATIENT_ID)
+      if (patientData) {
+        setPatientProfile(patientData.patient || patientData as unknown as Patient)
+        if (patientData.vitals && (patientData.vitals as Vital[]).length > 0) {
           const vitalMap: Record<string, { value: string; unit: string }> = {}
-          for (const v of vitals as Vital[]) {
+          for (const v of patientData.vitals as Vital[]) {
             vitalMap[v.type] = { value: String(v.value), unit: v.unit }
           }
           const iconMap: Record<string, { icon: typeof Activity; color: string; label: string }> = {
             bp_systolic: { icon: Activity, color: 'text-error', label: 'Blood Pressure' },
             heart_rate: { icon: Heart, color: 'text-pink-500', label: 'Heart Rate' },
             spo2: { icon: Droplets, color: 'text-accent', label: 'SpO2' },
+            blood_sugar: { icon: Activity, color: 'text-warning', label: 'Blood Glucose' },
             blood_glucose_fasting: { icon: Activity, color: 'text-warning', label: 'Blood Glucose' },
             temperature: { icon: Thermometer, color: 'text-secondary', label: 'Temperature' },
             weight: { icon: Weight, color: 'text-success', label: 'Weight' },
@@ -364,129 +245,58 @@ export default function VCare() {
           }))
           if (mapped.length > 0) setPatientVitals(mapped)
         }
-        if (medications && (medications as Medication[]).length > 0) {
-          setPatientMeds((medications as Medication[]).map(m => ({
-            name: m.name, dosage: m.dosage, timing: m.frequency,
-          })))
+        if (patientData.appointments && (patientData.appointments as Appointment[]).length > 0) {
+          setPatientApts(patientData.appointments as Appointment[])
         }
-        if (appointments && (appointments as Appointment[]).length > 0) {
-          setPatientApts((appointments as Appointment[]).map(a => ({
-            date: a.date, doctor: a.doctor_name || 'Doctor', department: a.department, time: a.time,
-          })))
-        }
-      } catch {
-        // Keep defaults
       }
-      setContextLoading(false)
-    }
+    } catch { /* keep defaults */ }
 
-    // Fetch real medications from D1 and build adherence grid
-    async function loadMedications() {
-      try {
-        const res = await patientsAPI.medications(patientId)
-        if (res?.medications?.length) {
-          const meds = res.medications as Medication[]
-          setPatientMeds(meds.map(m => ({
-            name: m.name, dosage: m.dosage, timing: m.frequency,
-          })))
-          // Build adherence grid from real medication data
-          // Use adherence_rate if available, otherwise simulate based on medication status
-          const adherenceMap: Record<string, ('taken' | 'missed' | 'upcoming')[]> = {}
-          for (const m of meds) {
-            const rate = m.adherence_rate ?? 85
-            const days: ('taken' | 'missed' | 'upcoming')[] = []
-            for (let d = 0; d < 6; d++) {
-              // Deterministic pattern based on adherence rate and med name hash
-              const hash = m.name.charCodeAt(d % m.name.length) + d
-              days.push(hash % 100 < rate ? 'taken' : 'missed')
-            }
-            days.push('upcoming') // today
-            adherenceMap[m.name] = days
-          }
-          setWeeklyAdherence(adherenceMap)
-
-          // Compute overall adherence score from all medications
-          const allStatuses = Object.values(adherenceMap).flat()
-          const taken = allStatuses.filter(s => s === 'taken').length
-          const total = allStatuses.filter(s => s !== 'upcoming').length
-          if (total > 0) setOverallAdherenceScore(Math.round((taken / total) * 100))
-
-          // Compute refill alerts — medications near end_date or with low adherence
-          const now = new Date()
-          let refillCount = 0
-          for (const m of meds) {
-            if (m.end_date) {
-              const endDate = new Date(m.end_date)
-              const daysLeft = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-              if (daysLeft <= 14 && daysLeft >= 0) refillCount++
-            } else if ((m.adherence_rate ?? 100) < 70) {
-              refillCount++ // Low adherence may indicate skipped refills
-            }
-          }
-          setRefillAlertCount(refillCount > 0 ? refillCount : 2) // Fallback to 2
-        }
-      } catch {
-        // Keep defaults — compute from default adherence data
-        const allStatuses = Object.values(weeklyAdherence).flat()
-        const taken = allStatuses.filter(s => s === 'taken').length
-        const total = allStatuses.filter(s => s !== 'upcoming').length
-        if (total > 0) setOverallAdherenceScore(Math.round((taken / total) * 100))
-        setRefillAlertCount(2)
+    // Load medications
+    try {
+      const res = await patientsAPI.medications(PATIENT_ID)
+      if (res?.medications?.length) {
+        setPatientMeds(res.medications as Medication[])
       }
-    }
+    } catch { /* keep defaults */ }
 
-    // Fetch real vitals trend data from D1
-    async function loadVitalsTrend() {
-      try {
-        const res = await patientsAPI.vitals(patientId)
-        if (res?.vitals?.length) {
-          const vitals = res.vitals as Vital[]
-          const bpReadings = vitals
-            .filter(v => v.type === 'bp_systolic')
-            .sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime())
-            .slice(-7)
-            .map(v => ({ value: v.value, date: v.recorded_at }))
-          const hrReadings = vitals
-            .filter(v => v.type === 'heart_rate')
-            .sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime())
-            .slice(-7)
-            .map(v => ({ value: v.value, date: v.recorded_at }))
-          const spo2Readings = vitals
-            .filter(v => v.type === 'spo2')
-            .sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime())
-            .slice(-7)
-            .map(v => ({ value: v.value, date: v.recorded_at }))
-
-          setVitalsTrend({
-            bp: bpReadings,
-            hr: hrReadings,
-            spo2: spo2Readings,
-          })
-        }
-      } catch {
-        // Keep defaults
+    // Load vitals trend
+    try {
+      const res = await patientsAPI.vitals(PATIENT_ID)
+      if (res?.vitals?.length) {
+        const vitals = res.vitals as Vital[]
+        setVitalsTrend({
+          bp: vitals.filter(v => v.type === 'bp_systolic').sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime()).slice(-7).map(v => ({ value: v.value, date: v.recorded_at })),
+          hr: vitals.filter(v => v.type === 'heart_rate').sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime()).slice(-7).map(v => ({ value: v.value, date: v.recorded_at })),
+          spo2: vitals.filter(v => v.type === 'spo2').sort((a, b) => new Date(a.recorded_at).getTime() - new Date(b.recorded_at).getTime()).slice(-7).map(v => ({ value: v.value, date: v.recorded_at })),
+        })
       }
-      setVitalsLoading(false)
-    }
+    } catch { /* keep defaults */ }
+    setVitalsLoading(false)
 
-    // Fetch satisfaction data from analytics API
-    async function loadSatisfaction() {
-      try {
-        const data = await analyticsAPI.satisfaction()
-        if (data) {
-          setSatisfactionData(data)
-          setNpsScore(data.nps_score ?? 72)
-        }
-      } catch {
-        // Keep defaults
+    // Load claims for this patient
+    try {
+      const res = await claimsAPI.list({ patient_id: PATIENT_ID })
+      if (res?.claims?.length) {
+        setPatientClaims(res.claims as Claim[])
       }
-    }
+    } catch { /* keep defaults */ }
 
-    loadContext()
-    loadMedications()
-    loadVitalsTrend()
-    loadSatisfaction()
+    // Load satisfaction
+    try {
+      const data = await analyticsAPI.satisfaction()
+      if (data) {
+        setSatisfactionData(data)
+        setNpsScore(data.nps_score ?? 0)
+      }
+    } catch { /* keep defaults */ }
+
+    setContextLoading(false)
   }, [])
+
+  useEffect(() => {
+    loadConversation()
+    loadData()
+  }, [loadData])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -504,8 +314,73 @@ export default function VCare() {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend() }
   }
 
+  // Book appointment — persists to D1
+  const handleBookAppointment = async () => {
+    if (!bookingDate || !bookingTime) return
+    setBookingLoading(true)
+    setBookingError('')
+    try {
+      const result = await appointmentsAPI.create({
+        patient_id: PATIENT_ID,
+        department: bookingDept,
+        date: bookingDate,
+        time: bookingTime,
+        type: 'consultation',
+        notes: `Booked via V-Care by patient`,
+      })
+      if (result?.appointment) {
+        setBookingConfirmed(true)
+        // Add to local appointments list
+        setPatientApts(prev => [...prev, result.appointment])
+      } else {
+        setBookingError('Failed to book appointment. Please try again.')
+      }
+    } catch {
+      setBookingError('Failed to book appointment. Please try again.')
+    }
+    setBookingLoading(false)
+  }
+
+  // Symptom check — calls API
+  const handleSymptomCheck = async () => {
+    if (!scSystem || scSymptoms.length === 0 || !scDuration || scSeverity === 0) return
+    setScLoading(true)
+    try {
+      const severityMap: Record<number, string> = { 1: 'mild', 2: 'mild', 3: 'moderate', 4: 'severe', 5: 'severe' }
+      const res = await chatAPI.symptomCheck({
+        symptoms: scSymptoms,
+        duration: scDuration,
+        severity: severityMap[scSeverity] || 'moderate',
+      })
+      if (res?.assessment) {
+        setScResult(res.assessment as TriageAssessment)
+      }
+    } catch {
+      // Fallback to local triage
+      setScResult(null)
+    }
+    setScLoading(false)
+    setScStep(4)
+  }
+
+  // Profile data from D1
+  const profileName = patientProfile?.name || 'Loading...'
+  const profileAge = patientProfile?.age || ''
+  const profileGender = patientProfile?.gender || ''
+  const profileBloodGroup = patientProfile?.blood_group || '—'
+  const profileInsurance = patientProfile?.insurance_provider || patientProfile?.insurance_type || '—'
+  const profileConditions = patientProfile?.chronic_conditions?.split(',').map(c => c.trim()).filter(Boolean) || []
+  const profileInitials = profileName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+
+  // Upcoming appointments only
+  const upcomingApts = patientApts.filter(a => {
+    const d = new Date(a.date)
+    return d >= new Date(new Date().toDateString()) && a.status !== 'completed' && a.status !== 'cancelled'
+  }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+
   return (
     <div className="flex flex-col lg:flex-row gap-4" style={{ height: 'auto', minHeight: 'calc(100vh - 8rem)' }}>
+      {/* Chat Panel — Left Side */}
       <div className="flex w-full lg:w-3/5 flex-col rounded-xl border border-border bg-white shadow-sm dark:border-border-dark dark:bg-surface-dark" style={{ minHeight: '60vh' }}>
         <div className="flex items-center justify-between border-b border-border px-5 py-3.5 dark:border-border-dark">
           <div className="flex items-center gap-3">
@@ -517,12 +392,13 @@ export default function VCare() {
                 <h2 className="font-display font-semibold text-text dark:text-text-dark">V-Care AI Assistant</h2>
                 <span className="inline-flex items-center gap-1 rounded-full bg-green-100 dark:bg-green-900/30 px-2 py-0.5 text-[10px] font-bold text-green-700 dark:text-green-400">
                   <Shield className="h-2.5 w-2.5" />
-                  24/7 Available
+                  24/7
                 </span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
                 <span className="text-xs text-success font-medium">Online</span>
+                {patientProfile && <span className="text-xs text-muted ml-2">Patient: {profileName}</span>}
               </div>
             </div>
           </div>
@@ -539,15 +415,15 @@ export default function VCare() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* AI Health Query Suggestions Strip */}
+        {/* Quick Query Suggestions */}
         <div className="border-t border-border px-5 py-2 dark:border-border-dark">
           <p className="text-[10px] font-medium text-muted mb-1.5 flex items-center gap-1">
-            <Brain className="h-3 w-3 text-primary" /> Quick Health Queries
+            <Brain className="h-3 w-3 text-primary" /> Quick Queries
           </p>
           <div className="flex gap-1.5 overflow-x-auto pb-0.5">
-            {aiQuerySuggestions.map((q) => (
+            {['What are my BP trends?', 'Side effects of Metformin?', 'My upcoming appointments', 'My insurance claim status', 'Diabetes management tips'].map((q) => (
               <button key={q} onClick={() => sendMessage(q)}
-                className="shrink-0 rounded-full bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 px-3 py-1 text-[11px] font-medium text-primary transition-all hover:from-primary/20 hover:to-accent/20 hover:shadow-sm dark:border-primary/30">
+                className="shrink-0 rounded-full bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 px-3 py-1 text-[11px] font-medium text-primary transition-all hover:from-primary/20 hover:to-accent/20 dark:border-primary/30">
                 {q}
               </button>
             ))}
@@ -566,7 +442,7 @@ export default function VCare() {
         <div className="border-t border-border px-4 py-3 dark:border-border-dark">
           <div className="flex items-center gap-2">
             <input ref={inputRef} type="text" value={input} onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown} placeholder="Type your message..."
+              onKeyDown={handleKeyDown} placeholder="Ask about health, appointments, medications, claims..."
               className="flex-1 rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-text placeholder:text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-border-dark dark:bg-background-dark dark:text-text-dark" />
             <button onClick={handleSend} disabled={!input.trim()}
               className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-all duration-200',
@@ -580,33 +456,44 @@ export default function VCare() {
         </div>
       </div>
 
+      {/* Right Side Panel — Patient Context */}
       <div className="flex w-full lg:w-2/5 flex-col gap-4 overflow-y-auto">
+
+        {/* Patient Profile — from D1 */}
         <Card header={<h3 className="font-display font-semibold text-text dark:text-text-dark">Patient Profile</h3>}>
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-display font-bold text-lg">RK</div>
-            <div>
-              <h4 className="font-semibold text-text dark:text-text-dark">Rajesh Kumar</h4>
-              <p className="text-sm text-muted">Age 58 &middot; Male</p>
-            </div>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <div className="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/5">
-              <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Blood Group</p>
-              <p className="text-sm font-bold text-text dark:text-text-dark">O+</p>
-            </div>
-            <div className="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/5">
-              <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Insurance</p>
-              <p className="text-sm font-bold text-text dark:text-text-dark">Star Health</p>
-            </div>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            <Badge variant="warning" size="sm">Type 2 Diabetes</Badge>
-            <Badge variant="error" size="sm">Hypertension</Badge>
-            <Badge variant="neutral" size="sm">Penicillin Allergy</Badge>
-          </div>
+          {contextLoading ? (
+            <div className="flex items-center justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted" /></div>
+          ) : (
+            <>
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-display font-bold text-lg">{profileInitials}</div>
+                <div>
+                  <h4 className="font-semibold text-text dark:text-text-dark">{profileName}</h4>
+                  <p className="text-sm text-muted">Age {profileAge} · {profileGender}</p>
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/5">
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Blood Group</p>
+                  <p className="text-sm font-bold text-text dark:text-text-dark">{profileBloodGroup}</p>
+                </div>
+                <div className="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/5">
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Insurance</p>
+                  <p className="text-sm font-bold text-text dark:text-text-dark">{profileInsurance}</p>
+                </div>
+              </div>
+              {profileConditions.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {profileConditions.map((c) => (
+                    <Badge key={c} variant="warning" size="sm">{c}</Badge>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </Card>
 
-        {/* Symptom Checker */}
+        {/* Symptom Checker — calls /api/chat/symptom-check */}
         <Card header={
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2">
@@ -624,11 +511,8 @@ export default function VCare() {
               <p className="text-xs text-muted mb-3">Select the body system related to your symptoms:</p>
               <div className="grid grid-cols-2 gap-2">
                 {bodySystems.map((sys) => (
-                  <button
-                    key={sys.id}
-                    onClick={() => { setScSystem(sys); setScStep(2) }}
-                    className="flex items-center gap-2 rounded-lg border border-border dark:border-border-dark px-3 py-2.5 text-left text-xs font-medium text-text dark:text-text-dark transition-all hover:border-primary hover:bg-primary/5 hover:text-primary"
-                  >
+                  <button key={sys.id} onClick={() => { setScSystem(sys); setScStep(2) }}
+                    className="flex items-center gap-2 rounded-lg border border-border dark:border-border-dark px-3 py-2.5 text-left text-xs font-medium text-text dark:text-text-dark transition-all hover:border-primary hover:bg-primary/5 hover:text-primary">
                     <sys.icon className="h-4 w-4 shrink-0 text-primary" />
                     <span className="leading-tight">{sys.label}</span>
                   </button>
@@ -651,26 +535,15 @@ export default function VCare() {
               <div className="space-y-2">
                 {scSystem.symptoms.map((symptom) => (
                   <label key={symptom} className="flex items-center gap-2.5 cursor-pointer rounded-lg border border-border dark:border-border-dark px-3 py-2 transition-colors hover:border-primary/40 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-                    <input
-                      type="checkbox"
-                      checked={scSymptoms.includes(symptom)}
-                      onChange={() => toggleSymptom(symptom)}
-                      className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary/20"
-                    />
+                    <input type="checkbox" checked={scSymptoms.includes(symptom)} onChange={() => toggleSymptom(symptom)}
+                      className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary/20" />
                     <span className="text-xs font-medium text-text dark:text-text-dark">{symptom}</span>
                   </label>
                 ))}
               </div>
-              <button
-                onClick={() => { if (scSymptoms.length > 0) setScStep(3) }}
-                disabled={scSymptoms.length === 0}
-                className={cn(
-                  'mt-4 w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-medium transition-colors',
-                  scSymptoms.length > 0
-                    ? 'bg-primary text-white hover:bg-primary/90'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
-                )}
-              >
+              <button onClick={() => { if (scSymptoms.length > 0) setScStep(3) }} disabled={scSymptoms.length === 0}
+                className={cn('mt-4 w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-medium transition-colors',
+                  scSymptoms.length > 0 ? 'bg-primary text-white hover:bg-primary/90' : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600')}>
                 Continue <ArrowRight className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -686,90 +559,77 @@ export default function VCare() {
                 <span className="text-xs text-muted">|</span>
                 <span className="text-xs font-medium text-text dark:text-text-dark">Duration & Severity</span>
               </div>
-
               <div className="space-y-4">
-                {/* Duration */}
                 <div>
                   <label className="block text-[10px] font-medium uppercase tracking-wider text-muted mb-1.5">How long have you had these symptoms?</label>
-                  <select
-                    value={scDuration}
-                    onChange={(e) => setScDuration(e.target.value)}
-                    className="w-full rounded-lg border border-border dark:border-border-dark bg-background dark:bg-background-dark text-text dark:text-text-dark text-xs px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  >
+                  <select value={scDuration} onChange={(e) => setScDuration(e.target.value)}
+                    className="w-full rounded-lg border border-border dark:border-border-dark bg-background dark:bg-background-dark text-text dark:text-text-dark text-xs px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20">
                     <option value="">Select duration...</option>
-                    {durationOptions.map((opt) => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
+                    {durationOptions.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
                   </select>
                 </div>
-
-                {/* Severity */}
                 <div>
                   <label className="block text-[10px] font-medium uppercase tracking-wider text-muted mb-1.5">Severity level</label>
                   <div className="flex gap-1.5">
                     {[1, 2, 3, 4, 5].map((level) => (
-                      <button
-                        key={level}
-                        onClick={() => setScSeverity(level)}
-                        className={cn(
-                          'flex-1 flex flex-col items-center gap-1 rounded-lg border py-2 transition-all text-[10px] font-medium',
-                          scSeverity === level
-                            ? `${severityLabels[level].color} text-white border-transparent`
-                            : 'border-border dark:border-border-dark text-muted hover:border-primary/40'
-                        )}
-                      >
+                      <button key={level} onClick={() => setScSeverity(level)}
+                        className={cn('flex-1 flex flex-col items-center gap-1 rounded-lg border py-2 transition-all text-[10px] font-medium',
+                          scSeverity === level ? `${severityLabels[level].color} text-white border-transparent` : 'border-border dark:border-border-dark text-muted hover:border-primary/40')}>
                         <span className="text-sm font-bold">{level}</span>
                         <span className="leading-none">{severityLabels[level].label}</span>
                       </button>
                     ))}
                   </div>
                 </div>
-
-                {/* Notes */}
                 <div>
                   <label className="block text-[10px] font-medium uppercase tracking-wider text-muted mb-1.5">Additional notes (optional)</label>
-                  <textarea
-                    value={scNotes}
-                    onChange={(e) => setScNotes(e.target.value)}
-                    placeholder="Describe any other relevant details..."
-                    rows={2}
-                    className="w-full rounded-lg border border-border dark:border-border-dark bg-background dark:bg-background-dark text-text dark:text-text-dark text-xs px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-                  />
+                  <textarea value={scNotes} onChange={(e) => setScNotes(e.target.value)} placeholder="Describe any other relevant details..." rows={2}
+                    className="w-full rounded-lg border border-border dark:border-border-dark bg-background dark:bg-background-dark text-text dark:text-text-dark text-xs px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
                 </div>
               </div>
-
-              <button
-                onClick={() => { if (scDuration && scSeverity > 0) setScStep(4) }}
-                disabled={!scDuration || scSeverity === 0}
-                className={cn(
-                  'mt-4 w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-medium transition-colors',
-                  scDuration && scSeverity > 0
-                    ? 'bg-primary text-white hover:bg-primary/90'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
-                )}
-              >
-                Get AI Assessment <ArrowRight className="h-3.5 w-3.5" />
+              <button onClick={handleSymptomCheck} disabled={!scDuration || scSeverity === 0 || scLoading}
+                className={cn('mt-4 w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-medium transition-colors',
+                  scDuration && scSeverity > 0 && !scLoading ? 'bg-primary text-white hover:bg-primary/90' : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600')}>
+                {scLoading ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Analyzing...</> : <>Get AI Assessment <ArrowRight className="h-3.5 w-3.5" /></>}
               </button>
             </div>
           )}
 
-          {/* Step 4: AI Triage Result */}
+          {/* Step 4: AI Triage Result — from API */}
           {scStep === 4 && scSystem && (() => {
-            const triage = getTriageResult(scSeverity)
+            const result = scResult
+            if (!result) {
+              return (
+                <div className="text-center py-4">
+                  <AlertTriangle className="h-8 w-8 text-warning mx-auto mb-2" />
+                  <p className="text-sm text-text dark:text-text-dark">Could not complete assessment. Please try again or consult a doctor.</p>
+                  <button onClick={resetSymptomChecker} className="mt-3 px-4 py-2 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">
+                    Start Over
+                  </button>
+                </div>
+              )
+            }
+
+            const colorMap: Record<string, { text: string; bg: string; border: string }> = {
+              green: { text: 'text-green-600', bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-200 dark:border-green-800' },
+              yellow: { text: 'text-yellow-600', bg: 'bg-yellow-50 dark:bg-yellow-900/20', border: 'border-yellow-200 dark:border-yellow-800' },
+              orange: { text: 'text-orange-600', bg: 'bg-orange-50 dark:bg-orange-900/20', border: 'border-orange-200 dark:border-orange-800' },
+              red: { text: 'text-red-600', bg: 'bg-red-50 dark:bg-red-900/20', border: 'border-red-200 dark:border-red-800' },
+            }
+            const colors = colorMap[result.triage_color] || colorMap.yellow
+
             return (
               <div>
-                {/* Triage Level Badge */}
-                <div className={cn('rounded-lg border p-3 mb-3', triage.bgColor, triage.borderColor)}>
+                {/* Triage Level */}
+                <div className={cn('rounded-lg border p-3 mb-3', colors.bg, colors.border)}>
                   <div className="flex items-center gap-2 mb-1.5">
-                    {scSeverity <= 2 && <ShieldCheck className={cn('h-5 w-5', triage.iconColor)} />}
-                    {scSeverity === 3 && <Calendar className={cn('h-5 w-5', triage.iconColor)} />}
-                    {scSeverity === 4 && <AlertTriangle className={cn('h-5 w-5', triage.iconColor)} />}
-                    {scSeverity === 5 && <Phone className={cn('h-5 w-5', triage.iconColor)} />}
-                    <span className={cn('text-sm font-bold', triage.color)}>
-                      {triage.level}
-                    </span>
+                    {result.triage_level === 'emergency' && <Phone className={cn('h-5 w-5', colors.text)} />}
+                    {result.triage_level === 'high' && <AlertTriangle className={cn('h-5 w-5', colors.text)} />}
+                    {result.triage_level === 'moderate' && <Calendar className={cn('h-5 w-5', colors.text)} />}
+                    {result.triage_level === 'low' && <ShieldCheck className={cn('h-5 w-5', colors.text)} />}
+                    <span className={cn('text-sm font-bold uppercase', colors.text)}>{result.triage_level} Risk</span>
                   </div>
-                  <p className="text-xs text-text dark:text-text-dark leading-relaxed">{triage.advice}</p>
+                  <p className="text-xs text-text dark:text-text-dark">Seek care within: <strong>{result.seek_care_within}</strong></p>
                 </div>
 
                 {/* Summary */}
@@ -778,61 +638,82 @@ export default function VCare() {
                   <p className="text-xs text-text dark:text-text-dark"><span className="text-muted">System:</span> {scSystem.label}</p>
                   <p className="text-xs text-text dark:text-text-dark"><span className="text-muted">Symptoms:</span> {scSymptoms.join(', ')}</p>
                   <p className="text-xs text-text dark:text-text-dark"><span className="text-muted">Duration:</span> {scDuration}</p>
-                  <p className="text-xs text-text dark:text-text-dark"><span className="text-muted">Severity:</span> {scSeverity}/5 ({severityLabels[scSeverity].label})</p>
-                  {scNotes && <p className="text-xs text-text dark:text-text-dark"><span className="text-muted">Notes:</span> {scNotes}</p>}
                 </div>
 
-                {/* Recommended Steps */}
+                {/* Possible Conditions */}
+                {result.possible_conditions && result.possible_conditions.length > 0 && (
+                  <div className="mb-3">
+                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted mb-2">Possible Conditions</p>
+                    <div className="space-y-2">
+                      {result.possible_conditions.map((cond, i) => (
+                        <div key={i} className="rounded-lg border border-border dark:border-border-dark p-2.5">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-semibold text-text dark:text-text-dark">{cond.name}</span>
+                            <Badge variant={cond.likelihood === 'high' ? 'error' : cond.likelihood === 'moderate' ? 'warning' : 'neutral'} size="sm">
+                              {cond.likelihood}
+                            </Badge>
+                          </div>
+                          <p className="text-[11px] text-muted">{cond.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recommendations */}
                 <div className="mb-3">
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted mb-2">Recommended Next Steps</p>
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted mb-2">Recommendations</p>
                   <ul className="space-y-1.5">
-                    {triage.steps.map((step, i) => (
+                    {result.recommendations.map((rec, i) => (
                       <li key={i} className="flex items-start gap-2 text-xs text-text dark:text-text-dark">
                         <CheckCircle className="h-3.5 w-3.5 shrink-0 text-primary mt-0.5" />
-                        <span>{step}</span>
+                        <span>{rec}</span>
                       </li>
                     ))}
                   </ul>
                 </div>
 
+                {/* Emergency Signs */}
+                {result.emergency_signs && result.emergency_signs.length > 0 && (
+                  <div className="mb-3 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10 p-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400 mb-1.5">Seek immediate help if:</p>
+                    <ul className="space-y-1">
+                      {result.emergency_signs.map((sign, i) => (
+                        <li key={i} className="flex items-start gap-1.5 text-[11px] text-red-700 dark:text-red-300">
+                          <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5" />
+                          <span>{sign}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 {/* Actions */}
                 <div className="flex flex-col gap-2">
-                  {triage.showBooking && (
-                    <button
-                      onClick={() => {
-                        resetSymptomChecker()
-                        // Scroll to booking card (best-effort)
-                        document.getElementById('book-appointment-card')?.scrollIntoView({ behavior: 'smooth' })
-                      }}
-                      className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary/90 transition-colors"
-                    >
+                  {(result.triage_level === 'moderate' || result.triage_level === 'high') && (
+                    <button onClick={() => { resetSymptomChecker(); document.getElementById('book-appointment-card')?.scrollIntoView({ behavior: 'smooth' }) }}
+                      className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary/90 transition-colors">
                       <CalendarPlus className="h-3.5 w-3.5" /> Book Appointment
                     </button>
                   )}
-                  {scSeverity === 5 && (
-                    <a
-                      href="tel:108"
-                      className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-red-600 text-white text-xs font-medium hover:bg-red-700 transition-colors"
-                    >
+                  {result.triage_level === 'emergency' && (
+                    <a href="tel:108" className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-red-600 text-white text-xs font-medium hover:bg-red-700 transition-colors">
                       <Phone className="h-3.5 w-3.5" /> Call 108 - Emergency
                     </a>
                   )}
-                  <button
-                    onClick={resetSymptomChecker}
-                    className="w-full py-2.5 rounded-lg bg-gray-100 dark:bg-white/10 text-muted text-xs font-medium hover:bg-gray-200 dark:hover:bg-white/15 transition-colors"
-                  >
+                  <button onClick={resetSymptomChecker}
+                    className="w-full py-2.5 rounded-lg bg-gray-100 dark:bg-white/10 text-muted text-xs font-medium hover:bg-gray-200 dark:hover:bg-white/15 transition-colors">
                     Start New Assessment
                   </button>
                 </div>
 
-                <p className="mt-3 text-[10px] text-muted text-center leading-relaxed">
-                  This is an AI-based assessment and not a medical diagnosis. Always consult a qualified healthcare professional.
-                </p>
+                <p className="mt-3 text-[10px] text-muted text-center leading-relaxed">{result.disclaimer}</p>
               </div>
             )
           })()}
         </Card>
 
+        {/* Recent Vitals — from D1 */}
         <Card header={<div className="flex items-center gap-2"><Wind className="h-4 w-4 text-primary" /><h3 className="font-display font-semibold text-text dark:text-text-dark">Recent Vitals</h3></div>} padding="sm">
           {contextLoading ? (
             <div className="flex items-center justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-muted" /></div>
@@ -850,299 +731,177 @@ export default function VCare() {
                 ))}
               </div>
 
-              {/* Vitals Trend Mini-Charts — powered by real D1 vitals data */}
-              <div className="mt-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted">Vitals Trends (D1 Data)</p>
-                  {vitalsLoading && <Loader2 className="h-3 w-3 animate-spin text-muted" />}
-                </div>
+              {/* Vitals Trend Mini-Charts */}
+              {!vitalsLoading && (vitalsTrend.bp.length > 0 || vitalsTrend.hr.length > 0) && (
+                <div className="mt-4 space-y-3">
+                  <p className="text-[10px] font-medium uppercase tracking-wider text-muted">7-Day Trends</p>
 
-                {/* Blood Pressure Trend */}
-                <div className="rounded-lg border border-border bg-white p-3 dark:border-border-dark dark:bg-surface-dark">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-1.5">
-                      <Activity className="h-3 w-3 text-error" />
-                      <span className="text-[10px] font-medium text-text dark:text-text-dark">Blood Pressure (Systolic)</span>
-                    </div>
-                    {vitalsTrend.bp.length > 0 && (
-                      <span className="text-[9px] text-muted">{vitalsTrend.bp.length} readings</span>
-                    )}
-                  </div>
-                  <div className="flex items-end gap-1.5" style={{ height: '40px' }}>
-                    {(() => {
-                      const data = vitalsTrend.bp.length > 0
-                        ? vitalsTrend.bp.map(r => ({ val: r.value, label: new Date(r.date).toLocaleDateString('en-IN', { weekday: 'narrow' }) }))
-                        : [{ val: 150, label: 'M' }, { val: 148, label: 'T' }, { val: 142, label: 'W' }, { val: 145, label: 'T' }, { val: 140, label: 'F' }, { val: 138, label: 'S' }, { val: 136, label: 'S' }]
-                      const maxVal = Math.max(...data.map(d => d.val), 160)
-                      const minVal = Math.min(...data.map(d => d.val), 100)
-                      const range = maxVal - minVal || 1
-                      return data.map((bar, i) => {
-                        const pct = Math.max(20, ((bar.val - minVal) / range) * 80 + 20)
-                        const color = bar.val > 140 ? 'bg-red-400' : bar.val > 130 ? 'bg-yellow-400' : 'bg-green-400'
-                        return (
-                          <div key={i} className="flex-1 flex flex-col items-center gap-0.5" title={`${bar.val} mmHg`}>
-                            <div className={cn('w-full rounded-sm', color)} style={{ height: `${pct}%` }} />
-                            <span className="text-[8px] text-muted">{bar.label}</span>
-                          </div>
-                        )
-                      })
-                    })()}
-                  </div>
-                </div>
-
-                {/* Heart Rate Trend */}
-                <div className="rounded-lg border border-border bg-white p-3 dark:border-border-dark dark:bg-surface-dark">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-1.5">
-                      <Heart className="h-3 w-3 text-pink-500" />
-                      <span className="text-[10px] font-medium text-text dark:text-text-dark">Heart Rate</span>
-                    </div>
-                    {vitalsTrend.hr.length > 0 && (
-                      <span className="text-[9px] text-muted">{vitalsTrend.hr.length} readings</span>
-                    )}
-                  </div>
-                  <div className="flex items-end gap-1.5" style={{ height: '40px' }}>
-                    {(() => {
-                      const data = vitalsTrend.hr.length > 0
-                        ? vitalsTrend.hr.map(r => ({ val: r.value, label: new Date(r.date).toLocaleDateString('en-IN', { weekday: 'narrow' }) }))
-                        : [{ val: 72, label: 'M' }, { val: 80, label: 'T' }, { val: 75, label: 'W' }, { val: 85, label: 'T' }, { val: 70, label: 'F' }, { val: 78, label: 'S' }, { val: 76, label: 'S' }]
-                      const maxVal = Math.max(...data.map(d => d.val), 100)
-                      const minVal = Math.min(...data.map(d => d.val), 50)
-                      const range = maxVal - minVal || 1
-                      return data.map((bar, i) => {
-                        const pct = Math.max(20, ((bar.val - minVal) / range) * 80 + 20)
-                        return (
-                          <div key={i} className="flex-1 flex flex-col items-center gap-0.5" title={`${bar.val} bpm`}>
-                            <div className="w-full rounded-sm bg-primary" style={{ height: `${pct}%` }} />
-                            <span className="text-[8px] text-muted">{bar.label}</span>
-                          </div>
-                        )
-                      })
-                    })()}
-                  </div>
-                </div>
-
-                {/* SpO2 Trend */}
-                <div className="rounded-lg border border-border bg-white p-3 dark:border-border-dark dark:bg-surface-dark">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-1.5">
-                      <Droplets className="h-3 w-3 text-accent" />
-                      <span className="text-[10px] font-medium text-text dark:text-text-dark">SpO2</span>
-                    </div>
-                    {vitalsTrend.spo2.length > 0 && (
-                      <span className="text-[9px] text-muted">{vitalsTrend.spo2.length} readings</span>
-                    )}
-                  </div>
-                  <div className="flex items-end gap-1.5" style={{ height: '40px' }}>
-                    {(() => {
-                      const data = vitalsTrend.spo2.length > 0
-                        ? vitalsTrend.spo2.map(r => ({ val: r.value, label: new Date(r.date).toLocaleDateString('en-IN', { weekday: 'narrow' }) }))
-                        : [{ val: 97, label: 'M' }, { val: 95, label: 'T' }, { val: 98, label: 'W' }, { val: 92, label: 'T' }, { val: 96, label: 'F' }, { val: 89, label: 'S' }, { val: 98, label: 'S' }]
-                      return data.map((dot, i) => (
-                        <div key={i} className="flex-1 flex flex-col items-center gap-0.5" style={{ height: '100%' }} title={`${dot.val}%`}>
-                          <div className="flex-1 flex items-end justify-center" style={{ paddingBottom: `calc(100% - ${dot.val}%)` }}>
-                            <div
-                              className={cn(
-                                'h-2.5 w-2.5 rounded-full',
-                                dot.val >= 95 ? 'bg-green-400' : dot.val >= 90 ? 'bg-yellow-400' : 'bg-red-400'
-                              )}
-                            />
-                          </div>
-                          <span className="text-[8px] text-muted">{dot.label}</span>
+                  {vitalsTrend.bp.length > 0 && (
+                    <div className="rounded-lg border border-border bg-white p-3 dark:border-border-dark dark:bg-surface-dark">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-1.5">
+                          <Activity className="h-3 w-3 text-error" />
+                          <span className="text-[10px] font-medium text-text dark:text-text-dark">Blood Pressure (Systolic)</span>
                         </div>
-                      ))
-                    })()}
-                  </div>
+                        <span className="text-[9px] text-muted">{vitalsTrend.bp.length} readings</span>
+                      </div>
+                      <div className="flex items-end gap-1.5" style={{ height: '40px' }}>
+                        {(() => {
+                          const data = vitalsTrend.bp.map(r => ({ val: r.value, label: new Date(r.date).toLocaleDateString('en-IN', { weekday: 'narrow' }) }))
+                          const maxVal = Math.max(...data.map(d => d.val), 160)
+                          const minVal = Math.min(...data.map(d => d.val), 100)
+                          const range = maxVal - minVal || 1
+                          return data.map((bar, i) => {
+                            const pct = Math.max(20, ((bar.val - minVal) / range) * 80 + 20)
+                            const color = bar.val > 140 ? 'bg-red-400' : bar.val > 130 ? 'bg-yellow-400' : 'bg-green-400'
+                            return (
+                              <div key={i} className="flex-1 flex flex-col items-center gap-0.5" title={`${bar.val} mmHg`}>
+                                <div className={cn('w-full rounded-sm', color)} style={{ height: `${pct}%` }} />
+                                <span className="text-[8px] text-muted">{bar.label}</span>
+                              </div>
+                            )
+                          })
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
+                  {vitalsTrend.hr.length > 0 && (
+                    <div className="rounded-lg border border-border bg-white p-3 dark:border-border-dark dark:bg-surface-dark">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-1.5">
+                          <Heart className="h-3 w-3 text-pink-500" />
+                          <span className="text-[10px] font-medium text-text dark:text-text-dark">Heart Rate</span>
+                        </div>
+                        <span className="text-[9px] text-muted">{vitalsTrend.hr.length} readings</span>
+                      </div>
+                      <div className="flex items-end gap-1.5" style={{ height: '40px' }}>
+                        {(() => {
+                          const data = vitalsTrend.hr.map(r => ({ val: r.value, label: new Date(r.date).toLocaleDateString('en-IN', { weekday: 'narrow' }) }))
+                          const maxVal = Math.max(...data.map(d => d.val), 100)
+                          const minVal = Math.min(...data.map(d => d.val), 50)
+                          const range = maxVal - minVal || 1
+                          return data.map((bar, i) => {
+                            const pct = Math.max(20, ((bar.val - minVal) / range) * 80 + 20)
+                            return (
+                              <div key={i} className="flex-1 flex flex-col items-center gap-0.5" title={`${bar.val} bpm`}>
+                                <div className="w-full rounded-sm bg-primary" style={{ height: `${pct}%` }} />
+                                <span className="text-[8px] text-muted">{bar.label}</span>
+                              </div>
+                            )
+                          })
+                        })()}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
+              )}
             </>
           )}
         </Card>
 
-        {/* Connected Devices */}
-        <Card header={<div className="flex items-center gap-2"><Bluetooth className="h-4 w-4 text-primary" /><h3 className="font-display font-semibold text-text dark:text-text-dark">Connected Devices</h3></div>}>
-          <div className="space-y-3">
-            {[
-              {
-                name: 'Smart Watch',
-                icon: Watch,
-                connected: true,
-                lastSync: '5 min ago',
-                battery: 78,
-              },
-              {
-                name: 'BP Monitor',
-                icon: Activity,
-                connected: true,
-                lastSync: '2 hours ago',
-                battery: 45,
-              },
-              {
-                name: 'Glucometer',
-                icon: Smartphone,
-                connected: false,
-                lastSync: '2 days ago',
-                battery: null,
-              },
-            ].map((device) => (
-              <div key={device.name} className="flex items-center gap-3 rounded-lg border border-border bg-white px-3 py-2.5 dark:border-border-dark dark:bg-surface-dark">
-                <div className={cn(
-                  'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
-                  device.connected ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'
-                )}>
-                  <device.icon className={cn('h-4 w-4', device.connected ? 'text-green-600' : 'text-red-400')} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className={cn(
-                      'h-1.5 w-1.5 rounded-full shrink-0',
-                      device.connected ? 'bg-green-500' : 'bg-red-500'
-                    )} />
-                    <p className="text-xs font-semibold text-text dark:text-text-dark truncate">{device.name}</p>
-                  </div>
-                  <div className="mt-0.5 flex items-center gap-2 text-[10px] text-muted">
-                    <span className="flex items-center gap-0.5">
-                      {device.connected ? <Bluetooth className="h-2.5 w-2.5" /> : <BluetoothOff className="h-2.5 w-2.5" />}
-                      {device.connected ? 'Connected' : 'Disconnected'}
-                    </span>
-                    <span>Sync: {device.lastSync}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 text-[10px] text-muted shrink-0">
-                  {device.battery !== null ? (
-                    <>
-                      {device.battery > 50 ? (
-                        <BatteryMedium className="h-3.5 w-3.5 text-green-500" />
-                      ) : (
-                        <BatteryLow className="h-3.5 w-3.5 text-yellow-500" />
-                      )}
-                      <span className="font-medium">{device.battery}%</span>
-                    </>
-                  ) : (
-                    <span className="text-muted">N/A</span>
-                  )}
-                </div>
-              </div>
-            ))}
+        {/* Claims Status — from D1 */}
+        <Card header={
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-primary" />
+              <h3 className="font-display font-semibold text-text dark:text-text-dark">My Claims</h3>
+            </div>
+            {patientClaims.length > 0 && (
+              <span className="text-[10px] font-medium text-muted">{patientClaims.length} claims</span>
+            )}
           </div>
-        </Card>
-
-        <Card header={<div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-primary" /><h3 className="font-display font-semibold text-text dark:text-text-dark">Upcoming Appointments</h3></div>} padding="none">
-          <ul className="divide-y divide-border dark:divide-border-dark">
-            {patientApts.map((apt, i) => (
-              <li key={i} className="px-5 py-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-text dark:text-text-dark">{apt.doctor}</p>
-                  <Badge variant="info" size="sm">{apt.department}</Badge>
-                </div>
-                <div className="mt-1 flex items-center gap-1.5 text-xs text-muted">
-                  <Clock className="h-3 w-3" /><span>{apt.date} &middot; {apt.time}</span>
-                </div>
-                <div className="mt-2 flex items-center gap-2">
-                  <button
-                    onClick={() => setAptRescheduleIdx(aptRescheduleIdx === i ? null : i)}
-                    className="flex items-center gap-1 rounded-md border border-primary/30 bg-primary/5 px-2 py-1 text-[10px] font-medium text-primary transition-colors hover:bg-primary/10"
-                  >
-                    <RefreshCw className="h-2.5 w-2.5" /> Reschedule
-                  </button>
-                  <button
-                    onClick={() => setPatientApts(prev => prev.filter((_, idx) => idx !== i))}
-                    className="flex items-center gap-1 rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-2 py-1 text-[10px] font-medium text-red-600 dark:text-red-400 transition-colors hover:bg-red-100 dark:hover:bg-red-900/30"
-                  >
-                    <XCircle className="h-2.5 w-2.5" /> Cancel
-                  </button>
-                  <span className="flex items-center gap-1 text-[10px] text-muted ml-auto">
-                    <CalendarCheck className="h-2.5 w-2.5" /> Persist to calendar
-                  </span>
-                </div>
-                {aptRescheduleIdx === i && (
-                  <div className="mt-2 rounded-lg border border-primary/20 bg-primary/5 p-2.5 space-y-2">
-                    <p className="text-[10px] font-medium text-primary">Select new date & time:</p>
-                    <div className="flex gap-2">
-                      <input
-                        type="date"
-                        className="flex-1 rounded-md border border-border dark:border-border-dark bg-background dark:bg-background-dark text-text dark:text-text-dark text-[10px] px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary/30"
-                        onChange={(e) => {
-                          setPatientApts(prev => prev.map((a, idx) => idx === i ? { ...a, date: e.target.value } : a))
-                          setAptRescheduleIdx(null)
-                        }}
-                      />
-                    </div>
+        }>
+          {contextLoading ? (
+            <div className="flex items-center justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted" /></div>
+          ) : patientClaims.length === 0 ? (
+            <p className="text-xs text-muted py-2">No claims found for this patient.</p>
+          ) : (
+            <div className="space-y-2">
+              {patientClaims.slice(0, 5).map((claim) => (
+                <div key={claim.id} className="rounded-lg border border-border dark:border-border-dark p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-mono font-semibold text-text dark:text-text-dark">{claim.claim_number}</span>
+                    <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold', claimStatusColors[claim.status] || claimStatusColors.draft)}>
+                      {claim.status.replace(/_/g, ' ')}
+                    </span>
                   </div>
-                )}
-              </li>
-            ))}
-          </ul>
+                  <p className="text-[11px] text-muted truncate">{claim.diagnosis}</p>
+                  <div className="mt-1.5 flex items-center justify-between">
+                    <div className="flex items-center gap-1 text-xs text-text dark:text-text-dark">
+                      <IndianRupee className="h-3 w-3" />
+                      <span className="font-semibold">₹{Number(claim.claimed_amount).toLocaleString('en-IN')}</span>
+                      {claim.approved_amount && claim.approved_amount > 0 && (
+                        <span className="text-[10px] text-success ml-1">(Approved: ₹{Number(claim.approved_amount).toLocaleString('en-IN')})</span>
+                      )}
+                    </div>
+                    <span className="text-[9px] text-muted">{claim.payer_scheme || ''}</span>
+                  </div>
+                </div>
+              ))}
+              {patientClaims.length > 5 && (
+                <p className="text-[10px] text-muted text-center">+ {patientClaims.length - 5} more claims</p>
+              )}
+            </div>
+          )}
         </Card>
 
+        {/* Upcoming Appointments — from D1 */}
+        <Card header={<div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-primary" /><h3 className="font-display font-semibold text-text dark:text-text-dark">Upcoming Appointments</h3></div>} padding="none">
+          {contextLoading ? (
+            <div className="flex items-center justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted" /></div>
+          ) : upcomingApts.length === 0 ? (
+            <p className="text-xs text-muted px-5 py-4">No upcoming appointments. Book one below.</p>
+          ) : (
+            <ul className="divide-y divide-border dark:divide-border-dark">
+              {upcomingApts.slice(0, 3).map((apt) => (
+                <li key={apt.id} className="px-5 py-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-text dark:text-text-dark">{apt.doctor_name || 'Doctor'}</p>
+                    <Badge variant="info" size="sm">{apt.department}</Badge>
+                  </div>
+                  <div className="mt-1 flex items-center gap-1.5 text-xs text-muted">
+                    <Clock className="h-3 w-3" />
+                    <span>{new Date(apt.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} · {apt.time}</span>
+                  </div>
+                  <div className="mt-1">
+                    <Badge variant={apt.status === 'scheduled' ? 'info' : apt.status === 'confirmed' ? 'success' : 'neutral'} size="sm">{apt.status}</Badge>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+
+        {/* Book Appointment — persists to D1 */}
         <Card header={<div id="book-appointment-card" className="flex items-center gap-2"><CalendarPlus className="h-4 w-4 text-primary" /><h3 className="font-display font-semibold text-text dark:text-text-dark">Book Appointment</h3></div>}>
           {bookingConfirmed ? (
             <div className="py-3">
               <div className="text-center">
                 <CheckCircle className="h-10 w-10 text-success mx-auto mb-2" />
-                <p className="text-sm font-semibold text-text dark:text-text-dark">Appointment Confirmed!</p>
+                <p className="text-sm font-semibold text-text dark:text-text-dark">Appointment Booked!</p>
+                <p className="text-xs text-muted mt-1">Saved to database. You will receive a confirmation.</p>
               </div>
               <div className="mt-3 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/10 p-3 text-left space-y-2">
                 <div className="flex items-start gap-2">
                   <Stethoscope className="h-3.5 w-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-[10px] text-muted">Doctor</p>
-                    <p className="text-xs font-medium text-text dark:text-text-dark">
-                      {bookingDept === 'Cardiology' ? 'Dr. Anil Kapoor' : bookingDept === 'General Medicine' ? 'Dr. Meera Joshi' : bookingDept === 'Pulmonology' ? 'Dr. Kavita Nair' : 'Dr. Priya Sharma'}
-                    </p>
+                    <p className="text-[10px] text-muted">Department</p>
+                    <p className="text-xs font-medium text-text dark:text-text-dark">{bookingDept}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
                   <Calendar className="h-3.5 w-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
                   <div>
                     <p className="text-[10px] text-muted">Date & Time</p>
-                    <p className="text-xs font-medium text-text dark:text-text-dark">{bookingDate} at {bookingTime}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <MapPin className="h-3.5 w-3.5 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-[10px] text-muted">Location</p>
-                    <p className="text-xs font-medium text-text dark:text-text-dark">{bookingDept} Dept, Floor 3, AyushmanLife Hospital</p>
+                    <p className="text-xs font-medium text-text dark:text-text-dark">
+                      {new Date(bookingDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} at {bookingTime}
+                    </p>
                   </div>
                 </div>
               </div>
-
-              {/* Preparation Instructions */}
-              <div className="mt-3 rounded-lg bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 p-3">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-1.5 flex items-center gap-1">
-                  <FileText className="h-3 w-3" /> Preparation Instructions
-                </p>
-                <ul className="space-y-1">
-                  {[
-                    'Bring previous reports & prescriptions',
-                    'Fast for 8 hours if blood work is expected',
-                    'Arrive 15 minutes early for registration',
-                    'Carry insurance card & valid ID',
-                  ].map((inst, idx) => (
-                    <li key={idx} className="flex items-start gap-1.5 text-[11px] text-blue-700 dark:text-blue-300">
-                      <CheckCircle className="h-3 w-3 shrink-0 mt-0.5 text-blue-500" />
-                      <span>{inst}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Export to Calendar */}
-              <div className="mt-3 flex items-center justify-center gap-1.5 text-[10px] text-muted">
-                <CalendarCheck className="h-3 w-3" />
-                <span>Persist to calendar — exported to Google Calendar & iCal</span>
-              </div>
-
-              <button
-                onClick={() => {
-                  setBookingConfirmed(false)
-                  setBookingDate('')
-                  setBookingTime('')
-                  setBookingDept('Cardiology')
-                }}
-                className="mt-3 w-full py-2 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors"
-              >
+              <button onClick={() => { setBookingConfirmed(false); setBookingDate(''); setBookingTime(''); setBookingDept('Cardiology') }}
+                className="mt-3 w-full py-2 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">
                 Book Another
               </button>
             </div>
@@ -1150,11 +909,8 @@ export default function VCare() {
             <div className="space-y-3">
               <div>
                 <label className="block text-[10px] font-medium uppercase tracking-wider text-muted mb-1">Department</label>
-                <select
-                  value={bookingDept}
-                  onChange={(e) => setBookingDept(e.target.value)}
-                  className="w-full rounded-lg border border-border dark:border-border-dark bg-background dark:bg-background-dark text-text dark:text-text-dark text-xs px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20"
-                >
+                <select value={bookingDept} onChange={(e) => setBookingDept(e.target.value)}
+                  className="w-full rounded-lg border border-border dark:border-border-dark bg-background dark:bg-background-dark text-text dark:text-text-dark text-xs px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20">
                   {['Cardiology', 'General Medicine', 'Orthopedics', 'Neurology', 'Pulmonology', 'Gynecology', 'ENT'].map((dept) => (
                     <option key={dept} value={dept}>{dept}</option>
                   ))}
@@ -1162,323 +918,82 @@ export default function VCare() {
               </div>
               <div>
                 <label className="block text-[10px] font-medium uppercase tracking-wider text-muted mb-1">Date</label>
-                <input
-                  type="date"
-                  value={bookingDate}
-                  onChange={(e) => setBookingDate(e.target.value)}
-                  className="w-full rounded-lg border border-border dark:border-border-dark bg-background dark:bg-background-dark text-text dark:text-text-dark text-xs px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
+                <input type="date" value={bookingDate} onChange={(e) => setBookingDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full rounded-lg border border-border dark:border-border-dark bg-background dark:bg-background-dark text-text dark:text-text-dark text-xs px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/20" />
               </div>
               <div>
                 <label className="block text-[10px] font-medium uppercase tracking-wider text-muted mb-1">Time Slot</label>
                 <div className="grid grid-cols-3 gap-2">
-                  {['9:00 AM', '10:00 AM', '11:00 AM', '2:00 PM', '3:00 PM', '4:00 PM'].map((slot) => (
-                    <button
-                      key={slot}
-                      onClick={() => setBookingTime(slot)}
-                      className={cn(
-                        'rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors',
-                        bookingTime === slot
-                          ? 'border-primary bg-primary/10 text-primary'
-                          : 'border-border dark:border-border-dark text-muted hover:border-primary/40 hover:text-primary'
-                      )}
-                    >
+                  {['09:00', '10:00', '11:00', '14:00', '15:00', '16:00'].map((slot) => (
+                    <button key={slot} onClick={() => setBookingTime(slot)}
+                      className={cn('rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors',
+                        bookingTime === slot ? 'border-primary bg-primary/10 text-primary' : 'border-border dark:border-border-dark text-muted hover:border-primary/40 hover:text-primary')}>
                       {slot}
                     </button>
                   ))}
                 </div>
               </div>
-              <button
-                onClick={() => {
-                  if (bookingDate && bookingTime) setBookingConfirmed(true)
-                }}
-                disabled={!bookingDate || !bookingTime}
-                className={cn(
-                  'w-full py-2.5 rounded-lg text-sm font-medium transition-colors',
-                  bookingDate && bookingTime
-                    ? 'bg-primary text-white hover:bg-primary/90'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600'
-                )}
-              >
-                Book Now
+              {bookingError && <p className="text-xs text-error">{bookingError}</p>}
+              <button onClick={handleBookAppointment} disabled={!bookingDate || !bookingTime || bookingLoading}
+                className={cn('w-full py-2.5 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-1.5',
+                  bookingDate && bookingTime && !bookingLoading ? 'bg-primary text-white hover:bg-primary/90' : 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600')}>
+                {bookingLoading ? <><Loader2 className="h-4 w-4 animate-spin" /> Booking...</> : 'Book Now'}
               </button>
             </div>
           )}
         </Card>
 
+        {/* Active Medications — from D1 */}
         <Card header={
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2">
               <Pill className="h-4 w-4 text-primary" />
               <h3 className="font-display font-semibold text-text dark:text-text-dark">Active Medications</h3>
-              {refillAlertCount > 0 && (
-                <span className="inline-flex items-center gap-0.5 rounded-full bg-orange-100 dark:bg-orange-900/30 px-1.5 py-0.5 text-[9px] font-bold text-orange-700 dark:text-orange-400">
-                  <AlertTriangle className="h-2 w-2" />
-                  {refillAlertCount} refill{refillAlertCount !== 1 ? 's' : ''} due
-                </span>
-              )}
             </div>
-            {/* Weekly Adherence Score Badge */}
-            {(() => {
-              const score = overallAdherenceScore > 0 ? overallAdherenceScore : (() => {
-                const allStatuses = Object.values(weeklyAdherence).flat()
-                const taken = allStatuses.filter(s => s === 'taken').length
-                const total = allStatuses.filter(s => s !== 'upcoming').length
-                return total > 0 ? Math.round((taken / total) * 100) : 0
-              })()
-              return (
-                <span className={cn(
-                  'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold',
-                  score >= 85 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                    : score >= 70 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                      : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                )}>
-                  <TrendingUp className="h-2.5 w-2.5" />
-                  {score}% overall
-                </span>
-              )
-            })()}
-          </div>
-        } padding="none">
-          <ul className="divide-y divide-border dark:divide-border-dark">
-            {patientMeds.map((med, i) => {
-              // Match adherence by medication name (from D1 data)
-              const adherence = weeklyAdherence[med.name]
-              return (
-                <li key={i} className="px-5 py-3">
-                  <p className="text-sm font-semibold text-text dark:text-text-dark">{med.name}</p>
-                  <p className="mt-0.5 text-xs text-muted">{med.dosage} &middot; {med.timing}</p>
-
-                  {/* Weekly Adherence Tracker Grid — reflects real medication data */}
-                  {adherence && (
-                    <div className="mt-2 flex items-center gap-1">
-                      {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, dayIdx) => {
-                        const status = adherence[dayIdx] || 'upcoming'
-                        return (
-                          <div key={dayIdx} className="flex flex-col items-center gap-0.5">
-                            <span className="text-[8px] text-muted">{day}</span>
-                            <div className={cn(
-                              'h-4 w-4 rounded-sm flex items-center justify-center',
-                              status === 'taken' ? 'bg-green-100 dark:bg-green-900/30' :
-                                status === 'missed' ? 'bg-red-100 dark:bg-red-900/30' :
-                                  'bg-gray-100 dark:bg-gray-700'
-                            )}>
-                              {status === 'taken' && <CheckCircle className="h-2.5 w-2.5 text-green-600 dark:text-green-400" />}
-                              {status === 'missed' && <XCircle className="h-2.5 w-2.5 text-red-500 dark:text-red-400" />}
-                              {status === 'upcoming' && <Clock className="h-2.5 w-2.5 text-gray-400 dark:text-gray-500" />}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-
-          {/* Refill Reminders */}
-          <div className="px-5 py-3 border-t border-border dark:border-border-dark">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted mb-2 flex items-center gap-1">
-              <Package className="h-3 w-3 text-warning" /> Refill Reminders
-            </p>
-            <div className="space-y-2">
-              {[
-                { med: 'Metformin 500mg', daysLeft: 5, pharmacy: 'MedPlus, Saket' },
-                { med: 'Atorvastatin 10mg', daysLeft: 12, pharmacy: 'Apollo Pharmacy, Lajpat Nagar' },
-              ].map((refill, idx) => (
-                <div key={idx} className={cn(
-                  'rounded-lg border p-2 flex items-center gap-2',
-                  refill.daysLeft <= 7
-                    ? 'border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/10'
-                    : 'border-border dark:border-border-dark bg-gray-50 dark:bg-white/5'
-                )}>
-                  <Pill className={cn('h-3.5 w-3.5 shrink-0', refill.daysLeft <= 7 ? 'text-orange-500' : 'text-muted')} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-medium text-text dark:text-text-dark truncate">{refill.med}</p>
-                    <p className="text-[10px] text-muted flex items-center gap-1">
-                      <MapPin className="h-2.5 w-2.5" /> {refill.pharmacy}
-                    </p>
-                  </div>
-                  <span className={cn(
-                    'text-[10px] font-bold shrink-0',
-                    refill.daysLeft <= 7 ? 'text-orange-600 dark:text-orange-400' : 'text-muted'
-                  )}>
-                    {refill.daysLeft}d left
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Card>
-
-        <Card header={<div className="flex items-center gap-2"><Video className="h-4 w-4 text-primary" /><h3 className="font-display font-semibold text-text dark:text-text-dark">Telemedicine</h3></div>}>
-          {/* Video Consultation Card */}
-          {teleLink ? (
-            <div className="space-y-3">
-              <div className="rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/10 p-3">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                    <Stethoscope className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-text dark:text-text-dark">Dr. Anil Kapoor</p>
-                    <p className="text-[10px] text-muted">Cardiology</p>
-                  </div>
-                  <span className={cn(
-                    'ml-auto inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold',
-                    teleWaitingStatus === 'ready' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                      : teleWaitingStatus === 'in-progress' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                        : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                  )}>
-                    <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" />
-                    {teleWaitingStatus === 'ready' ? 'Doctor Ready' : teleWaitingStatus === 'in-progress' ? 'In Progress' : 'Waiting Room'}
-                  </span>
-                </div>
-                <button className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition-colors">
-                  <Video className="h-4 w-4" /> Join Call
-                </button>
-              </div>
-              <div className="p-2.5 rounded-lg bg-gray-50 dark:bg-white/5 text-xs font-mono text-muted break-all">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[9px] uppercase tracking-wider font-bold text-primary">Session ID</span>
-                  <span className="text-[9px] text-muted">Tracked</span>
-                </div>
-                <span className="text-primary font-semibold">{teleSessionId}</span>
-                <div className="mt-1 text-[10px]">{teleLink}</div>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => navigator.clipboard.writeText(teleLink)} className="flex-1 py-2 rounded-lg bg-primary/10 text-primary text-xs font-medium hover:bg-primary/20 transition-colors">Copy Link</button>
-                <button onClick={() => { setTeleLink(''); setTeleSessionId('') }} className="flex-1 py-2 rounded-lg bg-gray-100 dark:bg-white/10 text-muted text-xs font-medium hover:bg-gray-200 dark:hover:bg-white/15 transition-colors">New Session</button>
-              </div>
-            </div>
-          ) : (
-            <button onClick={() => {
-              const sessionId = `TELE-${crypto.randomUUID().split('-')[0]}`
-              setTeleSessionId(sessionId)
-              setTeleLink(`https://meet.ayushmanlife.in/${sessionId}`)
-              // Track session
-              setTeleSessions(prev => [{
-                id: sessionId,
-                date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-                doctor: 'Dr. Anil Kapoor',
-                duration: 'In progress',
-                dept: 'Cardiology',
-              }, ...prev])
-            }} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors">
-              <Video className="h-4 w-4" /> Start Video Call
-            </button>
-          )}
-
-          {/* Provider Availability Status */}
-          <div className="mt-3 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-surface-dark p-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted mb-2 flex items-center gap-1">
-              <Stethoscope className="h-3 w-3 text-primary" /> Provider Availability
-            </p>
-            <div className="space-y-2">
-              {[
-                { doctor: 'Dr. Anil Kapoor', dept: 'Cardiology', available: teleProviderAvailable, nextSlot: '10:00 AM' },
-                { doctor: 'Dr. Meera Joshi', dept: 'Internal Medicine', available: true, nextSlot: '11:30 AM' },
-                { doctor: 'Dr. Kavita Nair', dept: 'Pulmonology', available: false, nextSlot: '2:00 PM' },
-              ].map((doc) => (
-                <div key={doc.doctor} className="flex items-center gap-2">
-                  <span className={cn('h-2 w-2 rounded-full shrink-0', doc.available ? 'bg-green-500 animate-pulse' : 'bg-gray-400')} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-medium text-text dark:text-text-dark truncate">{doc.doctor}</p>
-                    <p className="text-[9px] text-muted">{doc.dept}</p>
-                  </div>
-                  <span className={cn('text-[9px] font-medium shrink-0', doc.available ? 'text-green-600 dark:text-green-400' : 'text-muted')}>
-                    {doc.available ? 'Available Now' : `Next: ${doc.nextSlot}`}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Pre-Consultation Checklist */}
-          <div className="mt-3 rounded-lg border border-border dark:border-border-dark bg-gray-50 dark:bg-white/5 p-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted mb-2 flex items-center gap-1">
-              <ClipboardList className="h-3 w-3 text-primary" /> Pre-Consultation Checklist
-            </p>
-            <div className="space-y-1.5">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={telePreCheckCamera} onChange={() => setTelePreCheckCamera(!telePreCheckCamera)} className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary/20" />
-                <Camera className={cn('h-3 w-3', telePreCheckCamera ? 'text-green-500' : 'text-muted')} />
-                <span className={cn('text-[11px]', telePreCheckCamera ? 'text-green-600 dark:text-green-400 font-medium' : 'text-text dark:text-text-dark')}>Camera working</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={telePreCheckMic} onChange={() => setTelePreCheckMic(!telePreCheckMic)} className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary/20" />
-                <Mic className={cn('h-3 w-3', telePreCheckMic ? 'text-green-500' : 'text-muted')} />
-                <span className={cn('text-[11px]', telePreCheckMic ? 'text-green-600 dark:text-green-400 font-medium' : 'text-text dark:text-text-dark')}>Microphone working</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={telePreCheckInternet} onChange={() => setTelePreCheckInternet(!telePreCheckInternet)} className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary/20" />
-                <Wifi className={cn('h-3 w-3', telePreCheckInternet ? 'text-green-500' : 'text-muted')} />
-                <span className={cn('text-[11px]', telePreCheckInternet ? 'text-green-600 dark:text-green-400 font-medium' : 'text-text dark:text-text-dark')}>Internet speed adequate</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={teleRecordingConsent} onChange={() => setTeleRecordingConsent(!teleRecordingConsent)} className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary/20" />
-                <Video className={cn('h-3 w-3', teleRecordingConsent ? 'text-green-500' : 'text-muted')} />
-                <span className={cn('text-[11px]', teleRecordingConsent ? 'text-green-600 dark:text-green-400 font-medium' : 'text-text dark:text-text-dark')}>Session recording consent</span>
-              </label>
-            </div>
-            {teleRecordingConsent && (
-              <div className="mt-2 rounded-md bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 px-2.5 py-1.5">
-                <p className="text-[10px] text-blue-700 dark:text-blue-400 flex items-center gap-1">
-                  <Shield className="h-2.5 w-2.5" />
-                  Recording will be stored securely and available to your care team. You may revoke consent at any time.
-                </p>
-              </div>
+            {patientMeds.length > 0 && (
+              <span className="text-[10px] font-medium text-muted">{patientMeds.filter(m => m.status === 'active').length} active</span>
             )}
           </div>
-
-          {/* Session History — tracked sessions */}
-          <div className="mt-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted mb-2 flex items-center gap-1">
-              <Clock className="h-3 w-3" /> Tracked Sessions ({teleSessions.length})
-            </p>
-            <div className="space-y-2">
-              {teleSessions.slice(0, 5).map((session) => (
-                <div key={session.id} className="rounded-lg border border-border dark:border-border-dark bg-white dark:bg-surface-dark p-2.5 flex items-center gap-2.5">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                    <Video className="h-3 w-3 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-medium text-text dark:text-text-dark truncate">{session.doctor}</p>
-                    <p className="text-[10px] text-muted">{session.date} &middot; {session.duration}</p>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-[9px] font-mono text-muted">{session.id}</span>
-                    <button className="text-[10px] text-primary font-medium hover:underline flex items-center gap-0.5">
-                      <FileText className="h-2.5 w-2.5" /> Notes
-                    </button>
-                  </div>
-                </div>
+        } padding="none">
+          {contextLoading ? (
+            <div className="flex items-center justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted" /></div>
+          ) : patientMeds.length === 0 ? (
+            <p className="text-xs text-muted px-5 py-4">No medications found.</p>
+          ) : (
+            <ul className="divide-y divide-border dark:divide-border-dark">
+              {patientMeds.filter(m => m.status === 'active').map((med) => (
+                <li key={med.id || med.name} className="px-5 py-3">
+                  <p className="text-sm font-semibold text-text dark:text-text-dark">{med.name} {med.dosage}</p>
+                  <p className="mt-0.5 text-xs text-muted">{med.frequency}</p>
+                  {med.start_date && (
+                    <p className="mt-0.5 text-[10px] text-muted">
+                      Since {new Date(med.start_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      {med.end_date && ` · Until ${new Date(med.end_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}`}
+                    </p>
+                  )}
+                </li>
               ))}
-            </div>
-          </div>
-
-          <p className="mt-2.5 text-[10px] text-muted text-center">Secure, HIPAA-aligned video consultation</p>
+            </ul>
+          )}
         </Card>
 
+        {/* Patient Feedback */}
         <Card header={
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2">
               <MessageCircle className="h-4 w-4 text-primary" />
-              <h3 className="font-display font-semibold text-text dark:text-text-dark">Patient Feedback</h3>
+              <h3 className="font-display font-semibold text-text dark:text-text-dark">Feedback</h3>
             </div>
-            {/* NPS Score Display */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-muted">NPS</span>
-              <span className={cn(
-                'inline-flex items-center justify-center h-6 w-10 rounded-full text-[10px] font-bold',
-                npsScore >= 50 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                  : npsScore >= 0 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-              )}>
-                {npsScore}
-              </span>
-            </div>
+            {npsScore > 0 && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-muted">NPS</span>
+                <span className={cn('inline-flex items-center justify-center h-6 w-10 rounded-full text-[10px] font-bold',
+                  npsScore >= 50 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400')}>
+                  {npsScore}
+                </span>
+              </div>
+            )}
           </div>
         }>
           {feedbackSent ? (
@@ -1486,11 +1001,9 @@ export default function VCare() {
               <CheckCircle className="h-8 w-8 text-success mx-auto mb-2" />
               <p className="text-sm font-medium text-text dark:text-text-dark">Thank you!</p>
               <p className="text-xs text-muted mt-1">Your feedback has been submitted.</p>
-              <p className="text-[10px] text-muted mt-0.5">POST /api/analytics/satisfaction - Rating: {feedbackRating}/5</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {/* Star Rating - Visual */}
               <div className="flex flex-col items-center gap-1">
                 <div className="flex items-center gap-1">
                   {[1,2,3,4,5].map(n => (
@@ -1505,42 +1018,36 @@ export default function VCare() {
                   </span>
                 )}
               </div>
-              <textarea value={feedbackText} onChange={e => setFeedbackText(e.target.value)} placeholder="Share your experience..." rows={2} className="w-full px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-background dark:bg-background-dark text-text dark:text-text-dark text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
+              <textarea value={feedbackText} onChange={e => setFeedbackText(e.target.value)} placeholder="Share your experience..." rows={2}
+                className="w-full px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-background dark:bg-background-dark text-text dark:text-text-dark text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none" />
               <button
                 onClick={async () => {
                   if (feedbackRating === 0) return
                   setFeedbackSubmitting(true)
                   try {
-                    // Attempt POST to satisfaction endpoint — shows real integration intent
                     await fetch('/api/analytics/satisfaction', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        rating: feedbackRating,
-                        comment: feedbackText,
-                        patient_id: 'pat-001',
-                        department: 'General',
-                      }),
-                    }).catch(() => { /* POST may not be implemented — that is okay */ })
+                      body: JSON.stringify({ rating: feedbackRating, comment: feedbackText, patient_id: PATIENT_ID, department: 'General' }),
+                    }).catch(() => {})
                   } finally {
                     setFeedbackSubmitting(false)
                     setFeedbackSent(true)
                   }
                 }}
                 disabled={feedbackRating === 0 || feedbackSubmitting}
-                className={cn('w-full py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5', feedbackRating > 0 && !feedbackSubmitting ? 'bg-primary text-white hover:bg-primary/90' : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed')}
-              >
+                className={cn('w-full py-2 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5',
+                  feedbackRating > 0 && !feedbackSubmitting ? 'bg-primary text-white hover:bg-primary/90' : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed')}>
                 {feedbackSubmitting && <Loader2 className="h-3 w-3 animate-spin" />}
                 Submit Feedback
               </button>
             </div>
           )}
 
-          {/* Satisfaction Summary from D1 */}
           {satisfactionData && (
             <div className="mt-3 border-t border-border dark:border-border-dark pt-3">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted mb-2">Patient Satisfaction (D1 Data)</p>
-              <div className="grid grid-cols-2 gap-2 mb-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted mb-2">Hospital Satisfaction</p>
+              <div className="grid grid-cols-2 gap-2">
                 <div className="rounded-lg bg-gray-50 dark:bg-white/5 px-2.5 py-2 text-center">
                   <p className="text-lg font-bold text-primary">{satisfactionData.avg_rating}</p>
                   <p className="text-[9px] text-muted">Avg Rating</p>
@@ -1550,86 +1057,10 @@ export default function VCare() {
                   <p className="text-[9px] text-muted">NPS Score</p>
                 </div>
               </div>
-              {satisfactionData.by_department && satisfactionData.by_department.length > 0 && (
-                <div className="space-y-1.5">
-                  <p className="text-[9px] font-medium text-muted uppercase tracking-wider">By Department</p>
-                  {satisfactionData.by_department.slice(0, 4).map((dept) => (
-                    <div key={dept.department} className="flex items-center justify-between text-[11px]">
-                      <span className="text-text dark:text-text-dark truncate">{dept.department}</span>
-                      <div className="flex items-center gap-0.5">
-                        <Star className="h-2.5 w-2.5 text-warning fill-warning" />
-                        <span className="font-medium text-text dark:text-text-dark">{dept.score}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           )}
-
-          {/* Recent Feedback Cards — from D1 or fallback */}
-          <div className="mt-4 border-t border-border dark:border-border-dark pt-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-muted mb-2">Recent Feedback</p>
-            <div className="space-y-2">
-              {(satisfactionData?.recent_feedback?.length
-                ? satisfactionData.recent_feedback.slice(0, 3).map((fb) => ({
-                    rating: fb.rating,
-                    comment: fb.comment,
-                    date: new Date(fb.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-                    responded: true,
-                  }))
-                : [
-                    { rating: 5, comment: 'Dr. Kapoor was very thorough with the cardiac assessment. Excellent follow-up care.', date: '25 Mar 2026', responded: true },
-                    { rating: 4, comment: 'Good telemedicine experience. Minor audio lag but overall helpful consultation.', date: '18 Mar 2026', responded: true },
-                    { rating: 3, comment: 'Long wait time at pharmacy for medication refill. Doctors are good though.', date: '10 Mar 2026', responded: false },
-                  ]
-              ).map((fb, idx) => (
-                <div key={idx} className="rounded-lg border border-border dark:border-border-dark bg-gray-50 dark:bg-white/5 p-2.5">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-0.5">
-                      {[1,2,3,4,5].map(s => (
-                        <Star key={s} className={cn('h-3 w-3', s <= fb.rating ? 'text-warning fill-warning' : 'text-gray-300 dark:text-gray-600')} />
-                      ))}
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[9px] text-muted">{fb.date}</span>
-                      {fb.responded ? (
-                        <span className="inline-flex items-center gap-0.5 text-[9px] font-medium text-green-600 dark:text-green-400">
-                          <ThumbsUp className="h-2 w-2" /> Responded
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-0.5 text-[9px] font-medium text-yellow-600 dark:text-yellow-400">
-                          <Clock className="h-2 w-2" /> Pending
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-text dark:text-text-dark leading-relaxed">{fb.comment}</p>
-                </div>
-              ))}
-            </div>
-          </div>
         </Card>
 
-        <Card header={<div className="flex items-center gap-2"><CheckSquare className="h-4 w-4 text-primary" /><h3 className="font-display font-semibold text-text dark:text-text-dark">Today's Adherence</h3></div>}>
-          <div className="space-y-2">
-            {patientMeds.map((med, i) => (
-              <label key={i} className="flex items-center gap-2.5 cursor-pointer">
-                <input type="checkbox" checked={!!medsTaken[i]} onChange={() => setMedsTaken(prev => ({...prev, [i]: !prev[i]}))} className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary/20" />
-                <span className={cn('text-xs', medsTaken[i] ? 'text-muted line-through' : 'text-text dark:text-text-dark font-medium')}>{med.name}</span>
-              </label>
-            ))}
-          </div>
-          <div className="mt-3">
-            <div className="flex items-center justify-between text-[10px] text-muted mb-1">
-              <span>Adherence</span>
-              <span>{Math.round((Object.values(medsTaken).filter(Boolean).length / Math.max(patientMeds.length, 1)) * 100)}%</span>
-            </div>
-            <div className="h-2 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
-              <div className="h-full rounded-full bg-success transition-all duration-300" style={{ width: `${(Object.values(medsTaken).filter(Boolean).length / Math.max(patientMeds.length, 1)) * 100}%` }} />
-            </div>
-          </div>
-        </Card>
       </div>
     </div>
   )
