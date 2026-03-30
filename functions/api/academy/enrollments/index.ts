@@ -184,13 +184,16 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       return json({ enrollments, summary });
     }
 
-    const userId = (context.data as any)?.user?.id;
-    let query = `SELECT e.id, e.user_id, e.path_id,
-                        lp.name as path_title, e.status, e.progress_percent,
-                        lp.modules_count as total_modules,
+    const url2 = new URL(context.request.url);
+    const userId = url2.searchParams.get('user_id') || (context.data as any)?.user?.id;
+    let query = `SELECT e.id, e.user_id, u.name as user_name, u.department, e.path_id,
+                        lp.name as path_title, lp.category, lp.difficulty,
+                        lp.modules_count as total_modules, lp.estimated_hours,
+                        e.status, e.progress_percent,
                         e.started_at, e.completed_at
                  FROM learning_enrollments e
                  JOIN learning_paths lp ON e.path_id = lp.id
+                 JOIN users u ON e.user_id = u.id
                  WHERE 1=1`;
     const bindings: string[] = [];
 
@@ -211,7 +214,18 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       : stmt
     ).all();
 
-    return json({ enrollments: results || [] });
+    const enrollments = results || [];
+    const summary = {
+      total_enrollments: enrollments.length,
+      completed: enrollments.filter((e: any) => e.status === 'completed').length,
+      in_progress: enrollments.filter((e: any) => e.status === 'in_progress').length,
+      not_started: enrollments.filter((e: any) => e.status === 'not_started').length,
+      avg_progress: enrollments.length > 0
+        ? Math.round(enrollments.reduce((sum: number, e: any) => sum + (e.progress_percent || 0), 0) / enrollments.length)
+        : 0,
+    };
+
+    return json({ enrollments, summary });
   } catch (error) {
     console.error('Error fetching enrollments:', error);
     return json({ error: 'Failed to fetch enrollments' }, 500);

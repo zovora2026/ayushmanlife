@@ -162,11 +162,18 @@ export const workforce = {
 // Academy
 export const academy = {
   paths: () => fetchAPI<{ paths: LearningPath[] }>('/academy/paths'),
-  enrollments: () => fetchAPI<{ enrollments: Enrollment[] }>('/academy/enrollments'),
-  enroll: (pathId: string) =>
-    fetchAPI<{ enrollment: Enrollment }>('/academy/enrollments', { method: 'POST', body: JSON.stringify({ path_id: pathId }) }),
+  enrollments: (params?: Record<string, string>) =>
+    fetchAPI<{ enrollments: Enrollment[]; summary?: EnrollmentSummary }>(`/academy/enrollments?${new URLSearchParams(params || {})}`),
+  enroll: (pathId: string, userId?: string) =>
+    fetchAPI<{ enrollment: Enrollment }>('/academy/enrollments', { method: 'POST', body: JSON.stringify({ path_id: pathId, staff_id: userId }) }),
   updateProgress: (id: string, progress: number) =>
     fetchAPI<{ enrollment: Enrollment }>(`/academy/enrollments/${id}`, { method: 'PUT', body: JSON.stringify({ progress_percent: progress }) }),
+  modules: (params?: Record<string, string>) =>
+    fetchAPI<{ modules: LearningModule[]; total: number }>(`/academy/modules?${new URLSearchParams(params || {})}`),
+  assessments: (params?: Record<string, string>) =>
+    fetchAPI<{ assessments: Assessment[]; total: number; user_submissions?: AssessmentSubmission[] }>(`/academy/assessments?${new URLSearchParams(params || {})}`),
+  submitAssessment: (data: { assessment_id: string; user_id: string; answers: number[] }) =>
+    fetchAPI<{ submission: AssessmentSubmission; message: string }>('/academy/assessments', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 // Types
@@ -497,17 +504,67 @@ export interface LearningPath {
   difficulty: string;
   modules_count: number;
   estimated_hours?: number;
+  status?: string;
 }
 
 export interface Enrollment {
   id: string;
   user_id: string;
+  user_name?: string;
+  department?: string;
   path_id: string;
-  path_name?: string;
+  path_title?: string;
+  category?: string;
+  difficulty?: string;
+  total_modules?: number;
+  estimated_hours?: number;
   progress_percent: number;
   started_at: string;
   completed_at?: string;
   status: string;
+}
+
+export interface EnrollmentSummary {
+  total_enrollments: number;
+  completed: number;
+  in_progress: number;
+  not_started: number;
+  avg_progress: number;
+}
+
+export interface LearningModule {
+  id: string;
+  path_id: string;
+  path_name?: string;
+  title: string;
+  description?: string;
+  content_type: string;
+  order_num: number;
+  duration_minutes: number;
+}
+
+export interface Assessment {
+  id: string;
+  module_id: string;
+  path_id: string;
+  title: string;
+  path_name?: string;
+  module_title?: string;
+  passing_score: number;
+  time_limit_minutes: number;
+  total_attempts?: number;
+  passed_count?: number;
+}
+
+export interface AssessmentSubmission {
+  id: string;
+  assessment_id: string;
+  user_id?: string;
+  score: number;
+  passed: boolean | number;
+  correct?: number;
+  total?: number;
+  submitted_at?: string;
 }
 
 export interface Project {

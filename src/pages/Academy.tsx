@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { GraduationCap, Users, Award, Clock, BookOpen, Star, ChevronRight, BarChart3, CheckCircle, AlertTriangle, Loader2, Target, TrendingUp, Database, RefreshCw, Layers, Calendar, Rocket, Shield, ArrowRight, Zap, Activity } from 'lucide-react'
+import { GraduationCap, Users, Award, Clock, BookOpen, Star, ChevronRight, BarChart3, CheckCircle, AlertTriangle, Loader2, Target, TrendingUp, Database, RefreshCw, Layers, Calendar, Rocket, Shield, ArrowRight, Zap, Activity, PlayCircle, FileText, X } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { academy as academyAPI, workforce as workforceAPI } from '../lib/api'
+import type { LearningModule, Assessment } from '../lib/api'
 
 const tabs = ['Dashboard', 'Learning Paths', 'Certifications', 'Apprenticeship', 'Go-Live Center', 'Skill Assessment', 'ERP Services']
 
@@ -105,6 +106,11 @@ export default function Academy() {
   const [enrollmentSummary, setEnrollmentSummary] = useState<EnrollmentSummary>(DEFAULT_ENROLLMENT_SUMMARY)
   const [certifications, setCertifications] = useState<CertificationRow[]>(DEFAULT_CERTIFICATIONS)
   const [certSummary, setCertSummary] = useState<CertSummary>(DEFAULT_CERT_SUMMARY)
+  const [selectedPathId, setSelectedPathId] = useState<string | null>(null)
+  const [pathModules, setPathModules] = useState<LearningModule[]>([])
+  const [pathAssessments, setPathAssessments] = useState<Assessment[]>([])
+  const [enrolling, setEnrolling] = useState(false)
+  const [enrolledPathIds, setEnrolledPathIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     let mounted = true
@@ -152,6 +158,12 @@ export default function Academy() {
               activeLearners: uniqueStaff || rawEnrollments.length,
               totalHoursSpent: totalHours,
             })
+            // Track which paths user is enrolled in
+            const enrolledIds = new Set<string>()
+            for (const e of (enrollRes as any).enrollments) {
+              enrolledIds.add(e.path_id)
+            }
+            setEnrolledPathIds(enrolledIds)
           }
         }
 
@@ -219,6 +231,32 @@ export default function Academy() {
     load()
     return () => { mounted = false }
   }, [])
+
+  // Handle enrollment
+  async function handleEnroll(pathId: string) {
+    setEnrolling(true)
+    try {
+      await academyAPI.enroll(pathId, 'usr-001')
+      setEnrolledPathIds(prev => new Set([...prev, pathId]))
+    } catch { /* already enrolled or error */ }
+    setEnrolling(false)
+  }
+
+  // Load modules and assessments for a path
+  async function loadPathDetails(pathId: string) {
+    setSelectedPathId(pathId)
+    try {
+      const [modRes, asmtRes] = await Promise.all([
+        academyAPI.modules({ path_id: pathId }),
+        academyAPI.assessments({ path_id: pathId }),
+      ])
+      setPathModules(modRes.modules || [])
+      setPathAssessments(asmtRes.assessments || [])
+    } catch {
+      setPathModules([])
+      setPathAssessments([])
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -403,13 +441,92 @@ export default function Academy() {
                 <div className="w-full h-2 bg-gray-100 dark:bg-slate-700 rounded-full mb-2">
                   <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${(lp.completed / lp.modules) * 100}%` }} />
                 </div>
-                <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center justify-between text-xs mb-3">
                   <span className="text-muted">{lp.completed}/{lp.modules} completed</span>
                   <span className="text-muted">{lp.enrolled} enrolled</span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => loadPathDetails(lp.id)}
+                    className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-gray-100 dark:bg-slate-800 px-3 py-1.5 text-xs font-medium text-text dark:text-text-dark hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    <PlayCircle className="w-3 h-3" /> View Modules
+                  </button>
+                  {enrolledPathIds.has(lp.id) ? (
+                    <span className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-success">
+                      <CheckCircle className="w-3 h-3" /> Enrolled
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => handleEnroll(lp.id)}
+                      disabled={enrolling}
+                      className="flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                    >
+                      <GraduationCap className="w-3 h-3" /> Enroll
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
           </div>
+
+          {/* Module Detail Panel */}
+          {selectedPathId && (
+            <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-display font-semibold text-text dark:text-text-dark flex items-center gap-2">
+                  <Layers className="w-5 h-5 text-primary" />
+                  Modules — {learningPaths.find(p => p.id === selectedPathId)?.title}
+                </h3>
+                <button onClick={() => setSelectedPathId(null)} className="text-muted hover:text-text dark:hover:text-text-dark">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              {pathModules.length === 0 ? (
+                <p className="text-sm text-muted py-4 text-center">No modules found for this path.</p>
+              ) : (
+                <div className="space-y-2">
+                  {pathModules.map((mod, idx) => (
+                    <div key={mod.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800 border border-border/50 dark:border-border-dark/50">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-bold shrink-0">
+                        {idx + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-text dark:text-text-dark truncate">{mod.title}</p>
+                        <p className="text-xs text-muted truncate">{mod.description}</p>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={cn('px-2 py-0.5 rounded-full text-[10px] font-medium',
+                          mod.content_type === 'practical' ? 'bg-warning/10 text-warning' : 'bg-primary/10 text-primary'
+                        )}>
+                          {mod.content_type === 'practical' ? 'Practical' : 'Lesson'}
+                        </span>
+                        <span className="text-xs text-muted">{mod.duration_minutes} min</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {pathAssessments.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-border dark:border-border-dark">
+                  <h4 className="text-sm font-semibold text-text dark:text-text-dark mb-2 flex items-center gap-1">
+                    <FileText className="w-4 h-4 text-primary" /> Assessments
+                  </h4>
+                  {pathAssessments.map(a => (
+                    <div key={a.id} className="flex items-center justify-between p-3 rounded-lg bg-primary/5 border border-primary/20">
+                      <div>
+                        <p className="text-sm font-medium text-text dark:text-text-dark">{a.title}</p>
+                        <p className="text-xs text-muted">Passing score: {a.passing_score}% | Time limit: {a.time_limit_minutes} min | {a.total_attempts || 0} attempts, {a.passed_count || 0} passed</p>
+                      </div>
+                      <span className="px-2 py-1 rounded-lg bg-primary/10 text-primary text-xs font-medium">
+                        {a.passing_score}% to pass
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

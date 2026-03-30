@@ -315,6 +315,39 @@ CREATE TABLE IF NOT EXISTS project_assignments (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Learning Modules, Assessments, Submissions for CareerPath
+CREATE TABLE IF NOT EXISTS learning_modules (
+  id TEXT PRIMARY KEY,
+  path_id TEXT NOT NULL REFERENCES learning_paths(id),
+  title TEXT NOT NULL,
+  description TEXT,
+  content_type TEXT DEFAULT 'lesson',
+  order_num INTEGER NOT NULL,
+  duration_minutes INTEGER DEFAULT 30,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS learning_assessments (
+  id TEXT PRIMARY KEY,
+  module_id TEXT NOT NULL REFERENCES learning_modules(id),
+  path_id TEXT NOT NULL REFERENCES learning_paths(id),
+  title TEXT NOT NULL,
+  questions TEXT NOT NULL,
+  passing_score INTEGER DEFAULT 70,
+  time_limit_minutes INTEGER DEFAULT 30,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS assessment_submissions (
+  id TEXT PRIMARY KEY,
+  assessment_id TEXT NOT NULL REFERENCES learning_assessments(id),
+  user_id TEXT NOT NULL REFERENCES users(id),
+  answers TEXT NOT NULL,
+  score INTEGER NOT NULL,
+  passed INTEGER NOT NULL DEFAULT 0,
+  submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Knowledge Base for AMS Portal
 CREATE TABLE IF NOT EXISTS knowledge_base (
   id TEXT PRIMARY KEY,
@@ -355,3 +388,6 @@ CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
 CREATE INDEX IF NOT EXISTS idx_assignments_project ON project_assignments(project_id);
 CREATE INDEX IF NOT EXISTS idx_assignments_consultant ON project_assignments(consultant_id);
 CREATE INDEX IF NOT EXISTS idx_kb_category ON knowledge_base(category);
+CREATE INDEX IF NOT EXISTS idx_modules_path ON learning_modules(path_id);
+CREATE INDEX IF NOT EXISTS idx_assessments_module ON learning_assessments(module_id);
+CREATE INDEX IF NOT EXISTS idx_submissions_user ON assessment_submissions(user_id);
