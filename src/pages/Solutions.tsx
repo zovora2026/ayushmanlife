@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import {
   MessageSquareHeart, FileCheck, TrendingUp, Users, Headphones, Building2,
   GraduationCap, Database, Shield, ArrowRight, CheckCircle,
+  Server, Lock, Fingerprint, Cloud, Boxes, Settings,
 } from 'lucide-react'
 
 const solutions = [
@@ -70,6 +71,54 @@ const solutions = [
     features: ['Data quality scorecards', 'PHI/PII classification', 'Regulatory reporting (IRDAI, NHA)', 'Consent management', 'Data lineage tracking'],
     color: 'from-indigo-500 to-indigo-400',
     link: '/data-governance',
+  },
+  {
+    icon: Server,
+    title: 'EMR/EHR Advisory & Implementation',
+    description: 'End-to-end EMR implementation, optimization, and migration services for Epic, Oracle Health, and Meditech environments — from assessment to go-live and beyond.',
+    features: ['Epic, Oracle Health & Meditech certified consultants', 'Clinical workflow redesign & optimization', 'Data migration & interface development', 'Go-live command center & 24x7 support', 'Post-live optimization & Epic Refuel equivalent'],
+    color: 'from-rose-500 to-rose-400',
+    link: '/solutions',
+  },
+  {
+    icon: Boxes,
+    title: 'ERP & Enterprise Services',
+    description: 'Healthcare ERP modernization — Workday, SAP, and PeopleSoft implementation, optimization, and managed services for hospital finance, HR, and supply chain.',
+    features: ['Workday HCM & Finance implementation', 'SAP S/4HANA healthcare modules', 'Supply chain & procurement automation', 'Revenue cycle management integration', 'HR & payroll system modernization'],
+    color: 'from-amber-500 to-amber-400',
+    link: '/solutions',
+  },
+  {
+    icon: Settings,
+    title: 'ServiceNow Healthcare Workflows',
+    description: 'Purpose-built ServiceNow modules for healthcare IT service management, clinical device management, and provider lifecycle workflows.',
+    features: ['IT Service Management (ITSM) for hospitals', 'Clinical device & asset management', 'Provider credentialing workflows', 'Change & release management', 'CMDB for healthcare infrastructure'],
+    color: 'from-emerald-500 to-emerald-400',
+    link: '/services',
+  },
+  {
+    icon: Cloud,
+    title: 'Cloud & Infrastructure Services',
+    description: 'AWS and Azure cloud migration, optimization, and managed services for healthcare organizations — HIPAA-compliant architecture with India data residency.',
+    features: ['AWS & Azure cloud migration', 'HIPAA/DPDP-compliant architecture', 'India data residency compliance', 'Cost optimization & FinOps', 'Disaster recovery & business continuity'],
+    color: 'from-sky-500 to-sky-400',
+    link: '/platform',
+  },
+  {
+    icon: Lock,
+    title: 'Cybersecurity & Compliance',
+    description: 'Healthcare-specific cybersecurity operations — SOC monitoring, vulnerability management, incident response, and regulatory compliance for DPDP, HIPAA, and CERT-In.',
+    features: ['24x7 SOC monitoring & threat detection', 'Vulnerability assessment & pen testing', 'DPDP Act & HIPAA compliance audits', 'Incident response & forensics', 'Security awareness training for staff'],
+    color: 'from-red-500 to-red-400',
+    link: '/data-governance',
+  },
+  {
+    icon: Fingerprint,
+    title: 'Digital Identity & Verification',
+    description: 'CLEAR-equivalent healthcare identity verification — Aadhaar-based eKYC, biometric authentication, ABHA ID integration, and role-based access management.',
+    features: ['Aadhaar eKYC & biometric verification', 'ABHA (Ayushman Bharat Health Account) integration', 'Multi-factor authentication for clinical access', 'Role-based access control (RBAC)', 'Patient identity matching & deduplication'],
+    color: 'from-violet-500 to-violet-400',
+    link: '/admin',
   },
 ]
 

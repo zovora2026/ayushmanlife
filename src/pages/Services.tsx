@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   ListTodo,
   BarChart3,
@@ -10,8 +10,10 @@ import {
   XCircle,
   Eye,
   FileText,
+  Loader2,
 } from 'lucide-react'
 import { cn, formatDate } from '../lib/utils'
+import { tickets as ticketsAPI } from '../lib/api'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { Stat } from '../components/ui/Stat'
@@ -34,7 +36,7 @@ interface TicketData {
 
 type TicketFilter = 'All' | TicketData['status']
 
-const TICKETS: TicketData[] = [
+const DEFAULT_TICKETS: TicketData[] = [
   {
     id: 'TKT-001',
     title: 'EMR system slow during peak hours',
@@ -229,10 +231,38 @@ export default function Services() {
   const [activeTab, setActiveTab] = useState('tickets')
   const [ticketFilter, setTicketFilter] = useState<TicketFilter>('All')
   const [kbSearch, setKbSearch] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [ticketData, setTicketData] = useState<TicketData[]>(DEFAULT_TICKETS)
+
+  useEffect(() => {
+    let mounted = true
+    async function load() {
+      try {
+        const res = await ticketsAPI.list()
+        if (mounted && res?.tickets?.length) {
+          setTicketData(res.tickets.map((t) => ({
+            id: t.ticket_number || t.id,
+            title: t.title,
+            priority: t.priority as TicketData['priority'],
+            status: t.status as TicketData['status'],
+            assignee: t.assigned_to ?? '',
+            createdDate: t.created_at ?? '',
+            slaDeadline: t.created_at ?? '',
+            category: t.category,
+          })))
+        }
+      } catch {
+        // keep defaults
+      }
+      if (mounted) setLoading(false)
+    }
+    load()
+    return () => { mounted = false }
+  }, [])
 
   const filteredTickets = useMemo(
-    () => (ticketFilter === 'All' ? TICKETS : TICKETS.filter((t) => t.status === ticketFilter)),
-    [ticketFilter],
+    () => (ticketFilter === 'All' ? ticketData : ticketData.filter((t) => t.status === ticketFilter)),
+    [ticketFilter, ticketData],
   )
 
   const filteredArticles = useMemo(
@@ -313,6 +343,12 @@ export default function Services() {
       </div>
 
       <Tabs tabs={TABS} activeTab={activeTab} onChange={setActiveTab} />
+
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      )}
 
       {/* ── Ticket List ───────────────────────────────────────────── */}
       {activeTab === 'tickets' && (

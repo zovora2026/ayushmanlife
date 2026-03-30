@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Building2,
   FileCheck,
@@ -13,8 +13,11 @@ import {
   IndianRupee,
   Eye,
   Filter,
+  Loader2,
+  Globe,
 } from 'lucide-react'
 import { cn, formatCurrency, formatDate } from '../lib/utils'
+import { payer as payerAPI } from '../lib/api'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { Stat } from '../components/ui/Stat'
@@ -180,6 +183,26 @@ const LOSS_RATIO_DATA = [
   { name: 'Mar', ratio: 68 },
 ]
 
+const TPA_DATA = [
+  { name: 'Medi Assist TPA', code: 'MATPA', claimsProcessed: 12450, avgTAT: '2.3 days', settlementRate: '91%', partnerHospitals: 340, status: 'active' as const },
+  { name: 'Paramount Health TPA', code: 'PHTPA', claimsProcessed: 8920, avgTAT: '3.1 days', settlementRate: '87%', partnerHospitals: 245, status: 'active' as const },
+  { name: 'Raksha TPA', code: 'RTPA', claimsProcessed: 6780, avgTAT: '2.8 days', settlementRate: '89%', partnerHospitals: 180, status: 'active' as const },
+  { name: 'Vidal Health TPA', code: 'VHTPA', claimsProcessed: 5430, avgTAT: '3.5 days', settlementRate: '84%', partnerHospitals: 210, status: 'under_review' as const },
+  { name: 'Heritage Health TPA', code: 'HHTPA', claimsProcessed: 4210, avgTAT: '4.1 days', settlementRate: '82%', partnerHospitals: 155, status: 'active' as const },
+  { name: 'MDIndia Health TPA', code: 'MDITPA', claimsProcessed: 9870, avgTAT: '2.5 days', settlementRate: '90%', partnerHospitals: 290, status: 'active' as const },
+]
+
+const NETWORK_PROVIDERS = [
+  { name: 'Max Super Speciality Hospital', city: 'New Delhi', type: 'Tertiary', beds: 500, specialties: ['Cardiology', 'Oncology', 'Neurology'], empanelment: 'Active', utilization: 87 },
+  { name: 'Fortis Memorial Research Institute', city: 'Gurugram', type: 'Tertiary', beds: 310, specialties: ['Orthopaedics', 'Cardiac Surgery'], empanelment: 'Active', utilization: 82 },
+  { name: 'Apollo Hospitals', city: 'Chennai', type: 'Tertiary', beds: 710, specialties: ['Transplant', 'Oncology', 'Neurosciences'], empanelment: 'Active', utilization: 91 },
+  { name: 'Manipal Hospital', city: 'Bangalore', type: 'Tertiary', beds: 450, specialties: ['Cardiology', 'Orthopaedics', 'Gastro'], empanelment: 'Active', utilization: 79 },
+  { name: 'Medanta - The Medicity', city: 'Gurugram', type: 'Tertiary', beds: 1250, specialties: ['Cardiac Sciences', 'Neurosciences', 'Renal'], empanelment: 'Active', utilization: 85 },
+  { name: 'AIIMS Satellite Centre', city: 'Rishikesh', type: 'Government', beds: 300, specialties: ['General Medicine', 'Surgery', 'Paediatrics'], empanelment: 'Under Review', utilization: 72 },
+  { name: 'Narayana Health', city: 'Bangalore', type: 'Tertiary', beds: 380, specialties: ['Cardiac Surgery', 'Nephrology'], empanelment: 'Active', utilization: 88 },
+  { name: 'City Care Multi-Speciality', city: 'Pune', type: 'Secondary', beds: 120, specialties: ['General Medicine', 'Orthopaedics'], empanelment: 'Active', utilization: 65 },
+]
+
 // ── Static configuration ───────────────────────────────────────────────────────
 
 const TABS_CONFIG = [
@@ -187,6 +210,7 @@ const TABS_CONFIG = [
   { id: 'policies', label: 'Policy Manager', icon: <FileCheck className="h-4 w-4" /> },
   { id: 'adjudication', label: 'Claims Adjudication', icon: <CheckCircle2 className="h-4 w-4" /> },
   { id: 'tpa', label: 'TPA Management', icon: <Users className="h-4 w-4" /> },
+  { id: 'network', label: 'Provider Network', icon: <Globe className="h-4 w-4" /> },
   { id: 'fraud', label: 'Fraud Detection', icon: <ShieldAlert className="h-4 w-4" /> },
   { id: 'analytics', label: 'Analytics', icon: <BarChart3 className="h-4 w-4" /> },
 ]
@@ -255,22 +279,68 @@ export default function Payer() {
   const [activeTab, setActiveTab] = useState('overview')
   const [schemeFilter, setSchemeFilter] = useState<SchemeFilter>('All')
   const [fraudSearch, setFraudSearch] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [policies, setPolicies] = useState<PolicyData[]>(POLICIES)
+  const [fraudAlerts, setFraudAlerts] = useState<FraudAlertData[]>(FRAUD_ALERTS)
+
+  useEffect(() => {
+    let mounted = true
+    async function load() {
+      try {
+        const [policiesRes, fraudRes] = await Promise.all([
+          payerAPI.policies().catch(() => null),
+          payerAPI.fraudAlerts().catch(() => null),
+        ])
+        if (mounted && policiesRes?.policies?.length) {
+          setPolicies(policiesRes.policies.map((p) => ({
+            id: p.id,
+            policyNumber: p.policy_number,
+            scheme: p.scheme,
+            beneficiary: p.holder_name,
+            status: p.status as PolicyData['status'],
+            sumInsured: p.coverage_amount ?? 0,
+            premium: p.premium_amount ?? 0,
+            startDate: p.start_date,
+            endDate: p.end_date ?? '',
+            claimsCount: 0,
+          })))
+        }
+        if (mounted && fraudRes?.alerts?.length) {
+          setFraudAlerts(fraudRes.alerts.map((a) => ({
+            id: a.id,
+            claimId: a.claim_id ?? '',
+            riskScore: a.risk_score,
+            anomalyType: a.alert_type,
+            provider: a.description,
+            amount: 0,
+            status: a.status as FraudAlertData['status'],
+            detectedDate: a.created_at,
+          })))
+        }
+      } catch {
+        // keep defaults
+      }
+      if (mounted) setLoading(false)
+    }
+    load()
+    return () => { mounted = false }
+  }, [])
 
   const filteredPolicies = useMemo(() => {
-    if (schemeFilter === 'All') return POLICIES
-    return POLICIES.filter((p) => p.scheme === schemeFilter)
-  }, [schemeFilter])
+    if (schemeFilter === 'All') return policies
+    return policies.filter((p) => p.scheme === schemeFilter)
+  }, [schemeFilter, policies])
 
   const filteredFraudAlerts = useMemo(() => {
-    if (!fraudSearch) return FRAUD_ALERTS
+    if (!fraudSearch) return fraudAlerts
     const q = fraudSearch.toLowerCase()
-    return FRAUD_ALERTS.filter(
+    return fraudAlerts.filter(
       (a) =>
         a.claimId.toLowerCase().includes(q) ||
         a.anomalyType.toLowerCase().includes(q) ||
         a.provider.toLowerCase().includes(q),
     )
-  }, [fraudSearch])
+  }, [fraudSearch, fraudAlerts])
 
   const policyColumns = [
     {
@@ -372,6 +442,12 @@ export default function Payer() {
       </div>
 
       <Tabs tabs={TABS_CONFIG} activeTab={activeTab} onChange={setActiveTab} />
+
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      )}
 
       {/* ── Overview ──────────────────────────────────────────────── */}
       {activeTab === 'overview' && (
@@ -573,64 +649,171 @@ export default function Payer() {
       {/* ── TPA Management ────────────────────────────────────────── */}
       {activeTab === 'tpa' && (
         <div className="space-y-6">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Third Party Administrator directory and performance monitoring.
-          </p>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {TPA_DIRECTORY.map((tpa) => (
-              <Card key={tpa.id} className="transition-shadow hover:shadow-md">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                      {tpa.name}
-                    </h4>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {tpa.region}
-                    </p>
-                  </div>
-                  <div
-                    className={cn(
-                      'flex h-12 w-12 items-center justify-center rounded-full text-lg font-bold',
-                      tpa.performanceScore >= 90
-                        ? 'bg-success/10 text-success'
-                        : tpa.performanceScore >= 80
-                          ? 'bg-warning/10 text-warning'
-                          : 'bg-error/10 text-error',
-                    )}
-                  >
-                    {tpa.performanceScore}
-                  </div>
-                </div>
-
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  <div className="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/5">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Empanelments</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                      {tpa.empanelmentCount}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/5">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Active Claims</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                      {tpa.activeClaims}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/5">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Settlement</p>
-                    <p className={cn('text-lg font-bold', getPerformanceColor(tpa.settlementRatio))}>
-                      {tpa.settlementRatio}%
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-gray-50 px-3 py-2 dark:bg-white/5">
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Avg TAT</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                      {tpa.avgTAT}
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            ))}
+          {/* TPA Summary Stats */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Stat
+              label="Total TPAs"
+              value={TPA_DATA.length}
+              icon={<Users className="h-5 w-5" />}
+            />
+            <Stat
+              label="Claims via TPAs"
+              value={TPA_DATA.reduce((sum, t) => sum + t.claimsProcessed, 0).toLocaleString()}
+              icon={<FileCheck className="h-5 w-5" />}
+            />
+            <Stat
+              label="Avg TAT"
+              value={`${(TPA_DATA.reduce((sum, t) => sum + parseFloat(t.avgTAT), 0) / TPA_DATA.length).toFixed(1)} days`}
+              icon={<Clock className="h-5 w-5" />}
+            />
+            <Stat
+              label="Partner Hospitals"
+              value={TPA_DATA.reduce((sum, t) => sum + t.partnerHospitals, 0).toLocaleString()}
+              icon={<Building2 className="h-5 w-5" />}
+            />
           </div>
+
+          <Card
+            header={
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-primary" />
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                  TPA Directory
+                </h3>
+              </div>
+            }
+            padding="none"
+          >
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-border dark:divide-border-dark">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-white/5">
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">TPA Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Code</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Claims Processed</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Avg TAT</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Settlement Rate</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Partner Hospitals</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border dark:divide-border-dark">
+                  {TPA_DATA.map((tpa) => (
+                    <tr key={tpa.code} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                      <td className="whitespace-nowrap px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100">{tpa.name}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-xs font-mono text-gray-500 dark:text-gray-400">{tpa.code}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-gray-100">{tpa.claimsProcessed.toLocaleString()}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-gray-700 dark:text-gray-300">{tpa.avgTAT}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-gray-100">{tpa.settlementRate}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-gray-700 dark:text-gray-300">{tpa.partnerHospitals}</td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <Badge variant={tpa.status === 'active' ? 'success' : 'warning'} dot>
+                          {tpa.status === 'active' ? 'Active' : 'Under Review'}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* ── Provider Network ───────────────────────────────────────── */}
+      {activeTab === 'network' && (
+        <div className="space-y-6">
+          {/* Network Summary Stats */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Stat
+              label="Network Hospitals"
+              value={NETWORK_PROVIDERS.length}
+              icon={<Globe className="h-5 w-5" />}
+            />
+            <Stat
+              label="Total Beds"
+              value={NETWORK_PROVIDERS.reduce((sum, p) => sum + p.beds, 0).toLocaleString()}
+              icon={<Building2 className="h-5 w-5" />}
+            />
+            <Stat
+              label="Avg Utilization"
+              value={`${Math.round(NETWORK_PROVIDERS.reduce((sum, p) => sum + p.utilization, 0) / NETWORK_PROVIDERS.length)}%`}
+              icon={<TrendingUp className="h-5 w-5" />}
+            />
+            <Stat
+              label="Active Empanelments"
+              value={NETWORK_PROVIDERS.filter((p) => p.empanelment === 'Active').length}
+              icon={<CheckCircle2 className="h-5 w-5" />}
+            />
+          </div>
+
+          <Card
+            header={
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-primary" />
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                  Empanelled Provider Directory
+                </h3>
+              </div>
+            }
+            padding="none"
+          >
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-border dark:divide-border-dark">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-white/5">
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Hospital Name</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">City</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Type</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Beds</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Specialties</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Empanelment</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Utilization</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border dark:divide-border-dark">
+                  {NETWORK_PROVIDERS.map((provider) => (
+                    <tr key={provider.name} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                      <td className="whitespace-nowrap px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100">{provider.name}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{provider.city}</td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <Badge variant={provider.type === 'Government' ? 'info' : provider.type === 'Secondary' ? 'neutral' : 'success'}>
+                          {provider.type}
+                        </Badge>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-gray-100">{provider.beds}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {provider.specialties.map((s) => (
+                            <Badge key={s} variant="neutral" size="sm">{s}</Badge>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <Badge variant={provider.empanelment === 'Active' ? 'success' : 'warning'} dot>
+                          {provider.empanelment}
+                        </Badge>
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-20 overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
+                            <div
+                              className={cn(
+                                'h-full rounded-full transition-all',
+                                provider.utilization >= 85 ? 'bg-success' : provider.utilization >= 70 ? 'bg-warning' : 'bg-error',
+                              )}
+                              style={{ width: `${provider.utilization}%` }}
+                            />
+                          </div>
+                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{provider.utilization}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
         </div>
       )}
 

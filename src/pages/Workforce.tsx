@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Users,
   UserCheck,
@@ -11,16 +11,19 @@ import {
   BarChart3,
   Award,
   Grid3X3,
+  Loader2,
 } from 'lucide-react'
 import { cn, getInitials, formatDate } from '../lib/utils'
 import { demoStaff } from '../lib/mock-data'
+import { workforce } from '../lib/api'
+import type { StaffMember, ShiftSchedule } from '../lib/api'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { Stat } from '../components/ui/Stat'
 import { Tabs } from '../components/ui/Tabs'
 import { Dropdown } from '../components/ui/Dropdown'
 import { Table } from '../components/ui/Table'
-import type { Certification } from '../types'
+import type { Staff, Certification } from '../types'
 
 const TABS = [
   { id: 'talent', label: 'Talent Dashboard', icon: <Users className="h-4 w-4" /> },
@@ -62,8 +65,34 @@ function getCredentialStatusVariant(status: string): 'success' | 'warning' | 'er
   return 'error'
 }
 
+/** Map an API StaffMember to the local Staff shape used by the UI */
+function mapAPIStaffToLocal(member: StaffMember): Staff {
+  return {
+    id: member.id,
+    name: member.name,
+    role: member.role,
+    department: member.department ?? '',
+    email: member.email,
+    phone: member.phone ?? '',
+    joinDate: '',
+    certifications: (member.certifications ?? []).map((c) => ({
+      name: c.certification_name,
+      issuer: '',
+      expiryDate: c.expiry_date,
+      status: c.status as Certification['status'],
+      verified: false,
+    })),
+    skills: (member.skills ?? []).map((s) => ({
+      skill: s.skill_name,
+      level: s.proficiency,
+    })),
+    shift: '',
+    status: 'Active',
+  }
+}
+
 // Build the weekly schedule with staff assigned to days
-function buildWeeklySchedule() {
+function buildWeeklySchedule(staffList: Staff[]) {
   const today = new Date()
   const dayOfWeek = today.getDay()
   const monday = new Date(today)
@@ -80,8 +109,13 @@ function buildWeeklySchedule() {
     })
   }
 
-  const activeStaff = demoStaff.filter((s) => s.status === 'Active')
+  const activeStaff = staffList.filter((s) => s.status === 'Active')
   const schedule: Record<string, { name: string; shift: string; department: string }[]> = {}
+
+  if (activeStaff.length === 0) {
+    days.forEach((day) => { schedule[day.label] = [] })
+    return { days, schedule }
+  }
 
   days.forEach((day, index) => {
     const startIdx = (index * 3) % activeStaff.length
@@ -99,10 +133,36 @@ function buildWeeklySchedule() {
 export default function Workforce() {
   const [activeTab, setActiveTab] = useState('talent')
   const [departmentFilter, setDepartmentFilter] = useState('')
+  const [staffList, setStaffList] = useState<Staff[]>(demoStaff)
+  const [scheduleData, setScheduleData] = useState<ShiftSchedule[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let mounted = true
+    async function load() {
+      try {
+        const [staffRes, scheduleRes] = await Promise.all([
+          workforce.staff(),
+          workforce.schedule(),
+        ])
+        if (mounted && staffRes.staff) {
+          setStaffList(staffRes.staff.map(mapAPIStaffToLocal))
+        }
+        if (mounted && scheduleRes.schedules) {
+          setScheduleData(scheduleRes.schedules)
+        }
+      } catch {
+        // keep demoStaff defaults on failure
+      }
+      if (mounted) setLoading(false)
+    }
+    load()
+    return () => { mounted = false }
+  }, [])
 
   const departments = useMemo(
-    () => Array.from(new Set(demoStaff.map((s) => s.department))).sort(),
-    []
+    () => Array.from(new Set(staffList.map((s) => s.department))).sort(),
+    [staffList]
   )
 
   const departmentOptions = useMemo(
@@ -114,24 +174,24 @@ export default function Workforce() {
   )
 
   const filteredStaff = useMemo(
-    () => (departmentFilter ? demoStaff.filter((s) => s.department === departmentFilter) : demoStaff),
-    [departmentFilter]
+    () => (departmentFilter ? staffList.filter((s) => s.department === departmentFilter) : staffList),
+    [departmentFilter, staffList]
   )
 
   const allCertifications = useMemo(() => {
     const certs: (Certification & { staffName: string })[] = []
-    demoStaff.forEach((s) => {
+    staffList.forEach((s) => {
       s.certifications.forEach((c) => {
         certs.push({ ...c, staffName: s.name })
       })
     })
     certs.sort((a, b) => new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime())
     return certs
-  }, [])
+  }, [staffList])
 
   const expiringCount = allCertifications.filter((c) => c.status === 'Expiring').length
 
-  const { days, schedule } = useMemo(() => buildWeeklySchedule(), [])
+  const { days, schedule } = useMemo(() => buildWeeklySchedule(staffList), [staffList])
 
   const credentialColumns = [
     { key: 'staffName', label: 'Staff Name' },
@@ -164,6 +224,14 @@ export default function Workforce() {
     },
   ]
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="h-6 w-6 animate-spin text-muted" />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -183,22 +251,22 @@ export default function Workforce() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Stat
               label="Total Staff"
-              value={30}
+              value={staffList.length}
               icon={<Users className="h-5 w-5" />}
             />
             <Stat
               label="Active"
-              value={26}
+              value={staffList.filter((s) => s.status === 'Active').length}
               icon={<UserCheck className="h-5 w-5" />}
             />
             <Stat
               label="On Leave"
-              value={3}
+              value={staffList.filter((s) => s.status === 'On Leave').length}
               icon={<UserX className="h-5 w-5" />}
             />
             <Stat
               label="Training"
-              value={1}
+              value={staffList.filter((s) => s.status === 'Training').length}
               icon={<GraduationCap className="h-5 w-5" />}
             />
           </div>
@@ -288,7 +356,7 @@ export default function Workforce() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border dark:divide-border-dark">
-                  {demoStaff.slice(0, 10).map((staff) => (
+                  {staffList.slice(0, 10).map((staff) => (
                     <tr
                       key={staff.id}
                       className="transition-colors hover:bg-gray-50 dark:hover:bg-white/5"

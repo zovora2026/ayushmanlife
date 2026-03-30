@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   TrendingUp,
   Activity,
@@ -15,6 +15,7 @@ import {
   Smile,
   Meh,
   Frown,
+  Loader2,
 } from 'lucide-react'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
@@ -23,6 +24,8 @@ import { Chart } from '../components/ui/Chart'
 import { Tabs } from '../components/ui/Tabs'
 import { Button } from '../components/ui/Button'
 import { demoPatients, chartData } from '../lib/mock-data'
+import { analytics } from '../lib/api'
+import type { PatientRiskData, OperationsData, SatisfactionData, RevenueData, ChurnData } from '../lib/api'
 import { cn, formatCurrency, getRiskColor } from '../lib/utils'
 
 const analyticsTabs = [
@@ -96,10 +99,141 @@ const departmentRevenueTable = [
 export default function Analytics() {
   const [activeTab, setActiveTab] = useState('risk')
 
-  const sortedPatients = [...demoPatients].sort((a, b) => b.riskScore - a.riskScore)
-  const highRisk = demoPatients.filter((p) => p.riskScore >= 70).length
-  const mediumRisk = demoPatients.filter((p) => p.riskScore >= 40 && p.riskScore < 70).length
-  const lowRisk = demoPatients.filter((p) => p.riskScore < 40).length
+  // ── API state ──
+  const [riskData, setRiskData] = useState<PatientRiskData | null>(null)
+  const [churnData, setChurnData] = useState<ChurnData | null>(null)
+  const [opsData, setOpsData] = useState<OperationsData | null>(null)
+  const [satData, setSatData] = useState<SatisfactionData | null>(null)
+  const [revData, setRevData] = useState<RevenueData | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  // Fetch data when the active tab changes
+  useEffect(() => {
+    let mounted = true
+
+    async function loadRisk() {
+      setLoading(true)
+      try {
+        const [risk, churn] = await Promise.all([
+          analytics.patientRisk(),
+          analytics.churn(),
+        ])
+        if (mounted) {
+          setRiskData(risk)
+          setChurnData(churn)
+        }
+      } catch {
+        // API unavailable — keep defaults / fallback data
+      }
+      if (mounted) setLoading(false)
+    }
+
+    async function loadOperations() {
+      setLoading(true)
+      try {
+        const ops = await analytics.operations()
+        if (mounted) setOpsData(ops)
+      } catch {
+        // keep defaults
+      }
+      if (mounted) setLoading(false)
+    }
+
+    async function loadSatisfaction() {
+      setLoading(true)
+      try {
+        const sat = await analytics.satisfaction()
+        if (mounted) setSatData(sat)
+      } catch {
+        // keep defaults
+      }
+      if (mounted) setLoading(false)
+    }
+
+    async function loadRevenue() {
+      setLoading(true)
+      try {
+        const rev = await analytics.revenue()
+        if (mounted) setRevData(rev)
+      } catch {
+        // keep defaults
+      }
+      if (mounted) setLoading(false)
+    }
+
+    if (activeTab === 'risk') loadRisk()
+    else if (activeTab === 'operations') loadOperations()
+    else if (activeTab === 'satisfaction') loadSatisfaction()
+    else if (activeTab === 'revenue') loadRevenue()
+
+    return () => { mounted = false }
+  }, [activeTab])
+
+  // ── Derive risk-tab display data (API -> fallback to mock) ──
+  // Build a normalized patient list usable by the table
+  const riskPatients = riskData
+    ? [...riskData.high_risk, ...riskData.medium_risk, ...riskData.low_risk].map((p) => ({
+        id: p.id,
+        name: p.name,
+        age: p.age ?? 0,
+        riskScore: p.risk_score ?? 0,
+        conditions: p.chronic_conditions ? p.chronic_conditions.split(',').map((s) => s.trim()) : [],
+        insuranceType: p.insurance_type ?? 'N/A',
+      }))
+    : demoPatients.map((p) => ({
+        id: p.id,
+        name: p.name,
+        age: p.age,
+        riskScore: p.riskScore,
+        conditions: p.conditions,
+        insuranceType: p.insuranceType,
+      }))
+
+  const sortedPatients = [...riskPatients].sort((a, b) => b.riskScore - a.riskScore)
+  const highRisk = riskData ? riskData.total_high : demoPatients.filter((p) => p.riskScore >= 70).length
+  const mediumRisk = riskData ? riskData.total_medium : demoPatients.filter((p) => p.riskScore >= 40 && p.riskScore < 70).length
+  const lowRisk = riskData ? riskData.total_low : demoPatients.filter((p) => p.riskScore < 40).length
+
+  // ── Operations display data ──
+  const opsAvgWait = opsData ? `${opsData.avg_turnaround_days} min` : '12 min'
+  const opsBedOccupancy = opsData ? `${opsData.bed_occupancy_pct}%` : '84%'
+  const opsStaffUtil = opsData ? `${opsData.staff_utilization_pct}%` : '78%'
+  const opsTurnaround = opsData ? `${opsData.avg_turnaround_days} days` : '45 min'
+
+  // ── Satisfaction display data ──
+  const npsScore = satData ? satData.nps_score : 78
+  const npsLabel = npsScore >= 70 ? 'Excellent' : npsScore >= 50 ? 'Good' : 'Needs Work'
+  const satDeptChart = satData
+    ? satData.by_department.map((d) => ({ name: d.department, score: d.score }))
+    : (chartData.departmentSatisfaction as Record<string, unknown>[])
+  const satFeedback = satData
+    ? satData.recent_feedback.map((f, i) => ({ id: i + 1, rating: f.rating, comment: f.comment, department: f.department, date: f.date }))
+    : feedbackItems
+
+  // ── Revenue display data ──
+  const revTotal = revData ? `₹${(revData.total_revenue / 10000000).toFixed(1)} Cr` : '₹8.4 Cr'
+  const revGrowth = revData ? revData.growth_rate : 5.2
+  const revDeptTable = revData
+    ? revData.by_department.map((d) => ({
+        name: d.department,
+        revenue: d.amount,
+        target: d.amount, // API doesn't provide target — use amount as target (100%)
+        growth: 0,
+      }))
+    : departmentRevenueTable
+  const revByPayer = revData
+    ? revData.by_payer.map((p) => ({ name: p.payer, revenue: p.amount }))
+    : (chartData.payerMix as Record<string, unknown>[])
+  const revByMonth = revData
+    ? revData.monthly.map((m) => ({ name: m.month, revenue: m.revenue, target: m.revenue }))
+    : (chartData.revenueByMonth as Record<string, unknown>[])
+
+  // ── Loading spinner helper ──
+  const LoadingSpinner = () => (
+    <div className="flex items-center justify-center py-20">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  )
 
   return (
     <div className="space-y-6">
@@ -123,6 +257,7 @@ export default function Analytics() {
 
       {/* ── Patient Risk Tab ── */}
       {activeTab === 'risk' && (
+        loading ? <LoadingSpinner /> : (
         <div className="space-y-6">
           {/* Risk Distribution Cards */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -258,6 +393,16 @@ export default function Analytics() {
               xAxisKey="name"
               height={280}
             />
+            {churnData && (
+              <div className="mt-4 flex gap-6 text-sm">
+                <span className="text-gray-500 dark:text-gray-400">
+                  Churn Rate: <span className="font-semibold text-error">{churnData.churn_rate}%</span>
+                </span>
+                <span className="text-gray-500 dark:text-gray-400">
+                  Retention Rate: <span className="font-semibold text-success">{churnData.retention_rate}%</span>
+                </span>
+              </div>
+            )}
           </Card>
 
           {/* AI Recommendations */}
@@ -308,37 +453,39 @@ export default function Analytics() {
             </div>
           </Card>
         </div>
+        )
       )}
 
       {/* ── Operations Tab ── */}
       {activeTab === 'operations' && (
+        loading ? <LoadingSpinner /> : (
         <div className="space-y-6">
           {/* Operations KPIs */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Stat
               label="Avg Wait Time"
-              value="12 min"
+              value={opsAvgWait}
               change={-6.2}
               changeLabel="vs last week"
               icon={<Clock className="h-5 w-5" />}
             />
             <Stat
               label="Bed Occupancy"
-              value="84%"
+              value={opsBedOccupancy}
               change={2.1}
               changeLabel="vs last week"
               icon={<BedDouble className="h-5 w-5" />}
             />
             <Stat
               label="Staff Utilization"
-              value="78%"
+              value={opsStaffUtil}
               change={4.5}
               changeLabel="vs last week"
               icon={<Users className="h-5 w-5" />}
             />
             <Stat
               label="Avg Turnaround"
-              value="45 min"
+              value={opsTurnaround}
               change={-3.8}
               changeLabel="faster"
               icon={<Activity className="h-5 w-5" />}
@@ -417,10 +564,12 @@ export default function Analytics() {
             />
           </Card>
         </div>
+        )
       )}
 
       {/* ── Satisfaction Tab ── */}
       {activeTab === 'satisfaction' && (
+        loading ? <LoadingSpinner /> : (
         <div className="space-y-6">
           {/* NPS Score and Sentiment */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -448,17 +597,17 @@ export default function Analytics() {
                       fill="none"
                       stroke="currentColor"
                       strokeWidth="10"
-                      strokeDasharray={`${(78 / 100) * 314} 314`}
+                      strokeDasharray={`${(npsScore / 100) * 314} 314`}
                       strokeLinecap="round"
                       className="text-primary"
                     />
                   </svg>
                   <span className="absolute text-4xl font-bold text-gray-900 dark:text-gray-100">
-                    78
+                    {npsScore}
                   </span>
                 </div>
                 <div className="mt-4 flex items-center gap-2">
-                  <Badge variant="success" size="md">Excellent</Badge>
+                  <Badge variant="success" size="md">{npsLabel}</Badge>
                   <span className="text-xs text-gray-400">Industry avg: 42</span>
                 </div>
               </div>
@@ -537,7 +686,7 @@ export default function Analytics() {
           >
             <Chart
               type="bar"
-              data={chartData.departmentSatisfaction as Record<string, unknown>[]}
+              data={satDeptChart as Record<string, unknown>[]}
               dataKeys={['score']}
               xAxisKey="name"
               height={300}
@@ -553,7 +702,7 @@ export default function Analytics() {
             }
           >
             <div className="space-y-4">
-              {feedbackItems.map((item) => (
+              {satFeedback.map((item) => (
                 <div
                   key={item.id}
                   className="rounded-lg border border-border p-4 dark:border-border-dark"
@@ -585,17 +734,19 @@ export default function Analytics() {
             </div>
           </Card>
         </div>
+        )
       )}
 
       {/* ── Revenue Tab ── */}
       {activeTab === 'revenue' && (
+        loading ? <LoadingSpinner /> : (
         <div className="space-y-6">
           {/* Revenue KPIs */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <Stat
               label="Total Revenue"
-              value="₹8.4 Cr"
-              change={5.2}
+              value={revTotal}
+              change={revGrowth}
               changeLabel="MoM"
               icon={<IndianRupee className="h-5 w-5" />}
             />
@@ -608,7 +759,7 @@ export default function Analytics() {
             />
             <Stat
               label="MoM Growth"
-              value="4.2%"
+              value={revData ? `${revData.growth_rate}%` : '4.2%'}
               change={1.1}
               changeLabel="accelerating"
               icon={<ArrowUpRight className="h-5 w-5" />}
@@ -628,7 +779,7 @@ export default function Analytics() {
           >
             <Chart
               type="area"
-              data={chartData.revenueByMonth as Record<string, unknown>[]}
+              data={revByMonth as Record<string, unknown>[]}
               dataKeys={['revenue', 'target']}
               xAxisKey="name"
               height={320}
@@ -648,7 +799,7 @@ export default function Analytics() {
           >
             <Chart
               type="bar"
-              data={chartData.payerMix as Record<string, unknown>[]}
+              data={revByPayer as Record<string, unknown>[]}
               dataKeys={['revenue']}
               xAxisKey="name"
               height={300}
@@ -676,7 +827,7 @@ export default function Analytics() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border dark:divide-border-dark">
-                  {departmentRevenueTable.map((dept, idx) => {
+                  {revDeptTable.map((dept, idx) => {
                     const achievement = Math.round((dept.revenue / dept.target) * 100)
                     return (
                       <tr
@@ -727,6 +878,7 @@ export default function Analytics() {
             </div>
           </Card>
         </div>
+        )
       )}
     </div>
   )

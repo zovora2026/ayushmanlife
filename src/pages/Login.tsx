@@ -1,19 +1,20 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Heart, Mail, Lock, ArrowRight } from 'lucide-react'
+import { Heart, Mail, Lock, ArrowRight, Loader2 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
-  const { login } = useAuthStore()
+  const { login, loading } = useAuthStore()
   const navigate = useNavigate()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    if (login(email, password)) {
+    const success = await login(email, password)
+    if (success) {
       navigate('/dashboard')
     } else {
       setError('Invalid credentials. Try demo@ayushmanlife.in / demo123')
@@ -74,16 +75,40 @@ export default function Login() {
 
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-colors"
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50"
             >
-              Sign In <ArrowRight className="w-4 h-4" />
+              {loading ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Signing in...</>
+              ) : (
+                <>Sign In <ArrowRight className="w-4 h-4" /></>
+              )}
             </button>
           </form>
 
-          <div className="mt-6 p-3 rounded-lg bg-primary/5 dark:bg-primary/10 text-center">
-            <p className="text-xs text-muted">
-              <strong className="text-text dark:text-text-dark">Demo credentials:</strong>{' '}
-              demo@ayushmanlife.in / demo123
+          <div className="mt-6 space-y-3">
+            <div className="relative flex items-center">
+              <div className="flex-grow border-t border-border dark:border-border-dark" />
+              <span className="mx-3 text-xs text-muted">or</span>
+              <div className="flex-grow border-t border-border dark:border-border-dark" />
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                setEmail('demo@ayushmanlife.in')
+                setPassword('demo123')
+                setError('')
+                const success = await login('demo@ayushmanlife.in', 'demo123')
+                if (success) navigate('/dashboard')
+                else setError('Demo login failed. Please try manually.')
+              }}
+              disabled={loading}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-secondary/10 text-secondary font-semibold hover:bg-secondary/20 transition-colors border border-secondary/20 disabled:opacity-50"
+            >
+              Try Demo Instantly
+            </button>
+            <p className="text-[10px] text-muted text-center">
+              No signup required — explore the full platform with sample data
             </p>
           </div>
         </div>

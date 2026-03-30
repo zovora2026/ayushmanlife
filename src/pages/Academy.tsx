@@ -1,10 +1,22 @@
-import { useState } from 'react'
-import { GraduationCap, Users, Award, Clock, BookOpen, Star, ChevronRight, BarChart3, CheckCircle, AlertTriangle } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { GraduationCap, Users, Award, Clock, BookOpen, Star, ChevronRight, BarChart3, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react'
 import { cn } from '../lib/utils'
+import { academy as academyAPI } from '../lib/api'
 
-const tabs = ['Dashboard', 'Learning Paths', 'Certifications', 'Apprenticeship', 'Skill Assessment']
+const tabs = ['Dashboard', 'Learning Paths', 'Certifications', 'Apprenticeship', 'Go-Live Center', 'Skill Assessment']
 
-const learningPaths = [
+interface LearningPathData {
+  id: string
+  title: string
+  modules: number
+  completed: number
+  difficulty: string
+  duration: string
+  enrolled: number
+  category: string
+}
+
+const DEFAULT_LEARNING_PATHS: LearningPathData[] = [
   { id: '1', title: 'Healthcare IT Fundamentals', modules: 12, completed: 12, difficulty: 'Beginner', duration: '40 hrs', enrolled: 245, category: 'Foundation' },
   { id: '2', title: 'EMR/EHR Specialist', modules: 18, completed: 14, difficulty: 'Intermediate', duration: '80 hrs', enrolled: 189, category: 'Clinical IT' },
   { id: '3', title: 'ServiceNow Healthcare Admin', modules: 15, completed: 8, difficulty: 'Intermediate', duration: '60 hrs', enrolled: 156, category: 'ITSM' },
@@ -42,6 +54,37 @@ function DiffBadge({ d }: { d: string }) {
 
 export default function Academy() {
   const [activeTab, setActiveTab] = useState('Dashboard')
+  const [loading, setLoading] = useState(true)
+  const [learningPaths, setLearningPaths] = useState<LearningPathData[]>(DEFAULT_LEARNING_PATHS)
+
+  useEffect(() => {
+    let mounted = true
+    async function load() {
+      try {
+        const [pathsRes] = await Promise.all([
+          academyAPI.paths().catch(() => null),
+          academyAPI.enrollments().catch(() => null),
+        ])
+        if (mounted && pathsRes?.paths?.length) {
+          setLearningPaths(pathsRes.paths.map((p) => ({
+            id: p.id,
+            title: p.name,
+            modules: p.modules_count,
+            completed: 0,
+            difficulty: p.difficulty,
+            duration: p.estimated_hours ? `${p.estimated_hours} hrs` : 'N/A',
+            enrolled: 0,
+            category: p.category,
+          })))
+        }
+      } catch {
+        // keep defaults
+      }
+      if (mounted) setLoading(false)
+    }
+    load()
+    return () => { mounted = false }
+  }, [])
 
   return (
     <div className="space-y-6">
@@ -58,6 +101,12 @@ export default function Academy() {
           )}>{t}</button>
         ))}
       </div>
+
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      )}
 
       {activeTab === 'Dashboard' && (
         <div className="space-y-6">
@@ -207,6 +256,121 @@ export default function Academy() {
                   <p className="text-2xl font-bold text-primary mt-1">{[15, 55, 23, 120][i]}</p>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'Go-Live Center' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { label: 'Active Projects', value: '8', icon: BarChart3, change: '+2 this month' },
+              { label: 'Go-Live Ready', value: '3', icon: CheckCircle, change: 'On schedule' },
+              { label: 'Training Complete', value: '92%', icon: GraduationCap, change: '+8%' },
+              { label: 'Support Tickets', value: '24', icon: AlertTriangle, change: '-35% post go-live' },
+            ].map(s => (
+              <div key={s.label} className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <s.icon className="w-5 h-5 text-primary" />
+                  <span className="text-xs text-success font-medium">{s.change}</span>
+                </div>
+                <p className="font-display font-bold text-2xl text-text dark:text-text-dark">{s.value}</p>
+                <p className="text-xs text-muted mt-1">{s.label}</p>
+              </div>
+            ))}
+          </div>
+          <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark overflow-hidden">
+            <div className="p-5 border-b border-border dark:border-border-dark">
+              <h3 className="font-display font-semibold text-text dark:text-text-dark">Go-Live Readiness Tracker</h3>
+            </div>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border dark:border-border-dark bg-gray-50 dark:bg-slate-800">
+                  {['Hospital', 'System', 'Phase', 'Training %', 'Go-Live Date', 'Status'].map(h => (
+                    <th key={h} className="text-left px-4 py-3 font-semibold text-muted text-xs uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  { hospital: 'City Care Multi-Speciality, Pune', system: 'Epic', phase: 'Go-Live', training: 98, date: '05 Apr 2026', status: 'Ready' },
+                  { hospital: 'Max Super Speciality, Delhi', system: 'Oracle Health', phase: 'Testing', training: 85, date: '20 Apr 2026', status: 'On Track' },
+                  { hospital: 'Apollo Hospitals, Chennai', system: 'Epic + ServiceNow', phase: 'Training', training: 62, date: '15 May 2026', status: 'On Track' },
+                  { hospital: 'Fortis Memorial, Gurugram', system: 'Meditech', phase: 'Build', training: 35, date: '01 Jun 2026', status: 'At Risk' },
+                  { hospital: 'Manipal Hospital, Bangalore', system: 'Epic', phase: 'Go-Live', training: 96, date: '02 Apr 2026', status: 'Ready' },
+                  { hospital: 'Narayana Health, Bangalore', system: 'Oracle Health', phase: 'Go-Live', training: 100, date: '30 Mar 2026', status: 'Live' },
+                  { hospital: 'AIIMS Satellite, Rishikesh', system: 'ABDM Integration', phase: 'Testing', training: 78, date: '10 May 2026', status: 'On Track' },
+                  { hospital: 'Medanta, Gurugram', system: 'Epic + Workday', phase: 'Training', training: 55, date: '25 May 2026', status: 'On Track' },
+                ].map((p, i) => (
+                  <tr key={i} className="border-b border-border dark:border-border-dark last:border-0 hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                    <td className="px-4 py-3 font-medium text-text dark:text-text-dark">{p.hospital}</td>
+                    <td className="px-4 py-3 text-muted">{p.system}</td>
+                    <td className="px-4 py-3">
+                      <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium',
+                        p.phase === 'Go-Live' ? 'bg-primary/10 text-primary' :
+                        p.phase === 'Testing' ? 'bg-accent/10 text-accent' :
+                        p.phase === 'Training' ? 'bg-warning/10 text-warning' : 'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-gray-300'
+                      )}>{p.phase}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-16 h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                          <div className={cn('h-full rounded-full', p.training >= 90 ? 'bg-success' : p.training >= 60 ? 'bg-warning' : 'bg-error')} style={{ width: `${p.training}%` }} />
+                        </div>
+                        <span className="text-xs text-muted">{p.training}%</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-muted">{p.date}</td>
+                    <td className="px-4 py-3">
+                      <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium',
+                        p.status === 'Ready' ? 'bg-success/10 text-success' :
+                        p.status === 'Live' ? 'bg-primary/10 text-primary' :
+                        p.status === 'On Track' ? 'bg-accent/10 text-accent' : 'bg-error/10 text-error'
+                      )}>{p.status}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="grid md:grid-cols-3 gap-4">
+            <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-5">
+              <h4 className="font-display font-semibold text-text dark:text-text-dark mb-3">24x7 Command Center</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between"><span className="text-muted">Active Support Staff</span><span className="font-semibold text-text dark:text-text-dark">12</span></div>
+                <div className="flex items-center justify-between"><span className="text-muted">Open Escalations</span><span className="font-semibold text-error">3</span></div>
+                <div className="flex items-center justify-between"><span className="text-muted">Avg Response Time</span><span className="font-semibold text-success">4 min</span></div>
+                <div className="flex items-center justify-between"><span className="text-muted">War Room Active</span><span className="font-semibold text-primary">Yes (Narayana)</span></div>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-5">
+              <h4 className="font-display font-semibold text-text dark:text-text-dark mb-3">Training Completion</h4>
+              <div className="space-y-2">
+                {['End Users', 'Super Users', 'IT Staff', 'Physicians'].map((role, i) => {
+                  const pct = [94, 88, 91, 72][i]
+                  return (
+                    <div key={role}>
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="text-muted">{role}</span>
+                        <span className={cn('font-medium', pct >= 85 ? 'text-success' : 'text-warning')}>{pct}%</span>
+                      </div>
+                      <div className="h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <div className={cn('h-full rounded-full', pct >= 85 ? 'bg-success' : 'bg-warning')} style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+            <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-5">
+              <h4 className="font-display font-semibold text-text dark:text-text-dark mb-3">Post Go-Live Metrics</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between"><span className="text-muted">System Adoption</span><span className="font-semibold text-success">94%</span></div>
+                <div className="flex items-center justify-between"><span className="text-muted">Workflow Efficiency</span><span className="font-semibold text-success">+28%</span></div>
+                <div className="flex items-center justify-between"><span className="text-muted">User Satisfaction</span><span className="font-semibold text-primary">4.6/5</span></div>
+                <div className="flex items-center justify-between"><span className="text-muted">Downtime Events</span><span className="font-semibold text-success">0</span></div>
+              </div>
             </div>
           </div>
         </div>

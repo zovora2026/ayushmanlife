@@ -1,19 +1,25 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Heart, Mail, Lock, User, ArrowRight } from 'lucide-react'
+import { Heart, Mail, Lock, User, ArrowRight, Loader2 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 
 export default function Register() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const { register } = useAuthStore()
+  const [error, setError] = useState('')
+  const { register, loading } = useAuthStore()
   const navigate = useNavigate()
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    register(name, email, password)
-    navigate('/dashboard')
+    setError('')
+    const success = await register(name, email, password)
+    if (success) {
+      navigate('/dashboard')
+    } else {
+      setError('Registration failed. Please try again.')
+    }
   }
 
   return (
@@ -34,6 +40,9 @@ export default function Register() {
 
         <div className="bg-white dark:bg-surface-dark rounded-2xl border border-border dark:border-border-dark p-8 shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-5">
+            {error && (
+              <div className="p-3 rounded-lg bg-error/10 text-error text-sm">{error}</div>
+            )}
             <div>
               <label className="block text-sm font-medium text-text dark:text-text-dark mb-1.5">Full Name</label>
               <div className="relative">
@@ -58,8 +67,13 @@ export default function Register() {
                   className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border dark:border-border-dark bg-background dark:bg-background-dark text-text dark:text-text-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" required />
               </div>
             </div>
-            <button type="submit" className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-colors">
-              Create Account <ArrowRight className="w-4 h-4" />
+            <button type="submit" disabled={loading}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50">
+              {loading ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Creating account...</>
+              ) : (
+                <>Create Account <ArrowRight className="w-4 h-4" /></>
+              )}
             </button>
           </form>
         </div>

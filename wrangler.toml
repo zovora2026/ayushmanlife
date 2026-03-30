@@ -2,3 +2,11 @@ name = "ayushmanlife"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "dist"
+
+# D1 Database binding — uncomment and add database_id after running:
+# source .env && CLOUDFLARE_API_TOKEN=$CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_ACCOUNT_ID npx wrangler d1 create ayushmanlife-db
+# NOTE: Current API token lacks D1 permissions. Update token at dash.cloudflare.com to include D1 edit scope.
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "ayushmanlife-db"
+# database_id = "REPLACE_WITH_DATABASE_ID"
