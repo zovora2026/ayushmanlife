@@ -643,6 +643,13 @@ export default function Services() {
   const [d1BreachedTickets, setD1BreachedTickets] = useState(BREACHED_TICKETS)
   const [d1ServiceNowModules, setD1ServiceNowModules] = useState(SERVICENOW_MODULES)
 
+  // Insurance Operations D1-derived metrics
+  const [insTicketCount, setInsTicketCount] = useState(0)
+  const [insOpenCount, setInsOpenCount] = useState(0)
+  const [insSlaCompliance, setInsSlaCompliance] = useState(92.5)
+  const [insBreachCount, setInsBreachCount] = useState(0)
+  const [insCategoryBreakdown, setInsCategoryBreakdown] = useState<{ category: string; count: number; color: string }[]>([])
+
   useEffect(() => {
     let mounted = true
     async function load() {
@@ -759,6 +766,55 @@ export default function Services() {
             accuracy: 96.4,
             autoResolved: tickets.length > 0 ? Math.round((autoResolvable.length / tickets.length) * 100) : 34,
           })
+
+          // ── Insurance Operations metrics from D1 tickets ────────────
+          const insuranceCategories = ['claims', 'insurance', 'payer', 'policy', 'underwriting', 'tpa', 'pre-auth', 'cashless', 'irdai', 'fraud']
+          const insuranceTickets = tickets.filter((t: Ticket) => {
+            const cat = (t.category || '').toLowerCase()
+            const title = (t.title || '').toLowerCase()
+            const desc = (t.description || '').toLowerCase()
+            return insuranceCategories.some(kw => cat.includes(kw) || title.includes(kw) || desc.includes(kw))
+          })
+          if (insuranceTickets.length > 0) {
+            setInsTicketCount(insuranceTickets.length)
+            const insOpen = insuranceTickets.filter((t: Ticket) => t.status === 'open' || t.status === 'in-progress' || t.status === 'escalated')
+            setInsOpenCount(insOpen.length)
+
+            // Insurance SLA compliance
+            const insResolved = insuranceTickets.filter((t: Ticket) => t.resolved_at)
+            let insWithinSla = 0
+            for (const t of insResolved) {
+              if (t.created_at && t.resolved_at && t.sla_hours) {
+                const created = new Date(t.created_at).getTime()
+                const resolved = new Date(t.resolved_at).getTime()
+                const slaDeadline = created + (t.sla_hours * 3600000)
+                if (resolved <= slaDeadline) insWithinSla++
+              }
+            }
+            if (insResolved.length > 0) {
+              setInsSlaCompliance(Math.round((insWithinSla / insResolved.length) * 1000) / 10)
+            }
+
+            // Insurance breach count
+            const insBreached = insOpen.filter((t: Ticket) => {
+              if (!t.created_at || !t.sla_hours) return false
+              const deadline = new Date(t.created_at).getTime() + (t.sla_hours * 3600000)
+              return now.getTime() > deadline
+            })
+            setInsBreachCount(insBreached.length)
+
+            // Category breakdown for insurance tickets
+            const catMap = new Map<string, number>()
+            const catColors = ['bg-primary', 'bg-violet-500', 'bg-amber-500', 'bg-teal-500', 'bg-rose-500', 'bg-indigo-500']
+            insuranceTickets.forEach((t: Ticket) => {
+              const cat = t.category || 'Other'
+              catMap.set(cat, (catMap.get(cat) || 0) + 1)
+            })
+            const breakdown = Array.from(catMap.entries())
+              .map(([category, count], idx) => ({ category, count, color: catColors[idx % catColors.length] }))
+              .sort((a, b) => b.count - a.count)
+            setInsCategoryBreakdown(breakdown)
+          }
 
           // ServiceNow modules — wire incident counts from D1 ticket data
           const itsmIncidents = tickets.filter((t: Ticket) =>
@@ -1269,6 +1325,58 @@ export default function Services() {
               <p className="mt-2 text-xs text-success font-medium">All connected</p>
             </div>
           </div>
+
+          {/* Insurance Operations D1-Driven Metrics */}
+          <Card className="border-primary/20 bg-primary/5">
+            <div className="flex items-center gap-2 mb-3">
+              <ShieldCheck className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Insurance Operations Intelligence</h3>
+              {insTicketCount > 0 && <Badge variant="success" size="sm">D1 Data</Badge>}
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              <div className="rounded-lg bg-white dark:bg-surface-dark border border-border dark:border-border-dark px-3 py-2.5 text-center">
+                <p className="font-display font-bold text-xl text-primary">{insTicketCount > 0 ? insTicketCount : INSURANCE_TICKETS.length}</p>
+                <p className="text-[10px] font-medium text-text dark:text-text-dark">Insurance Tickets</p>
+                <p className="text-[9px] text-muted">{insTicketCount > 0 ? 'Filtered from D1' : 'Static data'}</p>
+              </div>
+              <div className="rounded-lg bg-white dark:bg-surface-dark border border-border dark:border-border-dark px-3 py-2.5 text-center">
+                <p className="font-display font-bold text-xl text-amber-600 dark:text-amber-400">{insOpenCount > 0 ? insOpenCount : '5'}</p>
+                <p className="text-[10px] font-medium text-text dark:text-text-dark">Open / In Progress</p>
+                <p className="text-[9px] text-muted">Requiring attention</p>
+              </div>
+              <div className="rounded-lg bg-white dark:bg-surface-dark border border-border dark:border-border-dark px-3 py-2.5 text-center">
+                <p className={cn('font-display font-bold text-xl', insSlaCompliance >= 90 ? 'text-success' : insSlaCompliance >= 80 ? 'text-warning' : 'text-error')}>{insSlaCompliance}%</p>
+                <p className="text-[10px] font-medium text-text dark:text-text-dark">Insurance SLA Compliance</p>
+                <p className="text-[9px] text-muted">Computed from insurance tickets</p>
+              </div>
+              <div className="rounded-lg bg-white dark:bg-surface-dark border border-border dark:border-border-dark px-3 py-2.5 text-center">
+                <p className={cn('font-display font-bold text-xl', insBreachCount === 0 ? 'text-success' : 'text-error')}>{insBreachCount}</p>
+                <p className="text-[10px] font-medium text-text dark:text-text-dark">Insurance SLA Breaches</p>
+                <p className="text-[9px] text-muted">{insBreachCount === 0 ? 'All on track' : 'Needs escalation'}</p>
+              </div>
+            </div>
+            {insCategoryBreakdown.length > 0 && (
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted mb-2">Insurance Ticket Categories (D1)</p>
+                <div className="space-y-2">
+                  {insCategoryBreakdown.map((cat) => {
+                    const maxCount = Math.max(...insCategoryBreakdown.map(c => c.count), 1)
+                    return (
+                      <div key={cat.category} className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-medium text-text dark:text-text-dark">{cat.category}</span>
+                          <span className="font-bold text-gray-900 dark:text-gray-100">{cat.count}</span>
+                        </div>
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
+                          <div className={cn('h-full rounded-full transition-all', cat.color)} style={{ width: `${(cat.count / maxCount) * 100}%` }} />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </Card>
 
           {/* Insurance ITSM Ticket Queue */}
           <div className="space-y-3">

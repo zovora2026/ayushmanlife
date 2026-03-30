@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { Calendar, Clock, User, ArrowLeft, Tag, BookOpen, FileText, Download, Video, Play, Eye } from 'lucide-react'
+import { Calendar, Clock, User, ArrowLeft, Tag, BookOpen, FileText, Download, Video, Play, Eye, Search, TrendingUp, BarChart3, Filter } from 'lucide-react'
 import Navbar from '../components/layout/Navbar'
 import Footer from '../components/layout/Footer'
 import { cn } from '../lib/utils'
@@ -17,6 +17,8 @@ const blogPosts = [
     readTime: '6 min read',
     category: 'AI & Claims',
     tags: ['AI', 'Claims Processing', 'Healthcare IT', 'ABDM'],
+    views: 4821,
+    isMostRead: true,
   },
   {
     slug: 'reducing-patient-churn',
@@ -29,6 +31,8 @@ const blogPosts = [
     readTime: '8 min read',
     category: 'Analytics',
     tags: ['Patient Retention', 'Predictive Analytics', 'Revenue', 'Data Science'],
+    views: 3156,
+    isMostRead: false,
   },
   {
     slug: 'abdm-integration-guide',
@@ -41,6 +45,8 @@ const blogPosts = [
     readTime: '10 min read',
     category: 'Compliance',
     tags: ['ABDM', 'Ayushman Bharat', 'Integration', 'FHIR', 'Digital Health'],
+    views: 5230,
+    isMostRead: true,
   },
   {
     slug: 'healthcare-cybersecurity-2026',
@@ -53,6 +59,8 @@ const blogPosts = [
     readTime: '7 min read',
     category: 'Security',
     tags: ['Cybersecurity', 'HIPAA', 'Ransomware', 'Healthcare Security'],
+    views: 2890,
+    isMostRead: false,
   },
   {
     slug: 'workforce-development-future',
@@ -65,6 +73,8 @@ const blogPosts = [
     readTime: '5 min read',
     category: 'Workforce',
     tags: ['Workforce Development', 'Training', 'Healthcare IT', 'Career'],
+    views: 1845,
+    isMostRead: false,
   },
   {
     slug: 'servicenow-healthcare-implementation',
@@ -77,6 +87,8 @@ const blogPosts = [
     readTime: '9 min read',
     category: 'ServiceNow',
     tags: ['ServiceNow', 'ITSM', 'Implementation', 'Best Practices'],
+    views: 2340,
+    isMostRead: false,
   },
 ]
 
@@ -247,19 +259,110 @@ function ArticleDetail({ slug }: { slug: string }) {
 
 function InsightsListing() {
   const [activeTab, setActiveTab] = useState<'blog' | 'cases' | 'whitepapers' | 'videos'>('blog')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState<string>('all')
+
+  const allCategories = useMemo(() => {
+    const cats = new Set(blogPosts.map(p => p.category))
+    return ['all', ...Array.from(cats)]
+  }, [])
+
+  const filteredPosts = useMemo(() => {
+    return blogPosts.filter(post => {
+      const matchesSearch = searchQuery === '' ||
+        post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        post.excerpt.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        post.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()))
+      const matchesCategory = selectedCategory === 'all' || post.category === selectedCategory
+      return matchesSearch && matchesCategory
+    })
+  }, [searchQuery, selectedCategory])
+
+  const filteredCaseStudies = useMemo(() => {
+    return caseStudies.filter(cs => {
+      return searchQuery === '' ||
+        cs.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        cs.clientType.toLowerCase().includes(searchQuery.toLowerCase())
+    })
+  }, [searchQuery])
+
+  const totalViews = blogPosts.reduce((sum, p) => sum + p.views, 0) + videos.reduce((sum, v) => sum + v.views, 0) + whitepapers.reduce((sum, w) => sum + w.downloads, 0)
 
   return (
     <div>
       <Navbar />
       <div className="max-w-6xl mx-auto px-4 pt-24 pb-16">
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <h1 className="font-display font-bold text-4xl text-text dark:text-text-dark mb-3">Insights & Resources</h1>
           <p className="text-lg text-muted">Expert perspectives on healthcare technology, AI, and digital transformation in India.</p>
         </div>
 
+        {/* Content Analytics Bar */}
+        <div className="mb-8 p-4 rounded-xl bg-gradient-to-r from-primary/5 to-violet-500/5 border border-primary/10 dark:border-primary/20">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-display font-semibold text-sm text-text dark:text-text-dark flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-primary" /> Content Analytics
+            </h3>
+            <span className="text-xs text-muted">{totalViews.toLocaleString()} total engagements</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { count: blogPosts.length, label: 'Blog Posts', icon: BookOpen, color: 'text-primary', bg: 'bg-primary/10' },
+              { count: caseStudies.length, label: 'Case Studies', icon: FileText, color: 'text-secondary', bg: 'bg-secondary/10' },
+              { count: whitepapers.length, label: 'Whitepapers', icon: Download, color: 'text-accent', bg: 'bg-accent/10' },
+              { count: videos.length, label: 'Video Demos', icon: Video, color: 'text-violet-500', bg: 'bg-violet-500/10' },
+            ].map(item => (
+              <div key={item.label} className="flex items-center gap-3 p-3 rounded-lg bg-white dark:bg-surface-dark border border-border dark:border-border-dark">
+                <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center', item.bg)}>
+                  <item.icon className={cn('w-4.5 h-4.5', item.color)} />
+                </div>
+                <div>
+                  <p className={cn('font-display font-bold text-lg', item.color)}>{item.count}</p>
+                  <p className="text-xs text-muted">{item.label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Search & Filter Bar */}
+        <div className="mb-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+            <input
+              type="text"
+              placeholder="Search articles, case studies, tags..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border dark:border-border-dark bg-white dark:bg-surface-dark text-sm text-text dark:text-text-dark placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+            />
+          </div>
+          {activeTab === 'blog' && (
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-muted" />
+              <div className="flex gap-1.5">
+                {allCategories.map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={cn(
+                      'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                      selectedCategory === cat
+                        ? 'bg-primary text-white'
+                        : 'bg-gray-100 dark:bg-slate-800 text-muted hover:bg-gray-200 dark:hover:bg-slate-700'
+                    )}
+                  >
+                    {cat === 'all' ? 'All' : cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
         <div className="flex justify-center gap-2 mb-10">
           {([['blog', 'Blog', BookOpen], ['cases', 'Case Studies', FileText], ['whitepapers', 'Whitepapers', Download], ['videos', 'Videos', Video]] as const).map(([id, label, Icon]) => (
-            <button key={id} onClick={() => setActiveTab(id)} className={cn(
+            <button key={id} onClick={() => { setActiveTab(id); setSearchQuery(''); setSelectedCategory('all'); }} className={cn(
               'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors',
               activeTab === id ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-slate-800 text-muted hover:bg-gray-200 dark:hover:bg-slate-700'
             )}>
@@ -269,9 +372,21 @@ function InsightsListing() {
         </div>
 
         {activeTab === 'blog' && (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {blogPosts.map(post => (
-              <Link key={post.slug} to={`/insights/${post.slug}`} className="group bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark overflow-hidden hover:shadow-lg transition-all">
+          <div>
+            {filteredPosts.length === 0 ? (
+              <div className="text-center py-12">
+                <Search className="w-8 h-8 text-muted mx-auto mb-3" />
+                <p className="text-muted">No articles found matching &quot;{searchQuery}&quot;</p>
+              </div>
+            ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredPosts.map(post => (
+              <Link key={post.slug} to={`/insights/${post.slug}`} className="group bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark overflow-hidden hover:shadow-lg transition-all relative">
+                {post.isMostRead && (
+                  <div className="absolute top-3 right-3 z-10 flex items-center gap-1 px-2 py-0.5 rounded-full bg-secondary text-white text-[10px] font-bold uppercase tracking-wide">
+                    <TrendingUp className="w-3 h-3" /> Most Read
+                  </div>
+                )}
                 <div className="h-40 gradient-primary flex items-center justify-center">
                   <BookOpen className="w-12 h-12 text-white/30" />
                 </div>
@@ -279,6 +394,7 @@ function InsightsListing() {
                   <div className="flex items-center gap-2 mb-3">
                     <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium">{post.category}</span>
                     <span className="text-xs text-muted">{post.readTime}</span>
+                    <span className="text-xs text-muted flex items-center gap-0.5 ml-auto"><Eye className="w-3 h-3" />{post.views.toLocaleString()}</span>
                   </div>
                   <h3 className="font-display font-semibold text-text dark:text-text-dark mb-2 group-hover:text-primary transition-colors line-clamp-2">{post.title}</h3>
                   <p className="text-sm text-muted line-clamp-2">{post.excerpt}</p>
@@ -291,11 +407,13 @@ function InsightsListing() {
               </Link>
             ))}
           </div>
+            )}
+          </div>
         )}
 
         {activeTab === 'cases' && (
           <div className="grid md:grid-cols-2 gap-6">
-            {caseStudies.map(cs => (
+            {filteredCaseStudies.map(cs => (
               <Link key={cs.slug} to={`/insights/${cs.slug}`} className="group bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-6 hover:shadow-lg transition-all">
                 <span className="px-2 py-0.5 rounded-full bg-secondary/10 text-secondary text-xs font-medium">{cs.clientType}</span>
                 <h3 className="font-display font-semibold text-lg text-text dark:text-text-dark mt-3 mb-2 group-hover:text-primary transition-colors">{cs.title}</h3>

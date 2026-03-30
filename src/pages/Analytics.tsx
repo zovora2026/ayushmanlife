@@ -29,6 +29,9 @@ import {
   FileCheck,
   Heart,
   BarChart3,
+  Cpu,
+  TrendingDown,
+  CalendarClock,
 } from 'lucide-react'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
@@ -424,6 +427,10 @@ export default function Analytics() {
                 <p className="mb-1 text-xs text-gray-600 dark:text-gray-400">
                   Predicted 30-day readmission probability: <span className="font-semibold text-error">42%</span>
                 </p>
+                <div className="mb-1.5 flex items-center gap-1.5">
+                  <Badge variant="error" size="sm" dot>High Confidence</Badge>
+                  <span className="text-[10px] text-muted">94.2% model accuracy</span>
+                </div>
                 <p className="mb-3 text-xs text-primary font-medium">
                   Recommend: Cardiology consult within 48 hours.
                 </p>
@@ -450,6 +457,10 @@ export default function Analytics() {
                 <p className="mb-1 text-xs text-gray-600 dark:text-gray-400">
                   HbA1c trending upward over last 3 visits.
                 </p>
+                <div className="mb-1.5 flex items-center gap-1.5">
+                  <Badge variant="warning" size="sm" dot>Medium Confidence</Badge>
+                  <span className="text-[10px] text-muted">91.8% precision</span>
+                </div>
                 <p className="mb-3 text-xs text-primary font-medium">
                   Recommend: Endocrinology review, medication adjustment.
                 </p>
@@ -476,6 +487,10 @@ export default function Analytics() {
                 <p className="mb-1 text-xs text-gray-600 dark:text-gray-400">
                   SpO2 declining trend over past 2 weeks.
                 </p>
+                <div className="mb-1.5 flex items-center gap-1.5">
+                  <Badge variant="warning" size="sm" dot>Medium Confidence</Badge>
+                  <span className="text-[10px] text-muted">89.3% recall</span>
+                </div>
                 <p className="mb-3 text-xs text-primary font-medium">
                   Recommend: Pulmonology follow-up, medication adherence check.
                 </p>
@@ -662,6 +677,67 @@ export default function Analytics() {
             <Stat label="Revenue at Risk" value={'\u20B918.5L'} change={-8.5} changeLabel="vs last month" icon={<IndianRupee className="h-5 w-5" />} />
           </div>
 
+          {/* AI Model Performance + 30-Day Forecast */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <Card className="border-2 border-primary/20">
+              <div className="flex items-center gap-2 mb-4">
+                <Cpu className="h-5 w-5 text-primary" />
+                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">AI Model Performance</h3>
+                <Badge variant="success" size="sm" dot>Trained</Badge>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { label: 'Accuracy', value: '94.2%', color: 'text-success' },
+                  { label: 'Precision', value: '91.8%', color: 'text-primary' },
+                  { label: 'Recall', value: '89.3%', color: 'text-accent' },
+                  { label: 'F1-Score', value: '90.5%', color: 'text-warning' },
+                ].map(metric => (
+                  <div key={metric.label} className="rounded-lg bg-gray-50 dark:bg-white/5 border border-border dark:border-border-dark p-3 text-center">
+                    <p className={cn('text-xl font-bold', metric.color)}>{metric.value}</p>
+                    <p className="text-xs text-muted mt-0.5">{metric.label}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-[10px] text-muted">Model: XGBoost v3.2 | Last trained: 28 Mar 2026 | Dataset: 24,853 patient records</p>
+            </Card>
+
+            <Card className="border-2 border-warning/20">
+              <div className="flex items-center gap-2 mb-4">
+                <CalendarClock className="h-5 w-5 text-warning" />
+                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">30-Day Churn Forecast</h3>
+                <Badge variant="warning" size="sm" dot>Prediction</Badge>
+              </div>
+              <div className="flex items-center gap-6 mb-4">
+                <div>
+                  <p className="text-3xl font-bold text-error">18</p>
+                  <p className="text-xs text-muted mt-0.5">Predicted churns</p>
+                </div>
+                <div>
+                  <p className="text-3xl font-bold text-warning">{'\u20B9'}14.2L</p>
+                  <p className="text-xs text-muted mt-0.5">Revenue at risk</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted">High confidence (&gt;80%)</span>
+                  <span className="font-bold text-error">7 patients</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted">Medium confidence (60-80%)</span>
+                  <span className="font-bold text-warning">6 patients</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted">Low confidence (&lt;60%)</span>
+                  <span className="font-bold text-gray-500 dark:text-gray-400">5 patients</span>
+                </div>
+              </div>
+              <div className="mt-3 flex items-center gap-1.5 text-[10px] text-success font-medium">
+                <TrendingDown className="h-3 w-3" />
+                Down 21% vs last month's forecast (23 patients)
+              </div>
+            </Card>
+          </div>
+
           {/* Churn Prediction Summary */}
           <Card className="border-2 border-warning/20 bg-gradient-to-r from-warning/5 via-white to-warning/5 dark:from-warning/10 dark:via-surface-dark dark:to-warning/10">
             <div className="flex items-start gap-4">
@@ -742,23 +818,29 @@ export default function Analytics() {
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted">Risk Factor</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted">Last Visit</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted">Churn Prob</th>
+                    <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted">Confidence</th>
                     <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border dark:divide-border-dark">
                   {[
-                    { name: 'Ramesh Gupta', factor: 'Wait Time', lastVisit: '12 Mar 2026', prob: 78 },
-                    { name: 'Priya Sharma', factor: 'Insurance Delay', lastVisit: '05 Mar 2026', prob: 72 },
-                    { name: 'Vikram Yadav', factor: 'Follow-up Gap', lastVisit: '18 Jan 2026', prob: 68 },
-                    { name: 'Meena Patel', factor: 'Wait Time', lastVisit: '22 Mar 2026', prob: 65 },
-                    { name: 'Suresh Iyer', factor: 'Competitor', lastVisit: '28 Feb 2026', prob: 61 },
-                    { name: 'Kavita Reddy', factor: 'Insurance Delay', lastVisit: '10 Mar 2026', prob: 58 },
+                    { name: 'Ramesh Gupta', factor: 'Wait Time', lastVisit: '12 Mar 2026', prob: 78, confidence: 'High' as const },
+                    { name: 'Priya Sharma', factor: 'Insurance Delay', lastVisit: '05 Mar 2026', prob: 72, confidence: 'High' as const },
+                    { name: 'Vikram Yadav', factor: 'Follow-up Gap', lastVisit: '18 Jan 2026', prob: 68, confidence: 'Medium' as const },
+                    { name: 'Meena Patel', factor: 'Wait Time', lastVisit: '22 Mar 2026', prob: 65, confidence: 'Medium' as const },
+                    { name: 'Suresh Iyer', factor: 'Competitor', lastVisit: '28 Feb 2026', prob: 61, confidence: 'Low' as const },
+                    { name: 'Kavita Reddy', factor: 'Insurance Delay', lastVisit: '10 Mar 2026', prob: 58, confidence: 'Low' as const },
                   ].map(p => (
                     <tr key={p.name} className="hover:bg-gray-50 dark:hover:bg-white/5">
                       <td className="px-4 py-3 font-medium text-text dark:text-text-dark">{p.name}</td>
                       <td className="px-4 py-3"><Badge size="sm" variant={p.factor === 'Wait Time' ? 'error' : p.factor === 'Competitor' ? 'neutral' : 'warning'}>{p.factor}</Badge></td>
                       <td className="px-4 py-3 text-muted">{p.lastVisit}</td>
                       <td className="px-4 py-3"><span className={cn('font-bold', p.prob >= 70 ? 'text-error' : 'text-warning')}>{p.prob}%</span></td>
+                      <td className="px-4 py-3">
+                        <Badge size="sm" variant={p.confidence === 'High' ? 'error' : p.confidence === 'Medium' ? 'warning' : 'neutral'} dot>
+                          {p.confidence}
+                        </Badge>
+                      </td>
                       <td className="px-4 py-3"><Button size="sm" variant="outline">Intervene</Button></td>
                     </tr>
                   ))}

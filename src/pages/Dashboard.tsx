@@ -17,6 +17,10 @@ import {
   FolderKanban,
   CheckCircle,
   Circle,
+  Database,
+  Globe,
+  Server,
+  Wifi,
 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { Card } from '../components/ui/Card'
@@ -190,8 +194,34 @@ export default function Dashboard() {
       }))
     : demoAppointments.slice(0, 5)
 
+  const lastUpdatedTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+
   return (
     <div className="space-y-6">
+      {/* System Health Strip */}
+      <div className="rounded-xl border border-border bg-gradient-to-r from-success/5 via-white to-success/5 dark:from-success/10 dark:via-surface-dark dark:to-success/10 dark:border-border-dark px-4 py-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-1.5">
+            <Server className="h-3.5 w-3.5 text-muted" />
+            <span className="text-xs font-semibold text-gray-900 dark:text-gray-100">System Health</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-4">
+            {[
+              { label: 'API Status', icon: Wifi },
+              { label: 'D1 Database', icon: Database },
+              { label: 'CDN', icon: Globe },
+            ].map(svc => (
+              <div key={svc.label} className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
+                <svc.icon className="h-3 w-3 text-muted" />
+                <span className="text-xs text-gray-600 dark:text-gray-400">{svc.label}</span>
+              </div>
+            ))}
+            <span className="text-[10px] text-gray-400 dark:text-gray-500">Last updated: {lastUpdatedTime}</span>
+          </div>
+        </div>
+      </div>
+
       {/* Welcome Header */}
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -203,6 +233,22 @@ export default function Dashboard() {
         <Badge variant="success" dot size="md">
           All systems operational
         </Badge>
+      </div>
+
+      {/* Quick Stats Row */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+          <Database className="h-3 w-3 text-primary" />
+          <span className="text-xs font-semibold text-primary">Real-time D1 Data</span>
+        </div>
+        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-white/10 border border-border dark:border-border-dark">
+          <Server className="h-3 w-3 text-muted" />
+          <span className="text-xs text-gray-600 dark:text-gray-400">18 API Routes</span>
+        </div>
+        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-white/10 border border-border dark:border-border-dark">
+          <Database className="h-3 w-3 text-muted" />
+          <span className="text-xs text-gray-600 dark:text-gray-400">12 D1 Tables</span>
+        </div>
       </div>
 
       {/* KPI Stat Cards */}

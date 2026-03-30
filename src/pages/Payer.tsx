@@ -859,6 +859,48 @@ export default function Payer() {
 
           {/* Policy Lifecycle Management */}
           <Card header={<h3 className="font-display font-semibold text-text dark:text-text-dark">Policy Lifecycle Management</h3>}>
+            {/* Lifecycle Pipeline Timeline */}
+            <div className="mb-5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted mb-3">Lifecycle Pipeline</p>
+              <div className="flex items-center justify-between gap-0 overflow-x-auto pb-2">
+                {[
+                  { stage: 'Application', count: policyLifecycle.pending, color: 'bg-blue-500', textColor: 'text-blue-600 dark:text-blue-400', borderColor: 'border-blue-200 dark:border-blue-800', bgLight: 'bg-blue-50 dark:bg-blue-900/20', active: false },
+                  { stage: 'Underwriting', count: Math.max(1, Math.floor(policyLifecycle.pending * 0.6)), color: 'bg-violet-500', textColor: 'text-violet-600 dark:text-violet-400', borderColor: 'border-violet-200 dark:border-violet-800', bgLight: 'bg-violet-50 dark:bg-violet-900/20', active: false },
+                  { stage: 'Issuance', count: Math.max(1, Math.floor(policyLifecycle.total * 0.15)), color: 'bg-indigo-500', textColor: 'text-indigo-600 dark:text-indigo-400', borderColor: 'border-indigo-200 dark:border-indigo-800', bgLight: 'bg-indigo-50 dark:bg-indigo-900/20', active: false },
+                  { stage: 'Active', count: policyLifecycle.active, color: 'bg-success', textColor: 'text-success', borderColor: 'border-green-300 dark:border-green-700', bgLight: 'bg-green-50 dark:bg-green-900/20', active: true },
+                  { stage: 'Renewal', count: policyLifecycle.expired, color: 'bg-amber-500', textColor: 'text-amber-600 dark:text-amber-400', borderColor: 'border-amber-200 dark:border-amber-800', bgLight: 'bg-amber-50 dark:bg-amber-900/20', active: false },
+                  { stage: 'Lapsed', count: policyLifecycle.lapsed, color: 'bg-error', textColor: 'text-error', borderColor: 'border-red-200 dark:border-red-800', bgLight: 'bg-red-50 dark:bg-red-900/20', active: false },
+                ].map((s, idx, arr) => (
+                  <div key={s.stage} className="flex items-center">
+                    <div className={cn(
+                      'flex flex-col items-center gap-1.5 rounded-xl border-2 px-3 py-3 min-w-[90px] transition-all',
+                      s.active ? `${s.borderColor} ${s.bgLight} ring-2 ring-success/30 shadow-sm` : `${s.borderColor} ${s.bgLight}`
+                    )}>
+                      <div className={cn(
+                        'flex h-10 w-10 items-center justify-center rounded-full text-white text-sm font-bold',
+                        s.color,
+                        s.active && 'ring-4 ring-success/20'
+                      )}>
+                        {s.count}
+                      </div>
+                      <span className={cn('text-[10px] font-semibold whitespace-nowrap', s.textColor)}>{s.stage}</span>
+                      {s.active && (
+                        <span className="inline-flex items-center gap-0.5 rounded-full bg-success/10 px-1.5 py-0.5 text-[8px] font-bold text-success">
+                          <span className="h-1 w-1 rounded-full bg-success animate-pulse" /> CURRENT
+                        </span>
+                      )}
+                    </div>
+                    {idx < arr.length - 1 && (
+                      <div className="flex items-center mx-0.5 shrink-0">
+                        <div className={cn('h-0.5 w-3', idx < 3 ? 'bg-success/40' : 'bg-gray-300 dark:bg-gray-600')} />
+                        <div className={cn('h-0 w-0 border-y-[4px] border-y-transparent border-l-[6px]', idx < 3 ? 'border-l-success/40' : 'border-l-gray-300 dark:border-l-gray-600')} />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
               {[
                 { stage: 'Active', count: policyLifecycle.active, trend: `${policyLifecycle.active} in-force`, color: 'text-success', bg: 'bg-success/10' },

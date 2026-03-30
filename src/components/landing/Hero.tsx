@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Play, Shield, Globe, Award, Heart, Activity, FileCheck, Brain } from 'lucide-react'
+import { ArrowRight, Play, Shield, Globe, Award, Heart, Activity, FileCheck, Brain, Building2, IndianRupee, Users, CheckCircle } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import type { DashboardKPIs } from '../../lib/api'
 
@@ -51,9 +51,15 @@ export default function Hero({ stats }: { stats?: DashboardKPIs | null }) {
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30" />
 
       <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-24 sm:py-32 md:py-40">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-white/90 text-sm mb-8 backdrop-blur-sm">
-          <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-          AI-Native Healthcare Platform — Now Live
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-white/90 text-sm backdrop-blur-sm">
+            <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
+            AI-Native Healthcare Platform — Now Live
+          </div>
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-success/20 border border-success/30 text-success text-xs font-semibold backdrop-blur-sm">
+            <CheckCircle className="w-3.5 h-3.5" />
+            All Systems Operational
+          </div>
         </div>
 
         <h1 className="font-display font-extrabold text-4xl sm:text-5xl md:text-7xl text-white leading-[1.1] tracking-tight mb-6">
@@ -84,17 +90,34 @@ export default function Hero({ stats }: { stats?: DashboardKPIs | null }) {
           </Link>
         </div>
 
-        <div className="flex flex-wrap justify-center gap-6 sm:gap-12 mb-12">
+        <div className="flex flex-wrap justify-center gap-6 sm:gap-12 mb-8">
           {[
             { value: stats?.active_claims ?? 0, suffix: '+', label: 'Claims Processed' },
             { value: stats?.total_patients ?? 0, suffix: '+', label: 'Patients Served' },
             { value: stats?.satisfaction_score ?? 0, suffix: '%', label: 'Satisfaction' },
           ].map((stat) => (
             <div key={stat.label} className="text-center">
-              <div className="font-display font-bold text-2xl sm:text-3xl text-white">
+              <div className="font-display font-bold text-2xl sm:text-3xl text-white animate-count-up">
                 <AnimatedCounter target={stat.value} suffix={stat.suffix} />
               </div>
               <p className="text-xs sm:text-sm text-white/50 mt-1">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Trust Indicators */}
+        <div className="flex flex-wrap justify-center gap-4 sm:gap-8 mb-12">
+          {[
+            { icon: Building2, value: '50+', label: 'Hospitals Trust Us' },
+            { icon: IndianRupee, value: '\u20B9283L+', label: 'Processed Monthly' },
+            { icon: Users, value: '24,853', label: 'Patients Served' },
+          ].map((trust) => (
+            <div key={trust.label} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm">
+              <trust.icon className="w-4 h-4 text-teal-300" />
+              <div className="text-left">
+                <p className="text-sm font-bold text-white">{trust.value}</p>
+                <p className="text-[10px] text-white/50">{trust.label}</p>
+              </div>
             </div>
           ))}
         </div>

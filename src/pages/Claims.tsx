@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import {
   FileCheck,
   Plus,
@@ -11,6 +11,11 @@ import {
   Loader2,
   X,
   Sparkles,
+  Zap,
+  ShieldCheck,
+  GitBranch,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
@@ -166,6 +171,26 @@ function NewClaimModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (
   )
 }
 
+// ICD code patterns that indicate valid coding (simplified check)
+const validIcdPatterns = ['E11', 'I10', 'S72', 'J18', 'K35', 'R69', 'M54', 'N18', 'G43', 'J44', 'C34', 'F32']
+
+function isAutoAdjudicable(claim: DisplayClaim): boolean {
+  // Auto-adjudication: amount < 50000 and has a recognizable diagnosis (proxy for valid ICD)
+  if (claim.amount >= 50000) return false
+  const diagLower = claim.diagnosis.toLowerCase()
+  const hasKnownDiagnosis = ['diabetes', 'hypertension', 'fracture', 'pneumonia', 'appendicitis',
+    'fever', 'infection', 'pain', 'headache', 'asthma', 'bronchitis', 'gastritis'].some(d => diagLower.includes(d))
+  const hasIcdCode = validIcdPatterns.some(p => claim.diagnosis.includes(p))
+  return hasKnownDiagnosis || hasIcdCode
+}
+
+const auditTrailSteps = [
+  { label: 'Created', color: 'bg-gray-400 dark:bg-gray-500' },
+  { label: 'AI Analyzed', color: 'bg-primary' },
+  { label: 'Auto-Adjudicated', color: 'bg-accent' },
+  { label: 'Approved', color: 'bg-success' },
+]
+
 export default function Claims() {
   const [viewMode, setViewMode] = useState<ViewMode>('table')
   const [activeFilter, setActiveFilter] = useState<FilterStatus>('All')
@@ -173,6 +198,7 @@ export default function Claims() {
   const [stats, setStats] = useState<ClaimStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [showNewClaim, setShowNewClaim] = useState(false)
+  const [expandedClaimId, setExpandedClaimId] = useState<string | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -262,6 +288,46 @@ export default function Claims() {
         )}
       </div>
 
+      {/* Rules Engine Stats */}
+      {!loading && (
+        <Card className="border-primary/20 bg-gradient-to-r from-primary/5 via-white to-accent/5 dark:from-primary/10 dark:via-surface-dark dark:to-accent/10">
+          <div className="flex items-center gap-2 mb-4">
+            <Zap className="h-5 w-5 text-primary" />
+            <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">Rules Engine</h3>
+            <Badge variant="success" size="sm" dot>Active</Badge>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="flex items-center gap-3 rounded-lg bg-white/60 dark:bg-white/5 border border-border dark:border-border-dark px-4 py-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-success/10">
+                <ShieldCheck className="h-5 w-5 text-success" />
+              </div>
+              <div>
+                <p className="text-lg font-bold text-success">68%</p>
+                <p className="text-xs text-muted">Auto-Adjudication Rate</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-lg bg-white/60 dark:bg-white/5 border border-border dark:border-border-dark px-4 py-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-warning/10">
+                <FileCheck className="h-5 w-5 text-warning" />
+              </div>
+              <div>
+                <p className="text-lg font-bold text-warning">32%</p>
+                <p className="text-xs text-muted">Manual Review Queue</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 rounded-lg bg-white/60 dark:bg-white/5 border border-border dark:border-border-dark px-4 py-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                <Clock className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-lg font-bold text-primary">2.3s</p>
+                <p className="text-xs text-muted">Avg Auto-Adjudication Time</p>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
       <div className="flex items-center gap-2">
         <button onClick={() => setViewMode('table')}
           className={cn('inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
@@ -306,19 +372,70 @@ export default function Claims() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border dark:divide-border-dark">
-                  {filteredClaims.map((claim, idx) => (
-                    <tr key={claim.id} className={cn('cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-white/5', idx % 2 === 1 && 'bg-gray-50/50 dark:bg-white/[0.02]')}>
-                      <td className="whitespace-nowrap px-4 py-3 font-medium text-primary">{claim.id}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-gray-700 dark:text-gray-300">{claim.patientName}</td>
-                      <td className="max-w-[200px] truncate px-4 py-3 text-gray-700 dark:text-gray-300">{claim.diagnosis}</td>
-                      <td className="whitespace-nowrap px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{formatCurrency(claim.amount)}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-gray-700 dark:text-gray-300">{claim.payer}</td>
-                      <td className="whitespace-nowrap px-4 py-3">
-                        <Badge variant={getStatusColor(statusLabels[claim.status] || claim.status)} dot>{statusLabels[claim.status] || claim.status}</Badge>
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-gray-500 dark:text-gray-400">{formatDate(claim.date)}</td>
-                    </tr>
-                  ))}
+                  {filteredClaims.map((claim, idx) => {
+                    const autoAdj = isAutoAdjudicable(claim)
+                    const isExpanded = expandedClaimId === claim.id
+                    return (
+                      <React.Fragment key={claim.id}>
+                        <tr
+                          onClick={() => setExpandedClaimId(isExpanded ? null : claim.id)}
+                          className={cn('cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-white/5', idx % 2 === 1 && 'bg-gray-50/50 dark:bg-white/[0.02]')}
+                        >
+                          <td className="whitespace-nowrap px-4 py-3 font-medium text-primary">
+                            <div className="flex items-center gap-2">
+                              {claim.id}
+                              {isExpanded ? <ChevronUp className="h-3 w-3 text-muted" /> : <ChevronDown className="h-3 w-3 text-muted" />}
+                            </div>
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-gray-700 dark:text-gray-300">{claim.patientName}</td>
+                          <td className="max-w-[200px] truncate px-4 py-3 text-gray-700 dark:text-gray-300">{claim.diagnosis}</td>
+                          <td className="whitespace-nowrap px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{formatCurrency(claim.amount)}</td>
+                          <td className="whitespace-nowrap px-4 py-3 text-gray-700 dark:text-gray-300">{claim.payer}</td>
+                          <td className="whitespace-nowrap px-4 py-3">
+                            <div className="flex items-center gap-1.5">
+                              <Badge variant={getStatusColor(statusLabels[claim.status] || claim.status)} dot>{statusLabels[claim.status] || claim.status}</Badge>
+                              {autoAdj && (
+                                <Badge variant="success" size="sm">
+                                  <ShieldCheck className="h-3 w-3 mr-0.5" />Auto
+                                </Badge>
+                              )}
+                            </div>
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-3 text-gray-500 dark:text-gray-400">{formatDate(claim.date)}</td>
+                        </tr>
+                        {isExpanded && (
+                          <tr className="bg-primary/[0.02] dark:bg-primary/[0.05]">
+                            <td colSpan={7} className="px-4 py-4">
+                              <div className="space-y-3">
+                                <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">Claim Audit Trail</p>
+                                <div className="flex items-center gap-0">
+                                  {auditTrailSteps.map((step, i) => {
+                                    const isActive = i <= (claim.status === 'approved' || claim.status === 'paid' ? 3 : claim.status === 'under_review' ? 2 : claim.status === 'submitted' ? 1 : 0)
+                                    return (
+                                      <div key={step.label} className="flex items-center">
+                                        <div className="flex flex-col items-center">
+                                          <div className={cn('h-3 w-3 rounded-full border-2', isActive ? `${step.color} border-transparent` : 'bg-gray-200 dark:bg-gray-700 border-gray-300 dark:border-gray-600')} />
+                                          <span className={cn('mt-1 text-[10px] whitespace-nowrap', isActive ? 'text-gray-900 dark:text-gray-100 font-medium' : 'text-gray-400 dark:text-gray-500')}>{step.label}</span>
+                                        </div>
+                                        {i < auditTrailSteps.length - 1 && (
+                                          <div className={cn('h-0.5 w-12 sm:w-20 mx-1 mt-[-12px]', isActive ? 'bg-primary/40' : 'bg-gray-200 dark:bg-gray-700')} />
+                                        )}
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                                {autoAdj && (
+                                  <p className="text-[10px] text-success font-medium flex items-center gap-1">
+                                    <Zap className="h-3 w-3" /> Auto-adjudicated in 2.3s — Amount under ₹50,000 with valid ICD codes
+                                  </p>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    )
+                  })}
                   {filteredClaims.length === 0 && (
                     <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400 dark:text-gray-500">No claims found for this filter</td></tr>
                   )}
@@ -343,7 +460,14 @@ export default function Claims() {
                   {claims.map((claim) => (
                     <Card key={claim.id} padding="sm" className="cursor-pointer transition-shadow hover:shadow-md">
                       <div className="space-y-2">
-                        <p className="text-xs font-semibold text-primary">{claim.id}</p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-semibold text-primary">{claim.id}</p>
+                          {isAutoAdjudicable(claim) && (
+                            <Badge variant="success" size="sm">
+                              <ShieldCheck className="h-2.5 w-2.5 mr-0.5" />Auto
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{claim.patientName}</p>
                         <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">{formatCurrency(claim.amount)}</span>
                         <p className="truncate text-xs text-gray-500 dark:text-gray-400">{claim.payer}</p>

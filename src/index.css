@@ -95,6 +95,15 @@ h1, h2, h3, h4, h5, h6 {
   animation: gradient-shift 8s ease infinite;
 }
 
+@keyframes count-up {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.animate-count-up {
+  animation: count-up 0.8s ease-out;
+}
+
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;

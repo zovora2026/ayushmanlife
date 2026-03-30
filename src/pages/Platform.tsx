@@ -1,11 +1,12 @@
 import Navbar from '../components/layout/Navbar'
 import Footer from '../components/layout/Footer'
 import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import {
   Layers, Cloud, Shield, Cpu, Database, Globe, Zap, ArrowRight,
   CheckCircle, Server, Lock, RefreshCw, Settings, BarChart3,
   Monitor, TrendingUp, Users, FileText, Activity, Workflow, Star,
-  Rocket, GitBranch, Box, Gauge,
+  Rocket, GitBranch, Box, Gauge, Award, BadgeCheck, Heart, Clock,
 } from 'lucide-react'
 
 const architecture = [
@@ -37,7 +38,47 @@ const capabilities = [
   'ABDM integration in under 2 weeks for any hospital',
 ]
 
+const migrationSystems = [
+  { name: 'EMR/EHR System', progress: 100, status: 'Complete' },
+  { name: 'Claims Processing', progress: 100, status: 'Complete' },
+  { name: 'Analytics Platform', progress: 95, status: 'In Progress' },
+  { name: 'Patient Portal', progress: 100, status: 'Complete' },
+  { name: 'Billing & RCM', progress: 88, status: 'In Progress' },
+  { name: 'Lab Information System', progress: 72, status: 'In Progress' },
+]
+
+const transformationProjects = [
+  { name: 'AI-Powered Discharge Summaries', status: 'active', progress: 78 },
+  { name: 'Real-Time Bed Management', status: 'active', progress: 65 },
+  { name: 'Predictive Readmission Model', status: 'active', progress: 82 },
+  { name: 'ABDM Health Locker Integration', status: 'active', progress: 45 },
+  { name: 'Voice-to-Clinical-Notes NLP', status: 'active', progress: 55 },
+  { name: 'Automated Prior Authorization', status: 'active', progress: 91 },
+  { name: 'Patient Risk Stratification v2', status: 'active', progress: 70 },
+  { name: 'Smart Scheduling Optimizer', status: 'active', progress: 60 },
+  { name: 'Revenue Leakage Detection', status: 'active', progress: 88 },
+  { name: 'Clinical Decision Support v3', status: 'active', progress: 50 },
+  { name: 'Insurance Eligibility Checker', status: 'active', progress: 95 },
+  { name: 'Pharmacy Inventory AI', status: 'active', progress: 40 },
+]
+
+const completedThisQuarter = [
+  'SmartClaims AI v2.0 Launch',
+  'V-Care Multilingual Support',
+  'FHIR R4 Gateway Upgrade',
+  'Zero-Trust Network Rollout',
+]
+
 export default function Platform() {
+  const [deployTimestamp] = useState(() => new Date().toISOString())
+  const [showAllProjects, setShowAllProjects] = useState(false)
+  const [uptimePulse, setUptimePulse] = useState(true)
+
+  useEffect(() => {
+    const interval = setInterval(() => setUptimePulse(p => !p), 2000)
+    return () => clearInterval(interval)
+  }, [])
+
   return (
     <div>
       <Navbar />
@@ -403,6 +444,90 @@ export default function Platform() {
               ))}
             </div>
 
+            {/* Active Projects + Technology Modernization Score */}
+            <div className="grid md:grid-cols-2 gap-6 mb-10">
+              {/* Active Projects Summary */}
+              <div className="p-6 rounded-xl bg-white dark:bg-surface-dark border border-border dark:border-border-dark">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-display font-semibold text-text dark:text-text-dark flex items-center gap-2">
+                    <Activity className="w-5 h-5 text-violet-500" /> Active Transformation Projects
+                  </h3>
+                  <span className="px-2.5 py-1 rounded-full bg-violet-500/10 text-violet-500 text-xs font-bold">12 Active</span>
+                </div>
+                <div className="space-y-2.5 max-h-64 overflow-y-auto">
+                  {(showAllProjects ? transformationProjects : transformationProjects.slice(0, 6)).map(proj => (
+                    <div key={proj.name} className="flex items-center gap-3">
+                      <span className="text-xs text-muted w-36 shrink-0 truncate">{proj.name}</span>
+                      <div className="flex-1 h-2 rounded-full bg-gray-200 dark:bg-slate-700 overflow-hidden">
+                        <div className={`h-full rounded-full transition-all ${proj.progress >= 90 ? 'bg-success' : proj.progress >= 60 ? 'bg-blue-500' : 'bg-amber-500'}`}
+                          style={{ width: `${proj.progress}%` }} />
+                      </div>
+                      <span className="text-xs font-semibold text-text dark:text-text-dark w-8 text-right">{proj.progress}%</span>
+                    </div>
+                  ))}
+                </div>
+                {!showAllProjects && transformationProjects.length > 6 && (
+                  <button onClick={() => setShowAllProjects(true)} className="mt-3 text-xs text-primary font-medium hover:underline">
+                    Show all {transformationProjects.length} projects
+                  </button>
+                )}
+                {showAllProjects && (
+                  <button onClick={() => setShowAllProjects(false)} className="mt-3 text-xs text-primary font-medium hover:underline">
+                    Show fewer
+                  </button>
+                )}
+                <div className="mt-4 pt-3 border-t border-border dark:border-border-dark">
+                  <p className="text-xs text-muted flex items-center gap-2">
+                    <CheckCircle className="w-3.5 h-3.5 text-success" />
+                    <span><strong className="text-success">4 Completed This Quarter:</strong> {completedThisQuarter.join(', ')}</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Technology Modernization Score */}
+              <div className="p-6 rounded-xl bg-gradient-to-br from-violet-500/5 to-blue-500/5 border border-violet-500/20 dark:border-violet-500/30">
+                <h3 className="font-display font-semibold text-text dark:text-text-dark mb-4 flex items-center gap-2">
+                  <Gauge className="w-5 h-5 text-violet-500" /> Technology Modernization Score
+                </h3>
+                <div className="flex items-center justify-center mb-6">
+                  <div className="relative w-32 h-32">
+                    <svg className="w-32 h-32 -rotate-90" viewBox="0 0 120 120">
+                      <circle cx="60" cy="60" r="52" fill="none" stroke="currentColor" strokeWidth="10" className="text-gray-200 dark:text-slate-700" />
+                      <circle cx="60" cy="60" r="52" fill="none" stroke="url(#modernGradient)" strokeWidth="10" strokeLinecap="round"
+                        strokeDasharray={`${(87 / 100) * 2 * Math.PI * 52} ${2 * Math.PI * 52}`} />
+                      <defs>
+                        <linearGradient id="modernGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor="#8b5cf6" />
+                          <stop offset="100%" stopColor="#3b82f6" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="font-display font-bold text-3xl text-text dark:text-text-dark">87</span>
+                      <span className="text-xs text-muted">/100</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {[
+                    { label: 'Cloud Maturity', score: 92, color: 'bg-success' },
+                    { label: 'AI/ML Adoption', score: 85, color: 'bg-blue-500' },
+                    { label: 'Security Posture', score: 94, color: 'bg-violet-500' },
+                    { label: 'Data Integration', score: 78, color: 'bg-amber-500' },
+                  ].map(item => (
+                    <div key={item.label} className="flex items-center gap-3">
+                      <span className="text-xs text-muted w-28 shrink-0">{item.label}</span>
+                      <div className="flex-1 h-2 rounded-full bg-gray-200 dark:bg-slate-700 overflow-hidden">
+                        <div className={`h-full rounded-full ${item.color}`} style={{ width: `${item.score}%` }} />
+                      </div>
+                      <span className="text-xs font-semibold text-text dark:text-text-dark w-8 text-right">{item.score}%</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted text-center mt-4">Overall platform health assessment across 4 dimensions</p>
+              </div>
+            </div>
+
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {[
                 { icon: Box, title: 'Legacy Modernization', color: 'text-violet-500', bg: 'bg-violet-500/10', desc: 'Migrate monolithic HIS/EMR to microservices architecture with zero data loss and minimal downtime.' },
@@ -471,6 +596,150 @@ export default function Platform() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Real-Time Cloud Infrastructure Status */}
+            <div className="mt-10 p-6 rounded-2xl bg-white dark:bg-surface-dark border border-border dark:border-border-dark">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-display font-semibold text-lg text-text dark:text-text-dark flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-primary" /> Cloud Infrastructure Status
+                </h3>
+                <span className="flex items-center gap-2 text-xs text-muted">
+                  <Clock className="w-3.5 h-3.5" />
+                  Last deploy: {new Date(deployTimestamp).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="p-4 rounded-xl bg-gray-50 dark:bg-slate-800 border border-border dark:border-border-dark">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={`w-2.5 h-2.5 rounded-full bg-success ${uptimePulse ? 'animate-pulse' : ''}`} />
+                    <span className="text-xs font-medium text-muted">Platform Uptime</span>
+                  </div>
+                  <p className="font-display font-bold text-2xl text-success">99.97%</p>
+                  <p className="text-xs text-muted mt-1">All systems operational</p>
+                </div>
+                <div className="p-4 rounded-xl bg-gray-50 dark:bg-slate-800 border border-border dark:border-border-dark">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Globe className="w-4 h-4 text-blue-500" />
+                    <span className="text-xs font-medium text-muted">Active Regions</span>
+                  </div>
+                  <p className="font-display font-bold text-2xl text-text dark:text-text-dark">3</p>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {['Mumbai', 'Singapore', 'US-East'].map(r => (
+                      <span key={r} className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 text-[10px] font-medium">{r}</span>
+                    ))}
+                  </div>
+                </div>
+                <div className="p-4 rounded-xl bg-gray-50 dark:bg-slate-800 border border-border dark:border-border-dark">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Zap className="w-4 h-4 text-amber-500" />
+                    <span className="text-xs font-medium text-muted">CDN Edge Nodes</span>
+                  </div>
+                  <p className="font-display font-bold text-2xl text-text dark:text-text-dark">285+</p>
+                  <p className="text-xs text-muted mt-1">Global edge network</p>
+                </div>
+                <div className="p-4 rounded-xl bg-gray-50 dark:bg-slate-800 border border-border dark:border-border-dark">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Shield className="w-4 h-4 text-violet-500" />
+                    <span className="text-xs font-medium text-muted">Avg Latency</span>
+                  </div>
+                  <p className="font-display font-bold text-2xl text-text dark:text-text-dark">47ms</p>
+                  <p className="text-xs text-muted mt-1">Edge response time (India)</p>
+                </div>
+              </div>
+              <div className="text-xs text-muted text-right">
+                Deployment: <code className="font-mono bg-gray-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">{deployTimestamp}</code>
+              </div>
+            </div>
+
+            {/* Migration Tracker */}
+            <div className="mt-6 p-6 rounded-2xl bg-white dark:bg-surface-dark border border-border dark:border-border-dark">
+              <h3 className="font-display font-semibold text-lg text-text dark:text-text-dark mb-6 flex items-center gap-2">
+                <RefreshCw className="w-5 h-5 text-primary" /> Cloud Migration Tracker
+              </h3>
+              <div className="space-y-4">
+                {migrationSystems.map(sys => (
+                  <div key={sys.name} className="flex items-center gap-4">
+                    <span className="text-sm font-medium text-text dark:text-text-dark w-44 shrink-0">{sys.name}</span>
+                    <div className="flex-1 h-3 rounded-full bg-gray-200 dark:bg-slate-700 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${sys.progress === 100 ? 'bg-success' : sys.progress >= 80 ? 'bg-blue-500' : 'bg-amber-500'}`}
+                        style={{ width: `${sys.progress}%` }}
+                      />
+                    </div>
+                    <span className={`text-sm font-semibold w-12 text-right ${sys.progress === 100 ? 'text-success' : 'text-blue-500'}`}>
+                      {sys.progress}%
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${sys.status === 'Complete' ? 'bg-success/10 text-success' : 'bg-blue-500/10 text-blue-500'}`}>
+                      {sys.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 pt-4 border-t border-border dark:border-border-dark flex items-center gap-2 text-sm text-muted">
+                <CheckCircle className="w-4 h-4 text-success" />
+                <span>4 of 6 systems fully migrated. Overall progress: {Math.round(migrationSystems.reduce((s, m) => s + m.progress, 0) / migrationSystems.length)}%</span>
+              </div>
+            </div>
+          </div>
+          {/* Recognition & Awards */}
+          <div className="mt-20">
+            <h2 className="font-display font-bold text-2xl text-text dark:text-text-dark text-center mb-4">
+              Recognition & Awards
+            </h2>
+            <p className="text-muted text-center mb-10 max-w-2xl mx-auto">
+              Industry recognition for innovation, quality, and impact in healthcare technology.
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              {[
+                {
+                  icon: Award,
+                  title: 'Top Rated Healthcare AI Platform 2026',
+                  badge: 'Peer-Reviewed',
+                  color: 'border-t-amber-500',
+                  bg: 'bg-amber-500/10',
+                  iconColor: 'text-amber-500',
+                },
+                {
+                  icon: Star,
+                  title: 'Best-in-KLAS Equivalent',
+                  badge: 'Category Leader',
+                  color: 'border-t-violet-500',
+                  bg: 'bg-violet-500/10',
+                  iconColor: 'text-violet-500',
+                },
+                {
+                  icon: Heart,
+                  title: 'NABH Digital Health Accredited',
+                  badge: 'Certified',
+                  color: 'border-t-teal-500',
+                  bg: 'bg-teal-500/10',
+                  iconColor: 'text-teal-500',
+                },
+                {
+                  icon: BadgeCheck,
+                  title: 'ABDM Compliant',
+                  badge: 'Verified',
+                  color: 'border-t-blue-500',
+                  bg: 'bg-blue-500/10',
+                  iconColor: 'text-blue-500',
+                },
+              ].map(award => (
+                <div key={award.title} className={`p-6 rounded-xl bg-white dark:bg-surface-dark border border-border dark:border-border-dark border-t-4 ${award.color} text-center`}>
+                  <div className={`w-14 h-14 rounded-2xl ${award.bg} flex items-center justify-center mx-auto mb-4`}>
+                    <award.icon className={`w-7 h-7 ${award.iconColor}`} />
+                  </div>
+                  <h4 className="font-display font-semibold text-sm text-text dark:text-text-dark mb-2">{award.title}</h4>
+                  <span className={`px-2.5 py-0.5 rounded-full ${award.bg} ${award.iconColor} text-xs font-semibold`}>
+                    {award.badge}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-6 text-center">
+              <p className="text-xs text-muted">
+                Ratings based on client satisfaction surveys, platform performance metrics, and independent healthcare IT assessments.
+              </p>
             </div>
           </div>
         </div>
