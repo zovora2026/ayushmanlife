@@ -71,7 +71,7 @@ export default function Sidebar() {
   return (
     <aside className={cn(
       'fixed left-0 top-0 h-screen bg-white dark:bg-slate-900 border-r border-border dark:border-border-dark z-40 transition-all duration-300 flex flex-col',
-      sidebarCollapsed ? 'w-16' : 'w-64'
+      sidebarCollapsed ? 'w-64 md:w-16' : 'w-64'
     )}>
       <div className="h-1 gradient-primary" />
 
@@ -79,8 +79,12 @@ export default function Sidebar() {
         <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shrink-0">
           <Heart className="w-5 h-5 text-white" />
         </div>
-        {!sidebarCollapsed && (
+        {!sidebarCollapsed ? (
           <span className="font-display font-bold text-lg text-text dark:text-text-dark">
+            Ayushman<span className="text-secondary">Life</span>
+          </span>
+        ) : (
+          <span className="font-display font-bold text-lg text-text dark:text-text-dark md:hidden">
             Ayushman<span className="text-secondary">Life</span>
           </span>
         )}
@@ -89,8 +93,12 @@ export default function Sidebar() {
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4">
         {navGroups.map((group) => (
           <div key={group.label}>
-            {!sidebarCollapsed && (
+            {!sidebarCollapsed ? (
               <p className="px-3 mb-1.5 text-[10px] font-semibold tracking-wider text-muted uppercase">
+                {group.label}
+              </p>
+            ) : (
+              <p className="px-3 mb-1.5 text-[10px] font-semibold tracking-wider text-muted uppercase md:hidden">
                 {group.label}
               </p>
             )}
@@ -111,7 +119,11 @@ export default function Sidebar() {
                     )}
                   >
                     <Icon className="w-5 h-5 shrink-0" />
-                    {!sidebarCollapsed && <span>{item.label}</span>}
+                    {!sidebarCollapsed ? (
+                      <span>{item.label}</span>
+                    ) : (
+                      <span className="md:hidden">{item.label}</span>
+                    )}
                   </Link>
                 )
               })}
@@ -123,12 +135,27 @@ export default function Sidebar() {
       {user && (
         <div className={cn(
           'border-t border-border dark:border-border-dark p-3',
-          sidebarCollapsed ? 'flex justify-center' : ''
+          sidebarCollapsed ? 'md:flex md:justify-center' : ''
         )}>
           {sidebarCollapsed ? (
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold">
-              {user.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-            </div>
+            <>
+              {/* Collapsed: icon-only on desktop, full profile on mobile */}
+              <div className="hidden md:flex w-8 h-8 rounded-full bg-primary/10 items-center justify-center text-primary text-xs font-bold">
+                {user.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+              </div>
+              <div className="flex items-center gap-3 md:hidden">
+                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold shrink-0">
+                  {user.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-text dark:text-text-dark truncate">{user.name}</p>
+                  <p className="text-xs text-muted truncate">{user.role}</p>
+                </div>
+                <button onClick={logout} className="p-1.5 rounded-lg text-muted hover:text-error hover:bg-error/10 transition-colors" title="Logout">
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            </>
           ) : (
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold shrink-0">
@@ -148,7 +175,7 @@ export default function Sidebar() {
 
       <button
         onClick={toggleSidebarCollapse}
-        className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-border dark:border-border-dark flex items-center justify-center text-muted hover:text-text dark:hover:text-text-dark shadow-sm transition-colors"
+        className="absolute -right-3 top-20 w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-border dark:border-border-dark hidden md:flex items-center justify-center text-muted hover:text-text dark:hover:text-text-dark shadow-sm transition-colors"
       >
         {sidebarCollapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
       </button>

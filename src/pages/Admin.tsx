@@ -552,6 +552,7 @@ export default function Admin() {
             </h2>
             <span className="text-sm text-muted">{users.length} users</span>
           </div>
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 dark:bg-slate-800">
@@ -575,6 +576,7 @@ export default function Admin() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
@@ -597,7 +599,7 @@ export default function Admin() {
               </div>
             ))}
           </div>
-          <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark overflow-hidden">
+          <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="bg-gray-50 dark:bg-slate-800">
                 {['Compliance Item', 'Status', 'Due Date', 'Score'].map(h => (

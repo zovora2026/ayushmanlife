@@ -148,7 +148,7 @@ export default function Dashboard() {
       </div>
 
       {/* Operational Status Strip */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
         {[
           { label: 'Bed Occupancy', value: '82%', sub: '328 / 400 beds', color: 'text-warning' },
           { label: 'ER Wait Time', value: '14 min', sub: 'Avg today', color: 'text-success' },

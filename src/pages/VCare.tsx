@@ -371,8 +371,8 @@ export default function VCare() {
   }
 
   return (
-    <div className="flex gap-4" style={{ height: 'calc(100vh - 8rem)' }}>
-      <div className="flex w-3/5 flex-col rounded-xl border border-border bg-white shadow-sm dark:border-border-dark dark:bg-surface-dark">
+    <div className="flex flex-col lg:flex-row gap-4" style={{ height: 'auto', minHeight: 'calc(100vh - 8rem)' }}>
+      <div className="flex w-full lg:w-3/5 flex-col rounded-xl border border-border bg-white shadow-sm dark:border-border-dark dark:bg-surface-dark" style={{ minHeight: '60vh' }}>
         <div className="flex items-center justify-between border-b border-border px-5 py-3.5 dark:border-border-dark">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
@@ -446,7 +446,7 @@ export default function VCare() {
         </div>
       </div>
 
-      <div className="flex w-2/5 flex-col gap-4 overflow-y-auto">
+      <div className="flex w-full lg:w-2/5 flex-col gap-4 overflow-y-auto">
         <Card header={<h3 className="font-display font-semibold text-text dark:text-text-dark">Patient Profile</h3>}>
           <div className="flex items-center gap-4">
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-display font-bold text-lg">RK</div>

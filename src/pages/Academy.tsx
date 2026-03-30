@@ -285,7 +285,7 @@ export default function Academy() {
             <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
             <p className="text-sm text-warning">3 certifications expiring within 60 days — review and schedule renewals</p>
           </div>
-          <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark overflow-hidden">
+          <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border dark:border-border-dark bg-gray-50 dark:bg-slate-800">
@@ -394,7 +394,7 @@ export default function Academy() {
               </div>
             ))}
           </div>
-          <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark overflow-hidden">
+          <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark overflow-x-auto">
             <div className="p-5 border-b border-border dark:border-border-dark">
               <h3 className="font-display font-semibold text-text dark:text-text-dark">Go-Live Readiness Tracker</h3>
             </div>

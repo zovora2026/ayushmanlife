@@ -532,6 +532,46 @@ export default function Payer() {
               </div>
             </Card>
           </div>
+
+          {/* Cloud Migration & Modernization for Insurance */}
+          <Card header={<h3 className="font-display font-semibold text-text dark:text-text-dark">Insurance Cloud Migration Status</h3>}>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              {[
+                { label: 'Systems Migrated', value: '14/18', color: 'text-primary' },
+                { label: 'Data Migrated', value: '4.2 TB', color: 'text-teal-500' },
+                { label: 'Cloud Savings', value: '38%', color: 'text-success' },
+                { label: 'Migration Health', value: '96%', color: 'text-violet-500' },
+              ].map(s => (
+                <div key={s.label} className="p-3 rounded-lg bg-gray-50 dark:bg-slate-800 text-center">
+                  <p className={cn('font-display font-bold text-lg', s.color)}>{s.value}</p>
+                  <p className="text-[10px] text-muted">{s.label}</p>
+                </div>
+              ))}
+            </div>
+            <div className="space-y-2">
+              {[
+                { system: 'Claims Processing Engine', status: 'Migrated', cloud: 'AWS', date: 'Jan 2026' },
+                { system: 'Policy Administration', status: 'Migrated', cloud: 'AWS', date: 'Feb 2026' },
+                { system: 'Underwriting Platform', status: 'In Progress', cloud: 'Azure', date: 'Apr 2026' },
+                { system: 'Fraud Analytics', status: 'Migrated', cloud: 'AWS', date: 'Dec 2025' },
+                { system: 'TPA Integration Layer', status: 'Planned', cloud: 'AWS', date: 'May 2026' },
+              ].map((s, i) => (
+                <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg bg-gray-50 dark:bg-slate-800">
+                  <span className={cn('w-2 h-2 rounded-full shrink-0',
+                    s.status === 'Migrated' ? 'bg-success' : s.status === 'In Progress' ? 'bg-warning' : 'bg-gray-300'
+                  )} />
+                  <p className="flex-1 text-xs font-medium text-text dark:text-text-dark">{s.system}</p>
+                  <span className="text-[10px] text-muted">{s.cloud}</span>
+                  <span className={cn('px-1.5 py-0.5 rounded-full text-[10px] font-medium',
+                    s.status === 'Migrated' ? 'bg-success/10 text-success' :
+                    s.status === 'In Progress' ? 'bg-warning/10 text-warning' :
+                    'bg-gray-100 text-gray-500 dark:bg-slate-700 dark:text-gray-400'
+                  )}>{s.status}</span>
+                  <span className="text-[10px] text-muted">{s.date}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
         </div>
       )}
 

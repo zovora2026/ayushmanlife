@@ -1,4 +1,4 @@
-import { Database, Shield, FileText, CheckCircle, AlertTriangle, BarChart3, Lock, Eye, ArrowRight, UserCheck, RefreshCw } from 'lucide-react'
+import { Database, Shield, FileText, CheckCircle, AlertTriangle, BarChart3, Lock, Eye, ArrowRight, UserCheck, RefreshCw, Layers, Zap, TrendingUp } from 'lucide-react'
 import { cn } from '../lib/utils'
 
 const qualityScores = [
@@ -205,6 +205,83 @@ export default function DataGovernance() {
               <div className="text-right shrink-0">
                 <p className="text-sm font-bold text-primary">{c.consent}</p>
                 <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-success/10 text-success">DPDP {c.dpdp}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Data Modernization */}
+      <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-5">
+        <h2 className="font-display font-semibold text-text dark:text-text-dark mb-4 flex items-center gap-2">
+          <Layers className="w-5 h-5 text-primary" /> Data Modernization
+        </h2>
+        <p className="text-xs text-muted mb-4">Modern data stack powering real-time healthcare analytics and AI</p>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+          {[
+            { label: 'Records Migrated', value: '8.4M', icon: Database, color: 'text-primary' },
+            { label: 'Data Quality Score', value: '96.2%', icon: CheckCircle, color: 'text-success' },
+            { label: 'Migration Success', value: '99.8%', icon: TrendingUp, color: 'text-teal-500' },
+            { label: 'Downtime Incidents', value: '0', icon: Zap, color: 'text-amber-500' },
+          ].map(s => (
+            <div key={s.label} className="p-3 rounded-lg bg-gray-50 dark:bg-slate-800 text-center">
+              <s.icon className={cn('w-5 h-5 mx-auto mb-1', s.color)} />
+              <p className={cn('font-display font-bold text-xl', s.color)}>{s.value}</p>
+              <p className="text-xs text-muted mt-1">{s.label}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-2 p-4 rounded-lg bg-gray-50 dark:bg-slate-800 text-xs overflow-x-auto">
+          <div className="flex flex-col gap-1 shrink-0">
+            {['HIS/EMR', 'Lab Systems', 'Claims Engine', 'Wearables'].map(s => (
+              <span key={s} className="px-2 py-1 rounded bg-primary/10 text-primary font-medium">{s}</span>
+            ))}
+          </div>
+          <ArrowRight className="w-4 h-4 text-muted shrink-0" />
+          <div className="flex flex-col gap-1 shrink-0">
+            <span className="px-2 py-1 rounded bg-violet-500/10 text-violet-600 font-medium">ETL/ELT Pipeline</span>
+            <span className="px-2 py-1 rounded bg-violet-500/10 text-violet-600 font-medium">FHIR Transformation</span>
+          </div>
+          <ArrowRight className="w-4 h-4 text-muted shrink-0" />
+          <div className="shrink-0">
+            <span className="px-2 py-1 rounded bg-teal-500/10 text-teal-600 font-medium">Healthcare Data Lake</span>
+          </div>
+          <ArrowRight className="w-4 h-4 text-muted shrink-0" />
+          <div className="flex flex-col gap-1 shrink-0">
+            {['BI Dashboards', 'AI/ML Models', 'Risk Analytics', 'Payer Gateway'].map(d => (
+              <span key={d} className="px-2 py-1 rounded bg-success/10 text-success font-medium">{d}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Real-Time Analytics Engine */}
+      <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-5">
+        <h2 className="font-display font-semibold text-text dark:text-text-dark mb-4 flex items-center gap-2">
+          <BarChart3 className="w-5 h-5 text-primary" /> Analytics Engine Status
+        </h2>
+        <div className="space-y-3">
+          {[
+            { pipeline: 'Patient Risk Scoring', latency: '< 200ms', throughput: '12K events/min', status: 'Active', accuracy: '94.2%' },
+            { pipeline: 'Claims Fraud Detection', latency: '< 500ms', throughput: '5K claims/hr', status: 'Active', accuracy: '97.1%' },
+            { pipeline: 'Churn Prediction', latency: '< 1s', throughput: '2K patients/hr', status: 'Active', accuracy: '89.6%' },
+            { pipeline: 'Revenue Forecasting', latency: '< 2s', throughput: 'Batch (daily)', status: 'Active', accuracy: '91.3%' },
+            { pipeline: 'Operational Efficiency', latency: '< 300ms', throughput: '8K events/min', status: 'Active', accuracy: '96.8%' },
+          ].map(p => (
+            <div key={p.pipeline} className="flex items-center gap-4 p-3 rounded-lg bg-gray-50 dark:bg-slate-800">
+              <span className="w-2 h-2 rounded-full bg-success shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-text dark:text-text-dark">{p.pipeline}</p>
+                <div className="flex gap-4 text-xs text-muted mt-0.5">
+                  <span>Latency: {p.latency}</span>
+                  <span>Throughput: {p.throughput}</span>
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-sm font-bold text-primary">{p.accuracy}</p>
+                <p className="text-[10px] text-muted">accuracy</p>
               </div>
             </div>
           ))}
