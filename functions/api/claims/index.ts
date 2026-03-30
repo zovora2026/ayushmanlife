@@ -233,9 +233,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
           params.push(date_to + 'T23:59:59Z');
         }
         if (search) {
-          conditions.push('(c.claim_number LIKE ? OR c.diagnosis LIKE ?)');
+          conditions.push('(c.claim_number LIKE ? OR c.diagnosis LIKE ? OR p.name LIKE ?)');
           const searchTerm = `%${search}%`;
-          params.push(searchTerm, searchTerm);
+          params.push(searchTerm, searchTerm, searchTerm);
         }
 
         const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -243,13 +243,15 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
 
         // Count total
         const countResult = await context.env.DB.prepare(
-          `SELECT COUNT(*) as total FROM claims c ${whereClause}`
+          `SELECT COUNT(*) as total FROM claims c LEFT JOIN patients p ON c.patient_id = p.id ${whereClause}`
         ).bind(...params).first<{ total: number }>();
         const total = countResult?.total ?? 0;
 
-        // Fetch page
+        // Fetch page with patient name via JOIN
         const { results } = await context.env.DB.prepare(
-          `SELECT c.* FROM claims c ${whereClause} ORDER BY c.created_at DESC LIMIT ? OFFSET ?`
+          `SELECT c.*, p.name as patient_name FROM claims c
+           LEFT JOIN patients p ON c.patient_id = p.id
+           ${whereClause} ORDER BY c.created_at DESC LIMIT ? OFFSET ?`
         ).bind(...params, limit, offset).all();
 
         return json({ claims: results || [], total, page, limit });
