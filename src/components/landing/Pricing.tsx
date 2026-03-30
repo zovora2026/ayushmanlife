@@ -64,26 +64,26 @@ const plans = [
 
 export default function Pricing() {
   return (
-    <section className="py-24 bg-gray-50 dark:bg-slate-800/50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="py-16 md:py-20 bg-gray-50 dark:bg-slate-800/50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="font-display font-bold text-3xl sm:text-4xl text-text dark:text-text-dark mb-4">
+          <h2 className="font-display font-bold text-3xl md:text-4xl text-text dark:text-text-dark mb-4 tracking-tight">
             Simple, Transparent Pricing
           </h2>
-          <p className="text-lg text-muted">
+          <p className="text-lg text-muted leading-relaxed">
             Start free, scale as you grow. No hidden fees.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
           {plans.map((plan) => (
             <div
               key={plan.name}
               className={cn(
-                'relative rounded-2xl p-8 transition-all',
+                'relative rounded-2xl p-8 flex flex-col',
                 plan.popular
-                  ? 'bg-white dark:bg-surface-dark border-2 border-primary shadow-xl scale-105'
-                  : 'bg-white dark:bg-surface-dark border border-border dark:border-border-dark hover:shadow-lg'
+                  ? 'bg-white dark:bg-surface-dark border-2 border-primary shadow-xl md:scale-105'
+                  : 'bg-white dark:bg-surface-dark border border-border dark:border-border-dark shadow-sm hover:shadow-md transition-shadow'
               )}
             >
               {plan.popular && (
@@ -110,7 +110,7 @@ export default function Pricing() {
                 {plan.cta}
               </Link>
 
-              <ul className="space-y-3">
+              <ul className="space-y-3 flex-1">
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex items-start gap-2 text-sm text-muted">
                     <Check className="w-4 h-4 text-success shrink-0 mt-0.5" />

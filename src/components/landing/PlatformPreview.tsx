@@ -35,14 +35,14 @@ function DashboardPreview() {
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="bg-white dark:bg-slate-700 rounded-lg p-3 border border-gray-100 dark:border-slate-600">
           <p className="text-xs font-semibold text-text dark:text-text-dark mb-2">Recent Activity</p>
           {['Claim CLM-0048 submitted', 'Patient Meera Reddy checked in', 'Dr. Kumar approved referral', 'Lab results uploaded'].map((a, i) => (
             <div key={i} className="flex items-center gap-2 py-1.5 border-b border-gray-50 dark:border-slate-600 last:border-0">
-              <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-              <p className="text-[10px] text-muted">{a}</p>
-              <span className="text-[9px] text-muted ml-auto">{(i + 1) * 5}m</span>
+              <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+              <p className="text-[10px] text-muted truncate">{a}</p>
+              <span className="text-[9px] text-muted ml-auto shrink-0">{(i + 1) * 5}m</span>
             </div>
           ))}
         </div>
@@ -56,11 +56,11 @@ function DashboardPreview() {
               { status: 'Paid', count: 156, color: 'bg-primary' },
             ].map((s) => (
               <div key={s.status} className="flex items-center gap-2">
-                <span className="text-[10px] text-muted w-20">{s.status}</span>
+                <span className="text-[10px] text-muted w-20 shrink-0">{s.status}</span>
                 <div className="flex-1 h-2 bg-gray-100 dark:bg-slate-600 rounded-full overflow-hidden">
                   <div className={cn('h-full rounded-full', s.color)} style={{ width: `${(s.count / 156) * 100}%` }} />
                 </div>
-                <span className="text-[10px] font-semibold text-text dark:text-text-dark w-8 text-right">{s.count}</span>
+                <span className="text-[10px] font-semibold text-text dark:text-text-dark w-8 text-right shrink-0">{s.count}</span>
               </div>
             ))}
           </div>
@@ -97,7 +97,7 @@ function VCarePreview() {
           </div>
         </div>
         <div className="p-2 border-t border-gray-100 dark:border-slate-600">
-          <div className="flex gap-1">
+          <div className="flex gap-1 flex-wrap">
             {['Book Appointment', 'Check Symptoms', 'Medications'].map((c) => (
               <span key={c} className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[8px]">{c}</span>
             ))}
@@ -128,7 +128,7 @@ function VCarePreview() {
 function ClaimsPreview() {
   return (
     <div className="space-y-3">
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         {['All', 'Submitted', 'Under Review', 'Approved', 'Rejected'].map((f, i) => (
           <span key={f} className={cn(
             'px-2 py-0.5 rounded-full text-[10px] font-medium',
@@ -136,12 +136,12 @@ function ClaimsPreview() {
           )}>{f}</span>
         ))}
       </div>
-      <div className="bg-white dark:bg-slate-700 rounded-lg border border-gray-100 dark:border-slate-600">
+      <div className="bg-white dark:bg-slate-700 rounded-lg border border-gray-100 dark:border-slate-600 overflow-x-auto">
         <table className="w-full text-[10px]">
           <thead>
             <tr className="border-b border-gray-100 dark:border-slate-600">
               {['Claim ID', 'Patient', 'Amount', 'Payer', 'Status'].map(h => (
-                <th key={h} className="text-left p-2 font-semibold text-muted">{h}</th>
+                <th key={h} className="text-left p-2 font-semibold text-muted whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
@@ -153,12 +153,12 @@ function ClaimsPreview() {
               { id: 'CLM-0045', patient: 'Meera Reddy', amount: '₹78,000', payer: 'HDFC ERGO', status: 'Paid', color: 'text-primary bg-primary/10' },
             ].map((c) => (
               <tr key={c.id} className="border-b border-gray-50 dark:border-slate-600 last:border-0">
-                <td className="p-2 font-semibold text-text dark:text-text-dark">{c.id}</td>
-                <td className="p-2 text-text dark:text-text-dark">{c.patient}</td>
-                <td className="p-2 font-semibold text-text dark:text-text-dark">{c.amount}</td>
-                <td className="p-2 text-muted">{c.payer}</td>
+                <td className="p-2 font-semibold text-text dark:text-text-dark whitespace-nowrap">{c.id}</td>
+                <td className="p-2 text-text dark:text-text-dark whitespace-nowrap">{c.patient}</td>
+                <td className="p-2 font-semibold text-text dark:text-text-dark whitespace-nowrap">{c.amount}</td>
+                <td className="p-2 text-muted whitespace-nowrap">{c.payer}</td>
                 <td className="p-2">
-                  <span className={cn('px-1.5 py-0.5 rounded-full text-[9px] font-medium', c.color)}>{c.status}</span>
+                  <span className={cn('px-1.5 py-0.5 rounded-full text-[9px] font-medium whitespace-nowrap', c.color)}>{c.status}</span>
                 </td>
               </tr>
             ))}
@@ -216,37 +216,39 @@ export default function PlatformPreview() {
   const Preview = previews[activeTab]
 
   return (
-    <section className="py-24 bg-gray-50 dark:bg-slate-800/50">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="py-16 md:py-20 bg-gray-50 dark:bg-slate-800/50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <h2 className="font-display font-bold text-3xl sm:text-4xl text-text dark:text-text-dark mb-4">
+          <h2 className="font-display font-bold text-3xl md:text-4xl text-text dark:text-text-dark mb-4 tracking-tight">
             See the Platform in Action
           </h2>
-          <p className="text-lg text-muted">
+          <p className="text-lg text-muted max-w-2xl mx-auto leading-relaxed">
             Interactive preview of core modules powering healthcare transformation.
           </p>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-border dark:border-border-dark overflow-hidden">
-          <div className="flex overflow-x-auto border-b border-border dark:border-border-dark">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  'flex items-center gap-2 px-4 sm:px-6 py-3.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
-                  activeTab === tab.id
-                    ? 'border-primary text-primary bg-primary/5'
-                    : 'border-transparent text-muted hover:text-text dark:hover:text-text-dark hover:bg-gray-50 dark:hover:bg-slate-700'
-                )}
-              >
-                <tab.icon className="w-4 h-4" />
-                {tab.label}
-              </button>
-            ))}
-          </div>
-          <div className="p-6 bg-gray-50 dark:bg-slate-900/50">
-            <Preview />
+        <div className="max-w-5xl mx-auto">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-border dark:border-border-dark overflow-hidden">
+            <div className="flex overflow-x-auto border-b border-border dark:border-border-dark">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={cn(
+                    'flex items-center gap-2 px-4 sm:px-6 py-3.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap',
+                    activeTab === tab.id
+                      ? 'border-primary text-primary bg-primary/5'
+                      : 'border-transparent text-muted hover:text-text dark:hover:text-text-dark hover:bg-gray-50 dark:hover:bg-slate-700'
+                  )}
+                >
+                  <tab.icon className="w-4 h-4" />
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            <div className="p-6 bg-gray-50 dark:bg-slate-900/50 min-h-[320px]">
+              <Preview />
+            </div>
           </div>
         </div>
       </div>

@@ -39,7 +39,7 @@ export default function Hero() {
         return (
           <div
             key={i}
-            className="absolute text-white/5 animate-float"
+            className="absolute text-white/5 animate-float hidden md:block"
             style={{ left: item.x, top: item.y, animationDelay: `${item.delay}s` }}
           >
             <Icon className="w-16 h-16" />
@@ -49,13 +49,13 @@ export default function Hero() {
 
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30" />
 
-      <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 text-center pt-24 pb-16">
+      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-32 md:py-40">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-white/90 text-sm mb-8 backdrop-blur-sm">
           <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
           AI-Native Healthcare Platform — Now Live
         </div>
 
-        <h1 className="font-display font-extrabold text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-white leading-tight mb-6">
+        <h1 className="font-display font-extrabold text-5xl md:text-7xl text-white leading-[1.1] tracking-tight mb-6">
           AI-Native Healthcare{' '}
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 to-blue-400">
             Platform for India
@@ -83,7 +83,7 @@ export default function Hero() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-3 gap-6 max-w-lg mx-auto mb-12">
+        <div className="flex justify-center gap-8 sm:gap-12 mb-12">
           {[
             { value: 50000, suffix: '+', label: 'Claims Processed' },
             { value: 100, suffix: '+', label: 'Hospitals' },
@@ -98,7 +98,7 @@ export default function Hero() {
           ))}
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
+        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mt-8">
           {[
             { icon: Shield, label: 'Ayushman Bharat' },
             { icon: Globe, label: 'ABDM Integrated' },

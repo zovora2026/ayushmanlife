@@ -13,12 +13,12 @@ const partners = [
 
 export default function Partners() {
   return (
-    <section className="py-16 bg-background dark:bg-background-dark">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="py-12 md:py-16 bg-background dark:bg-background-dark">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <p className="text-center text-sm text-muted mb-8">
           Works with the systems you already use
         </p>
-        <div className="grid grid-cols-4 md:grid-cols-8 gap-6">
+        <div className="flex flex-wrap justify-center items-center gap-8">
           {partners.map((p) => (
             <div key={p.name} className="flex flex-col items-center gap-2 opacity-50 hover:opacity-100 transition-opacity">
               <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center">

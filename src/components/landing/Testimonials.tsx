@@ -31,11 +31,11 @@ const testimonials = [
 
 export default function Testimonials() {
   return (
-    <section className="py-24 bg-background dark:bg-background-dark">
+    <section className="py-16 md:py-24 bg-background dark:bg-background-dark">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6 mb-20">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-20 text-center">
           {metrics.map((m) => (
-            <div key={m.label} className="text-center">
+            <div key={m.label}>
               <p className="font-display font-extrabold text-2xl sm:text-3xl text-gradient">{m.value}</p>
               <p className="text-sm text-muted mt-1">{m.label}</p>
             </div>
@@ -43,16 +43,16 @@ export default function Testimonials() {
         </div>
 
         <div className="text-center mb-12">
-          <h2 className="font-display font-bold text-3xl sm:text-4xl text-text dark:text-text-dark mb-4">
+          <h2 className="font-display font-bold text-3xl md:text-4xl text-text dark:text-text-dark mb-4 tracking-tight">
             Trusted by Healthcare Leaders
           </h2>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {testimonials.map((t) => (
             <div
               key={t.name}
-              className="p-6 rounded-xl bg-white dark:bg-surface-dark border border-border dark:border-border-dark hover:shadow-lg transition-shadow"
+              className="p-8 rounded-xl bg-white dark:bg-surface-dark border border-border dark:border-border-dark shadow-sm hover:shadow-md transition-shadow"
             >
               <Quote className="w-8 h-8 text-primary/20 mb-4" />
               <p className="text-sm text-muted leading-relaxed mb-6">

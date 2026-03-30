@@ -69,33 +69,34 @@ const features = [
 
 export default function Features() {
   return (
-    <section className="py-24 bg-background dark:bg-background-dark">
+    <section className="py-16 md:py-24 bg-background dark:bg-background-dark">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="font-display font-bold text-3xl sm:text-4xl text-text dark:text-text-dark mb-4">
+          <h2 className="font-display font-bold text-3xl md:text-4xl text-text dark:text-text-dark mb-4 tracking-tight">
             One Platform. Complete Healthcare Transformation.
           </h2>
-          <p className="text-lg text-muted max-w-2xl mx-auto">
+          <p className="text-lg text-muted max-w-2xl mx-auto leading-relaxed">
             Everything you need to run a modern healthcare enterprise — from AI-powered patient care to insurance operations and workforce management.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
           {features.map((feature) => (
             <div
               key={feature.title}
               className={cn(
                 'group p-6 rounded-xl bg-white dark:bg-surface-dark border border-border dark:border-border-dark',
-                'hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer'
+                'shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 cursor-pointer',
+                'flex flex-col min-h-[240px]'
               )}
             >
-              <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center mb-4', feature.color)}>
+              <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center mb-4 shrink-0', feature.color)}>
                 <feature.icon className="w-6 h-6" />
               </div>
               <h3 className="font-display font-semibold text-text dark:text-text-dark mb-2">
                 {feature.title}
               </h3>
-              <p className="text-sm text-muted leading-relaxed">
+              <p className="text-sm text-muted leading-relaxed flex-1">
                 {feature.description}
               </p>
               <p className="mt-3 text-sm font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">

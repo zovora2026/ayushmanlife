@@ -64,18 +64,18 @@ export default function ServiceStack() {
   const [openIndex, setOpenIndex] = useState(0)
 
   return (
-    <section className="py-24 bg-background dark:bg-background-dark">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="py-16 md:py-24 bg-background dark:bg-background-dark">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <h2 className="font-display font-bold text-3xl sm:text-4xl text-text dark:text-text-dark mb-4">
+          <h2 className="font-display font-bold text-3xl md:text-4xl text-text dark:text-text-dark mb-4 tracking-tight">
             Enterprise-Grade Healthcare IT Services
           </h2>
-          <p className="text-lg text-muted">
+          <p className="text-lg text-muted leading-relaxed max-w-2xl mx-auto">
             Comprehensive service stack covering every aspect of healthcare technology transformation.
           </p>
         </div>
 
-        <div className="space-y-3">
+        <div className="max-w-4xl mx-auto space-y-3">
           {services.map((service, i) => {
             const isOpen = openIndex === i
             return (
@@ -102,12 +102,12 @@ export default function ServiceStack() {
                     {service.title}
                   </span>
                   <ChevronDown className={cn(
-                    'w-5 h-5 text-muted transition-transform',
+                    'w-5 h-5 text-muted transition-transform shrink-0',
                     isOpen && 'rotate-180'
                   )} />
                 </button>
                 {isOpen && (
-                  <div className="px-5 pb-5 pl-19">
+                  <div className="px-5 pb-5">
                     <ul className="space-y-2 ml-14">
                       {service.items.map((item) => (
                         <li key={item} className="flex items-start gap-2 text-sm text-muted">
