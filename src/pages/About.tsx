@@ -1,6 +1,6 @@
 import Navbar from '../components/layout/Navbar'
 import Footer from '../components/layout/Footer'
-import { Heart, Target, Lightbulb, Users, Award, Globe, Zap } from 'lucide-react'
+import { Heart, Target, Lightbulb, Users, Award, Globe, Zap, Shield, Star, Trophy, CheckCircle } from 'lucide-react'
 
 const team = [
   { name: 'Ayush Sharma', role: 'Founder & CEO', bio: 'Former McKinsey healthcare practice, IIT Delhi + ISB alum.' },
@@ -90,6 +90,53 @@ export default function About() {
                   <v.icon className="w-8 h-8 text-primary mb-3" />
                   <h3 className="font-display font-semibold text-text dark:text-text-dark mb-2">{v.title}</h3>
                   <p className="text-sm text-muted">{v.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Awards & Recognition */}
+          <div className="mb-20">
+            <h2 className="font-display font-bold text-2xl text-text dark:text-text-dark text-center mb-3">Awards & Recognition</h2>
+            <p className="text-center text-muted text-sm mb-10">Industry recognition for healthcare IT innovation</p>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                { icon: Trophy, title: 'NASSCOM Best Healthcare AI', year: '2026', desc: 'AI Innovation Award for V-Care virtual health platform' },
+                { icon: Star, title: 'Inc42 Top 10 HealthTech', year: '2026', desc: 'Recognized among India\'s most promising health technology startups' },
+                { icon: Shield, title: 'ABDM Certified Partner', year: '2025', desc: 'Official Ayushman Bharat Digital Mission integration partner' },
+                { icon: CheckCircle, title: 'SOC 2 Type II', year: '2025', desc: 'Enterprise-grade security and compliance certification' },
+              ].map(a => (
+                <div key={a.title} className="p-5 rounded-xl bg-white dark:bg-surface-dark border border-border dark:border-border-dark text-center hover:shadow-md transition-shadow">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mx-auto mb-3">
+                    <a.icon className="w-6 h-6" />
+                  </div>
+                  <h3 className="font-display font-semibold text-text dark:text-text-dark text-sm">{a.title}</h3>
+                  <p className="text-xs text-primary font-medium mt-1">{a.year}</p>
+                  <p className="text-xs text-muted mt-2">{a.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Key Partnerships */}
+          <div className="mb-20">
+            <h2 className="font-display font-bold text-2xl text-text dark:text-text-dark text-center mb-3">Technology Partnerships</h2>
+            <p className="text-center text-muted text-sm mb-10">Working with the world&apos;s leading healthcare IT ecosystems</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {[
+                { name: 'Amazon Web Services', badge: 'GenAI Competency', status: 'Advanced Partner' },
+                { name: 'Microsoft Azure', badge: 'Health AI', status: 'Gold Partner' },
+                { name: 'ServiceNow', badge: 'Healthcare Workflows', status: 'Elite Partner' },
+                { name: 'ABDM / NHA', badge: 'Digital Health', status: 'Certified Integrator' },
+                { name: 'Epic Systems', badge: 'EMR Implementation', status: 'Consulting Partner' },
+                { name: 'Oracle Health', badge: 'Cerner Millennium', status: 'Implementation Partner' },
+                { name: 'Google Cloud', badge: 'Healthcare API', status: 'Technology Partner' },
+                { name: 'Workday', badge: 'HCM & Finance', status: 'Services Partner' },
+              ].map(p => (
+                <div key={p.name} className="p-4 rounded-xl bg-gray-50 dark:bg-surface-dark border border-border dark:border-border-dark text-center">
+                  <p className="font-display font-semibold text-sm text-text dark:text-text-dark">{p.name}</p>
+                  <p className="text-xs text-primary font-medium mt-1">{p.badge}</p>
+                  <p className="text-[10px] text-muted mt-0.5">{p.status}</p>
                 </div>
               ))}
             </div>

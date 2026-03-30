@@ -19,6 +19,9 @@ import {
   HeartPulse,
   CircleDot,
   RefreshCw,
+  Bot,
+  Tag,
+  CheckCircle,
 } from 'lucide-react'
 import { cn, formatDate } from '../lib/utils'
 import { tickets as ticketsAPI } from '../lib/api'
@@ -202,6 +205,59 @@ const KB_ARTICLES = [
   { id: 7, title: 'Network Printer Configuration', category: 'Infrastructure', description: 'Adding and configuring network printers across hospital wings and departments.', updated: '2026-03-10', views: 412 },
   { id: 8, title: 'New Employee IT Onboarding Checklist', category: 'General', description: 'Complete checklist for IT account provisioning, access setup, and device issuance.', updated: '2026-03-08', views: 589 },
 ]
+
+// ── AI Triage Data ───────────────────────────────────────────────────────────
+
+interface AITriageAction {
+  ticketId: string
+  description: string
+  type: 'auto-resolve' | 'classify' | 'escalate'
+  timeAgo: string
+}
+
+const AI_TRIAGE_ACTIONS: AITriageAction[] = [
+  {
+    ticketId: 'TKT-2026-0089',
+    description: 'Auto-classified as P3 (Network Latency) \u2192 Assigned to Infra Team',
+    type: 'classify',
+    timeAgo: '2 min ago',
+  },
+  {
+    ticketId: 'TKT-2026-0088',
+    description: 'Auto-resolved via KB Article #247 (Password Reset)',
+    type: 'auto-resolve',
+    timeAgo: '5 min ago',
+  },
+  {
+    ticketId: 'TKT-2026-0087',
+    description: 'Escalated to P1 (EMR System Down) \u2192 Paged On-Call Engineer',
+    type: 'escalate',
+    timeAgo: '8 min ago',
+  },
+  {
+    ticketId: 'TKT-2026-0086',
+    description: 'Auto-classified as P4 (Report Request) \u2192 Queued',
+    type: 'classify',
+    timeAgo: '12 min ago',
+  },
+  {
+    ticketId: 'TKT-2026-0085',
+    description: 'Auto-resolved via KB Article #189 (VPN Setup)',
+    type: 'auto-resolve',
+    timeAgo: '15 min ago',
+  },
+]
+
+function getTriageIcon(type: AITriageAction['type']) {
+  switch (type) {
+    case 'auto-resolve':
+      return <CheckCircle className="h-4 w-4 text-success" />
+    case 'classify':
+      return <Tag className="h-4 w-4 text-accent" />
+    case 'escalate':
+      return <AlertTriangle className="h-4 w-4 text-error" />
+  }
+}
 
 // ── Insurance Operations Data ─────────────────────────────────────────────────
 
@@ -538,6 +594,74 @@ export default function Services() {
       {/* ── Ticket List ───────────────────────────────────────────── */}
       {activeTab === 'tickets' && (
         <div className="space-y-4">
+          {/* AI Triage Status Banner */}
+          <Card className="border-success/30 bg-success/5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-success/10 text-success">
+                  <Bot className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">AI Triage Active</h3>
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-success" />
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Processing 24x7 &mdash; <span className="font-semibold text-gray-700 dark:text-gray-300">847</span> tickets auto-triaged today
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 text-sm">
+                <div className="text-center">
+                  <p className="font-bold text-gray-900 dark:text-gray-100">1.2s</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Avg Classification</p>
+                </div>
+                <div className="h-8 w-px bg-gray-200 dark:bg-white/10" />
+                <div className="text-center">
+                  <p className="font-bold text-gray-900 dark:text-gray-100">96.4%</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Accuracy</p>
+                </div>
+                <div className="h-8 w-px bg-gray-200 dark:bg-white/10" />
+                <div className="text-center">
+                  <p className="font-bold text-gray-900 dark:text-gray-100">34%</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Auto-resolved</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Recent AI Triage Actions */}
+          <Card
+            header={
+              <div className="flex items-center gap-2">
+                <Zap className="h-4 w-4 text-primary" />
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100">Recent AI Triage Actions</h3>
+              </div>
+            }
+          >
+            <div className="space-y-3">
+              {AI_TRIAGE_ACTIONS.map((action) => (
+                <div
+                  key={action.ticketId}
+                  className="flex items-start gap-3 rounded-lg border border-border bg-gray-50 px-3 py-2.5 dark:border-border-dark dark:bg-white/[0.02]"
+                >
+                  <div className="mt-0.5 shrink-0">{getTriageIcon(action.type)}</div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm text-gray-900 dark:text-gray-100">
+                      <span className="font-mono font-medium text-primary">{action.ticketId}</span>
+                      {': '}
+                      {action.description}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-xs text-gray-400 dark:text-gray-500">{action.timeAgo}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-2">
               {FILTER_OPTIONS.map((f) => (

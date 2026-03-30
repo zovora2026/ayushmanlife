@@ -3,7 +3,8 @@ import Footer from '../components/layout/Footer'
 import { Link } from 'react-router-dom'
 import {
   Layers, Cloud, Shield, Cpu, Database, Globe, Zap, ArrowRight,
-  CheckCircle, Server, Lock, RefreshCw,
+  CheckCircle, Server, Lock, RefreshCw, Settings, BarChart3,
+  Monitor, TrendingUp, Users, FileText, Activity, Workflow, Star,
 } from 'lucide-react'
 
 const architecture = [
@@ -210,6 +211,168 @@ export default function Platform() {
                 >
                   <Cloud className="w-8 h-8 text-primary" />
                   <span className="text-sm font-medium text-text dark:text-text-dark">{partner.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* EMR/EHR Optimization */}
+          <div className="mt-20">
+            <h2 className="font-display font-bold text-2xl text-text dark:text-text-dark text-center mb-4">
+              EMR/EHR Optimization
+            </h2>
+            <p className="text-muted text-center mb-12 max-w-3xl mx-auto">
+              Maximize the value of your EMR/EHR investment with AI-driven optimization — equivalent to
+              Epic Refuel and Oracle Health Performance services.
+            </p>
+
+            {/* Optimization Dashboard Preview */}
+            <div className="mb-12 p-6 rounded-2xl bg-white dark:bg-surface-dark border border-border dark:border-border-dark">
+              <h3 className="font-display font-semibold text-lg text-text dark:text-text-dark mb-6 flex items-center gap-2">
+                <Monitor className="w-5 h-5 text-primary" />
+                Optimization Dashboard Preview
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {/* System Utilization */}
+                <div className="p-4 rounded-xl bg-gray-50 dark:bg-slate-800 border border-border dark:border-border-dark">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Activity className="w-4 h-4 text-blue-500" />
+                    <span className="text-xs font-medium text-muted">System Utilization</span>
+                  </div>
+                  <p className="font-display font-bold text-2xl text-text dark:text-text-dark mb-1">73%</p>
+                  <div className="w-full h-2 rounded-full bg-gray-200 dark:bg-slate-700 mb-1">
+                    <div className="h-2 rounded-full bg-blue-500" style={{ width: '73%' }} />
+                  </div>
+                  <p className="text-xs text-muted">Target: 90%</p>
+                </div>
+
+                {/* Unused Features */}
+                <div className="p-4 rounded-xl bg-gray-50 dark:bg-slate-800 border border-border dark:border-border-dark">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Settings className="w-4 h-4 text-amber-500" />
+                    <span className="text-xs font-medium text-muted">Unused Features</span>
+                  </div>
+                  <p className="font-display font-bold text-2xl text-text dark:text-text-dark mb-1">127</p>
+                  <p className="text-xs text-muted mb-1">identified</p>
+                  <span className="text-xs font-medium text-primary cursor-pointer hover:underline">View Report</span>
+                </div>
+
+                {/* Workflow Efficiency */}
+                <div className="p-4 rounded-xl bg-gray-50 dark:bg-slate-800 border border-border dark:border-border-dark">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TrendingUp className="w-4 h-4 text-teal-500" />
+                    <span className="text-xs font-medium text-muted">Workflow Efficiency</span>
+                  </div>
+                  <p className="font-display font-bold text-2xl text-teal-500 mb-1">+28%</p>
+                  <p className="text-xs text-muted">improvement</p>
+                </div>
+
+                {/* User Satisfaction */}
+                <div className="p-4 rounded-xl bg-gray-50 dark:bg-slate-800 border border-border dark:border-border-dark">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Star className="w-4 h-4 text-amber-400" />
+                    <span className="text-xs font-medium text-muted">User Satisfaction</span>
+                  </div>
+                  <p className="font-display font-bold text-2xl text-text dark:text-text-dark mb-1">4.2<span className="text-base text-muted font-normal">/5.0</span></p>
+                  <div className="flex gap-0.5">
+                    {[1, 2, 3, 4].map(s => (
+                      <Star key={s} className="w-3 h-3 text-amber-400 fill-amber-400" />
+                    ))}
+                    <Star className="w-3 h-3 text-gray-300 dark:text-slate-600" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Optimization Capabilities Grid */}
+            <h3 className="font-display font-semibold text-lg text-text dark:text-text-dark text-center mb-6">
+              Optimization Capabilities
+            </h3>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[
+                {
+                  icon: RefreshCw,
+                  title: 'Epic Refuel Equivalent',
+                  color: 'text-blue-500',
+                  bg: 'bg-blue-500/10',
+                  bullets: [
+                    'Configuration review & realignment',
+                    'Workflow optimization & redesign',
+                    'Build quality assessment & remediation',
+                  ],
+                },
+                {
+                  icon: Database,
+                  title: 'Oracle Health Optimization',
+                  color: 'text-violet-500',
+                  bg: 'bg-violet-500/10',
+                  bullets: [
+                    'Revenue cycle tuning & automation',
+                    'Clinical workflow enhancement',
+                    'System configuration health check',
+                  ],
+                },
+                {
+                  icon: Workflow,
+                  title: 'Meditech Expanse Migration',
+                  color: 'text-teal-500',
+                  bg: 'bg-teal-500/10',
+                  bullets: [
+                    'Legacy to Expanse migration planning',
+                    'Data migration & validation',
+                    'Go-live execution & stabilization',
+                  ],
+                },
+                {
+                  icon: Globe,
+                  title: 'Interoperability Enhancement',
+                  color: 'text-amber-500',
+                  bg: 'bg-amber-500/10',
+                  bullets: [
+                    'HL7/FHIR interface optimization',
+                    'Data exchange improvements',
+                    'Cross-system integration testing',
+                  ],
+                },
+                {
+                  icon: BarChart3,
+                  title: 'Custom Reports & Dashboards',
+                  color: 'text-rose-500',
+                  bg: 'bg-rose-500/10',
+                  bullets: [
+                    'Reporting optimization & cleanup',
+                    'KPI dashboard creation',
+                    'Executive & clinical analytics',
+                  ],
+                },
+                {
+                  icon: Zap,
+                  title: 'Performance Tuning',
+                  color: 'text-indigo-500',
+                  bg: 'bg-indigo-500/10',
+                  bullets: [
+                    'System performance analysis',
+                    'Database optimization & indexing',
+                    'Load testing & capacity planning',
+                  ],
+                },
+              ].map(card => (
+                <div
+                  key={card.title}
+                  className="p-6 rounded-xl bg-white dark:bg-surface-dark border border-border dark:border-border-dark"
+                >
+                  <div className={`w-12 h-12 rounded-xl ${card.bg} flex items-center justify-center mb-4`}>
+                    <card.icon className={`w-6 h-6 ${card.color}`} />
+                  </div>
+                  <h4 className="font-display font-semibold text-text dark:text-text-dark mb-3">{card.title}</h4>
+                  <ul className="space-y-2">
+                    {card.bullets.map(b => (
+                      <li key={b} className="flex items-start gap-2">
+                        <CheckCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                        <span className="text-sm text-muted">{b}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               ))}
             </div>
