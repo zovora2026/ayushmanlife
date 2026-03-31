@@ -92,6 +92,12 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
 
     if (body.status) { updates.push('status = ?'); bindings.push(body.status) }
     if (body.status === 'implemented') { updates.push('implemented_at = CURRENT_TIMESTAMP') }
+    if (body.title !== undefined) { updates.push('title = ?'); bindings.push(body.title) }
+    if (body.description !== undefined) { updates.push('description = ?'); bindings.push(body.description) }
+    if (body.impact_assessment !== undefined) { updates.push('impact_assessment = ?'); bindings.push(body.impact_assessment) }
+    if (body.rollback_plan !== undefined) { updates.push('rollback_plan = ?'); bindings.push(body.rollback_plan) }
+    if (body.testing_plan !== undefined) { updates.push('testing_plan = ?'); bindings.push(body.testing_plan) }
+    if (body.category !== undefined) { updates.push('category = ?'); bindings.push(body.category) }
     if (body.assigned_to !== undefined) { updates.push('assigned_to = ?'); bindings.push(body.assigned_to) }
     if (body.assignee_name !== undefined) { updates.push('assignee_name = ?'); bindings.push(body.assignee_name) }
     if (body.scheduled_date !== undefined) { updates.push('scheduled_date = ?'); bindings.push(body.scheduled_date) }

@@ -4,8 +4,8 @@ import { Tabs } from '../components/ui/Tabs'
 import { Badge } from '../components/ui/Badge'
 import { Stat } from '../components/ui/Stat'
 
-const statusColors: Record<string, 'default' | 'info' | 'warning' | 'success' | 'error'> = {
-  draft: 'default',
+const statusColors: Record<string, 'neutral' | 'info' | 'warning' | 'success' | 'error'> = {
+  draft: 'neutral',
   pending: 'warning',
   in_review: 'info',
   approved: 'success',
@@ -36,7 +36,10 @@ export default function ChangeManagement() {
   const [meetingDecisions, setMeetingDecisions] = useState<CabDecision[]>([])
   const [statusFilter, setStatusFilter] = useState('')
   const [riskFilter, setRiskFilter] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activeTab, setActiveTab] = useState('dashboard')
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showCabModal, setShowCabModal] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -63,10 +66,36 @@ export default function ChangeManagement() {
     setMeetingDecisions(data.decisions || [])
   }
 
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editChange, setEditChange] = useState<ChangeRequest | null>(null)
+
   const handleStatusChange = async (id: string, newStatus: string) => {
     await changes.updateRequest({ id, status: newStatus })
     loadChanges()
     changes.getDashboard().then(setDashboard)
+  }
+
+  const handleEditChange = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!editChange) return
+    const form = e.currentTarget
+    const data = Object.fromEntries(new FormData(form))
+    try {
+      await changes.updateRequest({
+        id: editChange.id,
+        title: data.title as string,
+        description: data.description as string,
+        impact_assessment: data.impact_assessment as string,
+        rollback_plan: data.rollback_plan as string,
+        testing_plan: data.testing_plan as string,
+        risk_level: data.risk_level as string,
+        scheduled_date: data.scheduled_date as string || undefined,
+      })
+      setShowEditModal(false)
+      setEditChange(null)
+      loadChanges()
+      changes.getDashboard().then(setDashboard)
+    } catch (err) { console.error(err) }
   }
 
   const handleCreateChange = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -93,12 +122,34 @@ export default function ChangeManagement() {
     } catch (err) { console.error(err) }
   }
 
+  const handleCreateMeeting = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const form = e.currentTarget
+    const data = Object.fromEntries(new FormData(form))
+    try {
+      await changes.createMeeting({
+        meeting_date: data.meeting_date as string,
+        meeting_type: data.meeting_type as string,
+        chair_name: data.chair_name as string,
+        agenda: data.agenda as string,
+        attendees: data.attendees as string,
+      })
+      setShowCabModal(false)
+      changes.getCab().then(c => setMeetings(c.meetings || []))
+      changes.getDashboard().then(setDashboard)
+    } catch (err) { console.error(err) }
+  }
+
   if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" /></div>
 
-  const tabs = [
-    {
-      label: 'Dashboard',
-      content: dashboard && (
+  const TABS = [
+    { id: 'dashboard', label: 'Dashboard' },
+    { id: 'changes', label: 'Changes' },
+    { id: 'cab', label: 'CAB Meetings' },
+    { id: 'audit', label: 'Audit Trail' },
+  ]
+
+  const dashboardContent = dashboard && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Stat label="Total Changes" value={dashboard.total} />
@@ -131,7 +182,7 @@ export default function ChangeManagement() {
               <div className="space-y-2">
                 {Object.entries(dashboard.by_status).sort((a, b) => b[1] - a[1]).map(([status, count]) => (
                   <div key={status} className="flex items-center justify-between">
-                    <Badge variant={statusColors[status] || 'default'}>{status.replace(/_/g, ' ')}</Badge>
+                    <Badge variant={statusColors[status] || 'neutral'}>{status.replace(/_/g, ' ')}</Badge>
                     <div className="flex items-center gap-2 flex-1 ml-3">
                       <div className="flex-1 bg-gray-100 dark:bg-slate-700 rounded-full h-2">
                         <div className="bg-primary rounded-full h-2" style={{ width: `${(count / dashboard.total) * 100}%` }} />
@@ -196,14 +247,13 @@ export default function ChangeManagement() {
             </div>
           </div>
         </div>
-      ),
-    },
-    {
-      label: 'Changes',
-      content: (
+  )
+
+  const changesContent = (
         <div className="space-y-4">
           <div className="flex flex-wrap gap-3 items-center justify-between">
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search changes..." className="text-sm border border-border dark:border-border-dark rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 text-text dark:text-text-dark w-48" />
               <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="text-sm border border-border dark:border-border-dark rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 text-text dark:text-text-dark">
                 <option value="">All Statuses</option>
                 {['draft', 'pending', 'in_review', 'approved', 'scheduled', 'implemented', 'rejected'].map(s => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
@@ -219,14 +269,14 @@ export default function ChangeManagement() {
           </div>
 
           <div className="space-y-3">
-            {changeRequests.map(cr => (
+            {changeRequests.filter(cr => !searchQuery || cr.title.toLowerCase().includes(searchQuery.toLowerCase()) || (cr.description || '').toLowerCase().includes(searchQuery.toLowerCase()) || (cr.requester_name || '').toLowerCase().includes(searchQuery.toLowerCase())).map(cr => (
               <div key={cr.id} className="bg-white dark:bg-slate-800 rounded-xl border border-border dark:border-border-dark p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <h4 className="font-semibold text-text dark:text-text-dark">{cr.title}</h4>
                       <span className={`px-2 py-0.5 rounded text-xs font-bold ${riskColors[cr.risk_level]}`}>{cr.risk_level}</span>
-                      <Badge variant={statusColors[cr.status] || 'default'}>{cr.status.replace(/_/g, ' ')}</Badge>
+                      <Badge variant={statusColors[cr.status] || 'neutral'}>{cr.status.replace(/_/g, ' ')}</Badge>
                       {cr.change_type === 'emergency' && <span className="px-2 py-0.5 rounded bg-red-100 text-red-700 text-xs font-bold">EMERGENCY</span>}
                     </div>
                     <p className="text-sm text-muted line-clamp-2 mb-2">{cr.description}</p>
@@ -238,6 +288,7 @@ export default function ChangeManagement() {
                     </div>
                   </div>
                   <div className="flex flex-col gap-1 shrink-0">
+                    <button onClick={() => { setEditChange(cr); setShowEditModal(true) }} className="text-xs px-3 py-1 rounded bg-gray-50 dark:bg-slate-700 text-muted hover:text-text font-medium">Edit</button>
                     {cr.status === 'draft' && (
                       <button onClick={() => handleStatusChange(cr.id, 'pending')} className="text-xs px-3 py-1 rounded bg-amber-50 text-amber-700 hover:bg-amber-100 font-medium">Submit</button>
                     )}
@@ -279,12 +330,13 @@ export default function ChangeManagement() {
             ))}
           </div>
         </div>
-      ),
-    },
-    {
-      label: 'CAB Meetings',
-      content: (
+  )
+
+  const cabContent = (
         <div className="space-y-6">
+          <div className="flex justify-end">
+            <button onClick={() => setShowCabModal(true)} className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors">+ New CAB Meeting</button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {meetings.map(m => (
               <div key={m.id} className={`bg-white dark:bg-slate-800 rounded-xl border border-border dark:border-border-dark p-4 cursor-pointer hover:border-primary/50 transition-colors ${selectedMeeting?.id === m.id ? 'border-primary ring-1 ring-primary/20' : ''}`}
@@ -293,7 +345,7 @@ export default function ChangeManagement() {
                   <h4 className="font-semibold text-text dark:text-text-dark text-sm">
                     {m.meeting_type === 'emergency' ? '🚨 Emergency CAB' : 'CAB Meeting'} — {m.meeting_date}
                   </h4>
-                  <Badge variant={m.status === 'completed' ? 'success' : m.status === 'scheduled' ? 'info' : 'default'}>{m.status}</Badge>
+                  <Badge variant={m.status === 'completed' ? 'success' : m.status === 'scheduled' ? 'info' : 'neutral'}>{m.status}</Badge>
                 </div>
                 <div className="flex gap-3 text-xs text-muted mb-2">
                   <span>Chair: {m.chair_name}</span>
@@ -344,11 +396,9 @@ export default function ChangeManagement() {
             </div>
           )}
         </div>
-      ),
-    },
-    {
-      label: 'Audit Trail',
-      content: (
+  )
+
+  const auditContent = (
         <div className="space-y-4">
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-border dark:border-border-dark p-5">
             <h3 className="font-semibold text-text dark:text-text-dark mb-4">Change Implementation History</h3>
@@ -376,7 +426,7 @@ export default function ChangeManagement() {
                         {cr.change_type === 'emergency' ? <span className="text-xs font-bold text-red-600">EMRG</span> : <span className="text-xs text-muted">{cr.change_type}</span>}
                       </td>
                       <td className="py-2 px-3"><span className={`px-2 py-0.5 rounded text-xs font-bold ${riskColors[cr.risk_level]}`}>{cr.risk_level}</span></td>
-                      <td className="py-2 px-3"><Badge variant={statusColors[cr.status] || 'default'}>{cr.status.replace(/_/g, ' ')}</Badge></td>
+                      <td className="py-2 px-3"><Badge variant={statusColors[cr.status] || 'neutral'}>{cr.status.replace(/_/g, ' ')}</Badge></td>
                       <td className="py-2 px-3 text-muted text-xs">{cr.requester_name}</td>
                       <td className="py-2 px-3 text-muted text-xs">{cr.created_at?.split('T')[0] || cr.created_at?.split(' ')[0]}</td>
                       <td className="py-2 px-3 text-muted text-xs">{cr.implemented_at || '—'}</td>
@@ -403,9 +453,7 @@ export default function ChangeManagement() {
             </div>
           )}
         </div>
-      ),
-    },
-  ]
+  )
 
   return (
     <div className="space-y-6">
@@ -414,7 +462,12 @@ export default function ChangeManagement() {
         <p className="text-sm text-muted mt-1">EMR change control, risk assessment, CAB governance, and implementation tracking</p>
       </div>
 
-      <Tabs tabs={tabs} />
+      <Tabs tabs={TABS} activeTab={activeTab} onChange={setActiveTab} />
+
+      {activeTab === 'dashboard' && dashboardContent}
+      {activeTab === 'changes' && changesContent}
+      {activeTab === 'cab' && cabContent}
+      {activeTab === 'audit' && auditContent}
 
       {/* Create Change Modal */}
       {showCreateModal && (
@@ -452,6 +505,56 @@ export default function ChangeManagement() {
               <div className="flex justify-end gap-2 pt-2">
                 <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 text-sm text-muted hover:text-text dark:hover:text-text-dark">Cancel</button>
                 <button type="submit" className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors">Submit Change</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && editChange && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => { setShowEditModal(false); setEditChange(null) }}>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <h3 className="font-semibold text-lg text-text dark:text-text-dark mb-4">Edit Change Request</h3>
+            <form onSubmit={handleEditChange} className="space-y-3">
+              <input name="title" required defaultValue={editChange.title} placeholder="Title" className="w-full px-3 py-2 border border-border dark:border-border-dark rounded-lg bg-white dark:bg-slate-700 text-text dark:text-text-dark text-sm" />
+              <textarea name="description" defaultValue={editChange.description || ''} rows={3} placeholder="Description" className="w-full px-3 py-2 border border-border dark:border-border-dark rounded-lg bg-white dark:bg-slate-700 text-text dark:text-text-dark text-sm" />
+              <select name="risk_level" defaultValue={editChange.risk_level} className="w-full px-3 py-2 border border-border dark:border-border-dark rounded-lg bg-white dark:bg-slate-700 text-text dark:text-text-dark text-sm">
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </select>
+              <textarea name="impact_assessment" defaultValue={editChange.impact_assessment || ''} rows={2} placeholder="Impact Assessment" className="w-full px-3 py-2 border border-border dark:border-border-dark rounded-lg bg-white dark:bg-slate-700 text-text dark:text-text-dark text-sm" />
+              <textarea name="rollback_plan" defaultValue={editChange.rollback_plan || ''} rows={2} placeholder="Rollback Plan" className="w-full px-3 py-2 border border-border dark:border-border-dark rounded-lg bg-white dark:bg-slate-700 text-text dark:text-text-dark text-sm" />
+              <textarea name="testing_plan" defaultValue={editChange.testing_plan || ''} rows={2} placeholder="Testing Plan" className="w-full px-3 py-2 border border-border dark:border-border-dark rounded-lg bg-white dark:bg-slate-700 text-text dark:text-text-dark text-sm" />
+              <input name="scheduled_date" type="date" defaultValue={editChange.scheduled_date || ''} className="w-full px-3 py-2 border border-border dark:border-border-dark rounded-lg bg-white dark:bg-slate-700 text-text dark:text-text-dark text-sm" />
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => { setShowEditModal(false); setEditChange(null) }} className="px-4 py-2 text-sm text-muted hover:text-text dark:hover:text-text-dark">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* CAB Meeting Modal */}
+      {showCabModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowCabModal(false)}>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <h3 className="font-semibold text-lg text-text dark:text-text-dark mb-4">Schedule CAB Meeting</h3>
+            <form onSubmit={handleCreateMeeting} className="space-y-3">
+              <input name="meeting_date" type="date" required className="w-full px-3 py-2 border border-border dark:border-border-dark rounded-lg bg-white dark:bg-slate-700 text-text dark:text-text-dark text-sm" />
+              <select name="meeting_type" className="w-full px-3 py-2 border border-border dark:border-border-dark rounded-lg bg-white dark:bg-slate-700 text-text dark:text-text-dark text-sm">
+                <option value="regular">Regular CAB</option>
+                <option value="emergency">Emergency CAB</option>
+              </select>
+              <input name="chair_name" required placeholder="Chair Name" className="w-full px-3 py-2 border border-border dark:border-border-dark rounded-lg bg-white dark:bg-slate-700 text-text dark:text-text-dark text-sm" />
+              <input name="attendees" placeholder="Attendees (comma-separated)" className="w-full px-3 py-2 border border-border dark:border-border-dark rounded-lg bg-white dark:bg-slate-700 text-text dark:text-text-dark text-sm" />
+              <textarea name="agenda" placeholder="Meeting Agenda" rows={4} className="w-full px-3 py-2 border border-border dark:border-border-dark rounded-lg bg-white dark:bg-slate-700 text-text dark:text-text-dark text-sm" />
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setShowCabModal(false)} className="px-4 py-2 text-sm text-muted hover:text-text dark:hover:text-text-dark">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors">Schedule Meeting</button>
               </div>
             </form>
           </div>

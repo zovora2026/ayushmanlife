@@ -47,6 +47,9 @@ export default function InsuranceCore() {
   const [loading, setLoading] = useState(true)
   const [schemeFilter, setSchemeFilter] = useState('')
   const [uwFilter, setUwFilter] = useState('')
+  const [showPolicyForm, setShowPolicyForm] = useState(false)
+  const [showUwForm, setShowUwForm] = useState(false)
+  const [showEndorsementForm, setShowEndorsementForm] = useState(false)
 
   useEffect(() => { loadProducts() }, [])
 
@@ -112,6 +115,30 @@ export default function InsuranceCore() {
     } catch (e) { console.error(e) }
   }
 
+  async function handleCreatePolicy(data: Partial<InsurancePolicy>) {
+    try {
+      await insurance.createPolicy(data)
+      setShowPolicyForm(false)
+      loadPolicies()
+    } catch (e) { console.error(e) }
+  }
+
+  async function handleCreateUnderwriting(data: Partial<UnderwritingRequest>) {
+    try {
+      await insurance.createUnderwriting(data)
+      setShowUwForm(false)
+      loadUnderwriting()
+    } catch (e) { console.error(e) }
+  }
+
+  async function handleCreateEndorsement(data: Partial<PolicyEndorsement>) {
+    try {
+      await insurance.createEndorsement(data)
+      setShowEndorsementForm(false)
+      loadEndorsements()
+    } catch (e) { console.error(e) }
+  }
+
   if (loading && products.length === 0) {
     return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" /></div>
   }
@@ -126,9 +153,9 @@ export default function InsuranceCore() {
       <Tabs tabs={TABS} activeTab={tab} onChange={setTab} />
 
       {tab === 'products' && <ProductsTab products={products} filter={schemeFilter} setFilter={setSchemeFilter} />}
-      {tab === 'policies' && <PoliciesTab policies={policies} summary={policySummary} filter={schemeFilter} setFilter={setSchemeFilter} onStatusChange={handlePolicyStatusChange} />}
-      {tab === 'underwriting' && <UnderwritingTab requests={underwriting} summary={uwSummary} filter={uwFilter} setFilter={setUwFilter} onDecision={handleUnderwritingDecision} />}
-      {tab === 'endorsements' && <EndorsementsTab endorsements={endorsements} onAction={handleEndorsementAction} />}
+      {tab === 'policies' && <PoliciesTab policies={policies} summary={policySummary} filter={schemeFilter} setFilter={setSchemeFilter} onStatusChange={handlePolicyStatusChange} showForm={showPolicyForm} setShowForm={setShowPolicyForm} onCreatePolicy={handleCreatePolicy} products={products} />}
+      {tab === 'underwriting' && <UnderwritingTab requests={underwriting} summary={uwSummary} filter={uwFilter} setFilter={setUwFilter} onDecision={handleUnderwritingDecision} showForm={showUwForm} setShowForm={setShowUwForm} onCreateUw={handleCreateUnderwriting} products={products} />}
+      {tab === 'endorsements' && <EndorsementsTab endorsements={endorsements} onAction={handleEndorsementAction} showForm={showEndorsementForm} setShowForm={setShowEndorsementForm} onCreateEndorsement={handleCreateEndorsement} policies={policies} />}
     </div>
   )
 }
@@ -192,9 +219,12 @@ function ProductsTab({ products, filter, setFilter }: { products: InsuranceProdu
   )
 }
 
-function PoliciesTab({ policies, summary, filter, setFilter, onStatusChange }: {
-  policies: InsurancePolicy[]; summary: any; filter: string; setFilter: (v: string) => void; onStatusChange: (id: string, status: string) => void
+function PoliciesTab({ policies, summary, filter, setFilter, onStatusChange, showForm, setShowForm, onCreatePolicy, products }: {
+  policies: InsurancePolicy[]; summary: any; filter: string; setFilter: (v: string) => void; onStatusChange: (id: string, status: string) => void;
+  showForm: boolean; setShowForm: (v: boolean) => void; onCreatePolicy: (d: Partial<InsurancePolicy>) => void; products: InsuranceProduct[]
 }) {
+  const [form, setForm] = useState({ patient_id: '', product_id: '', scheme: 'ayushman_bharat', holder_name: '', coverage_amount: '', premium_amount: '', start_date: '' })
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -204,16 +234,47 @@ function PoliciesTab({ policies, summary, filter, setFilter, onStatusChange }: {
         <Stat label="Premium Collected" value={formatINR(summary?.total_premium || 0)} />
       </div>
 
-      <div className="flex items-center gap-3">
-        <Filter className="w-4 h-4 text-muted" />
-        <select value={filter} onChange={e => setFilter(e.target.value)} className="px-3 py-1.5 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm">
-          <option value="">All Schemes</option>
-          <option value="ayushman_bharat">Ayushman Bharat</option>
-          <option value="cghs">CGHS</option>
-          <option value="echs">ECHS</option>
-          <option value="private">Private</option>
-        </select>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Filter className="w-4 h-4 text-muted" />
+          <select value={filter} onChange={e => setFilter(e.target.value)} className="px-3 py-1.5 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm">
+            <option value="">All Schemes</option>
+            <option value="ayushman_bharat">Ayushman Bharat</option>
+            <option value="cghs">CGHS</option>
+            <option value="echs">ECHS</option>
+            <option value="private">Private</option>
+          </select>
+        </div>
+        <button onClick={() => setShowForm(!showForm)} className="px-3 py-1.5 bg-primary text-white text-sm rounded-lg hover:bg-primary-dark flex items-center gap-1">
+          <Plus className="w-4 h-4" /> New Policy
+        </button>
       </div>
+
+      {showForm && (
+        <Card>
+          <h3 className="font-medium text-text dark:text-text-dark mb-3">Create New Policy</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <input placeholder="Patient ID (e.g. pat-001)" value={form.patient_id} onChange={e => setForm({ ...form, patient_id: e.target.value })} className="px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm" />
+            <select value={form.product_id} onChange={e => setForm({ ...form, product_id: e.target.value })} className="px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm">
+              <option value="">Select Product</option>
+              {products.map(p => <option key={p.id} value={p.id}>{p.product_name} ({p.product_code})</option>)}
+            </select>
+            <input placeholder="Holder Name" value={form.holder_name} onChange={e => setForm({ ...form, holder_name: e.target.value })} className="px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm" />
+            <select value={form.scheme} onChange={e => setForm({ ...form, scheme: e.target.value })} className="px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm">
+              <option value="ayushman_bharat">Ayushman Bharat</option>
+              <option value="cghs">CGHS</option>
+              <option value="echs">ECHS</option>
+              <option value="private">Private</option>
+            </select>
+            <input type="number" placeholder="Coverage Amount" value={form.coverage_amount} onChange={e => setForm({ ...form, coverage_amount: e.target.value })} className="px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm" />
+            <input type="date" placeholder="Start Date" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} className="px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm" />
+          </div>
+          <div className="flex gap-2 mt-3">
+            <button onClick={() => { if (form.patient_id && form.product_id && form.holder_name) onCreatePolicy({ patient_id: form.patient_id, product_id: form.product_id, scheme: form.scheme, holder_name: form.holder_name, coverage_amount: Number(form.coverage_amount) || 500000, start_date: form.start_date || new Date().toISOString().slice(0, 10) } as any) }} className="px-4 py-2 bg-primary text-white text-sm rounded-lg hover:bg-primary-dark">Create Policy</button>
+            <button onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-muted hover:text-text border border-border rounded-lg">Cancel</button>
+          </div>
+        </Card>
+      )}
 
       <Card>
         <div className="overflow-x-auto">
@@ -263,10 +324,13 @@ function PoliciesTab({ policies, summary, filter, setFilter, onStatusChange }: {
   )
 }
 
-function UnderwritingTab({ requests, summary, filter, setFilter, onDecision }: {
+function UnderwritingTab({ requests, summary, filter, setFilter, onDecision, showForm, setShowForm, onCreateUw, products }: {
   requests: UnderwritingRequest[]; summary: any; filter: string; setFilter: (v: string) => void;
-  onDecision: (id: string, decision: string, loading?: number, remarks?: string) => void
+  onDecision: (id: string, decision: string, loading?: number, remarks?: string) => void;
+  showForm: boolean; setShowForm: (v: boolean) => void; onCreateUw: (d: Partial<UnderwritingRequest>) => void; products: InsuranceProduct[]
 }) {
+  const [form, setForm] = useState({ patient_id: '', product_id: '', request_type: 'new_policy', patient_name: '', patient_age: '', smoker: false, bmi: '', pre_existing_conditions: '', medical_history: '' })
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -276,16 +340,51 @@ function UnderwritingTab({ requests, summary, filter, setFilter, onDecision }: {
         <Stat label="Declined" value={summary?.by_decision?.declined || 0} />
       </div>
 
-      <div className="flex items-center gap-3">
-        <Filter className="w-4 h-4 text-muted" />
-        <select value={filter} onChange={e => setFilter(e.target.value)} className="px-3 py-1.5 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm">
-          <option value="">All Decisions</option>
-          <option value="pending">Pending</option>
-          <option value="approved">Approved</option>
-          <option value="approved_with_loading">Approved (with loading)</option>
-          <option value="declined">Declined</option>
-        </select>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Filter className="w-4 h-4 text-muted" />
+          <select value={filter} onChange={e => setFilter(e.target.value)} className="px-3 py-1.5 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm">
+            <option value="">All Decisions</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="approved_with_loading">Approved (with loading)</option>
+            <option value="declined">Declined</option>
+          </select>
+        </div>
+        <button onClick={() => setShowForm(!showForm)} className="px-3 py-1.5 bg-primary text-white text-sm rounded-lg hover:bg-primary-dark flex items-center gap-1">
+          <Plus className="w-4 h-4" /> New Request
+        </button>
       </div>
+
+      {showForm && (
+        <Card>
+          <h3 className="font-medium text-text dark:text-text-dark mb-3">Submit Underwriting Request</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <input placeholder="Patient ID (e.g. pat-001)" value={form.patient_id} onChange={e => setForm({ ...form, patient_id: e.target.value })} className="px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm" />
+            <input placeholder="Patient Name" value={form.patient_name} onChange={e => setForm({ ...form, patient_name: e.target.value })} className="px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm" />
+            <select value={form.product_id} onChange={e => setForm({ ...form, product_id: e.target.value })} className="px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm">
+              <option value="">Select Product</option>
+              {products.map(p => <option key={p.id} value={p.id}>{p.product_name}</option>)}
+            </select>
+            <select value={form.request_type} onChange={e => setForm({ ...form, request_type: e.target.value })} className="px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm">
+              <option value="new_policy">New Policy</option>
+              <option value="renewal">Renewal</option>
+              <option value="enhancement">Enhancement</option>
+            </select>
+            <input type="number" placeholder="Age" value={form.patient_age} onChange={e => setForm({ ...form, patient_age: e.target.value })} className="px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm" />
+            <input type="number" placeholder="BMI" step="0.1" value={form.bmi} onChange={e => setForm({ ...form, bmi: e.target.value })} className="px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm" />
+            <label className="flex items-center gap-2 text-sm text-text dark:text-text-dark">
+              <input type="checkbox" checked={form.smoker} onChange={e => setForm({ ...form, smoker: e.target.checked })} /> Smoker
+            </label>
+            <input placeholder="Pre-existing conditions" value={form.pre_existing_conditions} onChange={e => setForm({ ...form, pre_existing_conditions: e.target.value })} className="px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm" />
+            <input placeholder="Medical history" value={form.medical_history} onChange={e => setForm({ ...form, medical_history: e.target.value })} className="px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm" />
+          </div>
+          <div className="flex gap-2 mt-3">
+            <button onClick={() => { if (form.patient_id && form.product_id) onCreateUw({ patient_id: form.patient_id, product_id: form.product_id, request_type: form.request_type, patient_name: form.patient_name, patient_age: Number(form.patient_age) || undefined, smoker: form.smoker, bmi: Number(form.bmi) || undefined, pre_existing_conditions: form.pre_existing_conditions || undefined, medical_history: form.medical_history || undefined } as any) }} className="px-4 py-2 bg-primary text-white text-sm rounded-lg hover:bg-primary-dark">Submit Request</button>
+            <button onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-muted hover:text-text border border-border rounded-lg">Cancel</button>
+          </div>
+        </Card>
+      )}
 
       <div className="space-y-3">
         {requests.map(r => (
@@ -334,7 +433,11 @@ function UnderwritingTab({ requests, summary, filter, setFilter, onDecision }: {
   )
 }
 
-function EndorsementsTab({ endorsements, onAction }: { endorsements: PolicyEndorsement[]; onAction: (id: string, status: string) => void }) {
+function EndorsementsTab({ endorsements, onAction, showForm, setShowForm, onCreateEndorsement, policies }: {
+  endorsements: PolicyEndorsement[]; onAction: (id: string, status: string) => void;
+  showForm: boolean; setShowForm: (v: boolean) => void; onCreateEndorsement: (d: Partial<PolicyEndorsement>) => void; policies: InsurancePolicy[]
+}) {
+  const [form, setForm] = useState({ policy_id: '', endorsement_type: 'address_change', description: '', old_value: '', new_value: '', effective_date: '', premium_impact: '' })
   const pending = endorsements.filter(e => e.status === 'pending' || e.status === 'under_review')
   const processed = endorsements.filter(e => e.status === 'approved' || e.status === 'rejected')
 
@@ -346,6 +449,41 @@ function EndorsementsTab({ endorsements, onAction }: { endorsements: PolicyEndor
         <Stat label="Approved" value={endorsements.filter(e => e.status === 'approved').length} />
         <Stat label="Premium Impact" value={formatINR(endorsements.reduce((a, e) => a + (e.premium_impact || 0), 0))} />
       </div>
+
+      <div className="flex justify-end">
+        <button onClick={() => setShowForm(!showForm)} className="px-3 py-1.5 bg-primary text-white text-sm rounded-lg hover:bg-primary-dark flex items-center gap-1">
+          <Plus className="w-4 h-4" /> New Endorsement
+        </button>
+      </div>
+
+      {showForm && (
+        <Card>
+          <h3 className="font-medium text-text dark:text-text-dark mb-3">Submit Endorsement Request</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <select value={form.policy_id} onChange={e => setForm({ ...form, policy_id: e.target.value })} className="px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm">
+              <option value="">Select Policy</option>
+              {policies.map(p => <option key={p.id} value={p.id}>{p.policy_number} — {p.holder_name}</option>)}
+            </select>
+            <select value={form.endorsement_type} onChange={e => setForm({ ...form, endorsement_type: e.target.value })} className="px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm">
+              <option value="address_change">Address Change</option>
+              <option value="nominee_change">Nominee Change</option>
+              <option value="coverage_enhancement">Coverage Enhancement</option>
+              <option value="coverage_reduction">Coverage Reduction</option>
+              <option value="rider_addition">Rider Addition</option>
+              <option value="name_correction">Name Correction</option>
+            </select>
+            <input placeholder="Description" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm" />
+            <input placeholder="Old Value" value={form.old_value} onChange={e => setForm({ ...form, old_value: e.target.value })} className="px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm" />
+            <input placeholder="New Value" value={form.new_value} onChange={e => setForm({ ...form, new_value: e.target.value })} className="px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm" />
+            <input type="date" placeholder="Effective Date" value={form.effective_date} onChange={e => setForm({ ...form, effective_date: e.target.value })} className="px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm" />
+            <input type="number" placeholder="Premium Impact (±)" value={form.premium_impact} onChange={e => setForm({ ...form, premium_impact: e.target.value })} className="px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm" />
+          </div>
+          <div className="flex gap-2 mt-3">
+            <button onClick={() => { if (form.policy_id && form.description) onCreateEndorsement({ policy_id: form.policy_id, endorsement_type: form.endorsement_type, description: form.description, old_value: form.old_value || undefined, new_value: form.new_value || undefined, effective_date: form.effective_date || new Date().toISOString().slice(0, 10), premium_impact: Number(form.premium_impact) || 0 } as any) }} className="px-4 py-2 bg-primary text-white text-sm rounded-lg hover:bg-primary-dark">Submit</button>
+            <button onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-muted hover:text-text border border-border rounded-lg">Cancel</button>
+          </div>
+        </Card>
+      )}
 
       {pending.length > 0 && (
         <>

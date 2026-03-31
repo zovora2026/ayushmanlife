@@ -48,6 +48,7 @@ export default function TestManagement() {
   const [selectedSuite, setSelectedSuite] = useState<string>('')
   const [scriptFilter, setScriptFilter] = useState<string>('')
   const [defectFilter, setDefectFilter] = useState<string>('')
+  const [searchQuery, setSearchQuery] = useState<string>('')
   const [expandedSuite, setExpandedSuite] = useState<string>('')
   const [showScriptModal, setShowScriptModal] = useState(false)
   const [showDefectModal, setShowDefectModal] = useState(false)
@@ -172,6 +173,8 @@ export default function TestManagement() {
           setStatusFilter={setScriptFilter}
           onUpdateStatus={handleUpdateScriptStatus}
           onAdd={() => setShowScriptModal(true)}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
         />
       )}
       {tab === 'defects' && (
@@ -184,6 +187,8 @@ export default function TestManagement() {
           setSeverityFilter={setDefectFilter}
           onUpdateStatus={handleUpdateDefectStatus}
           onAdd={() => setShowDefectModal(true)}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
         />
       )}
 
@@ -453,14 +458,17 @@ function SuitesTab({ suites, expandedSuite, setExpandedSuite, onViewScripts }: {
 }
 
 // Scripts Tab
-function ScriptsTab({ scripts, suites, selectedSuite, setSelectedSuite, statusFilter, setStatusFilter, onUpdateStatus, onAdd }: {
+function ScriptsTab({ scripts, suites, selectedSuite, setSelectedSuite, statusFilter, setStatusFilter, onUpdateStatus, onAdd, searchQuery, setSearchQuery }: {
   scripts: TestScript[]; suites: TestSuite[]; selectedSuite: string; setSelectedSuite: (v: string) => void;
-  statusFilter: string; setStatusFilter: (v: string) => void; onUpdateStatus: (id: string, status: string) => void; onAdd: () => void
+  statusFilter: string; setStatusFilter: (v: string) => void; onUpdateStatus: (id: string, status: string) => void; onAdd: () => void;
+  searchQuery: string; setSearchQuery: (v: string) => void
 }) {
+  const filteredScripts = scripts.filter(s => !searchQuery || s.title.toLowerCase().includes(searchQuery.toLowerCase()) || (s.description || '').toLowerCase().includes(searchQuery.toLowerCase()))
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search scripts..." className="px-3 py-1.5 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm w-48" />
           <Filter className="w-4 h-4 text-muted" />
           <select value={selectedSuite} onChange={e => setSelectedSuite(e.target.value)} className="px-3 py-1.5 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm">
             <option value="">All Suites</option>
@@ -496,7 +504,7 @@ function ScriptsTab({ scripts, suites, selectedSuite, setSelectedSuite, statusFi
               </tr>
             </thead>
             <tbody>
-              {scripts.map(s => (
+              {filteredScripts.map(s => (
                 <tr key={s.id} className="border-b border-border/50 dark:border-border-dark/50 hover:bg-gray-50 dark:hover:bg-slate-800/50">
                   <td className="py-2 px-3 text-xs font-mono text-muted">{s.id}</td>
                   <td className="py-2 px-3">
@@ -540,14 +548,17 @@ function ScriptsTab({ scripts, suites, selectedSuite, setSelectedSuite, statusFi
 }
 
 // Defects Tab
-function DefectsTab({ defects, suites, selectedSuite, setSelectedSuite, severityFilter, setSeverityFilter, onUpdateStatus, onAdd }: {
+function DefectsTab({ defects, suites, selectedSuite, setSelectedSuite, severityFilter, setSeverityFilter, onUpdateStatus, onAdd, searchQuery, setSearchQuery }: {
   defects: TestDefect[]; suites: TestSuite[]; selectedSuite: string; setSelectedSuite: (v: string) => void;
-  severityFilter: string; setSeverityFilter: (v: string) => void; onUpdateStatus: (id: string, status: string) => void; onAdd: () => void
+  severityFilter: string; setSeverityFilter: (v: string) => void; onUpdateStatus: (id: string, status: string) => void; onAdd: () => void;
+  searchQuery: string; setSearchQuery: (v: string) => void
 }) {
+  const filteredDefects = defects.filter(d => !searchQuery || d.title.toLowerCase().includes(searchQuery.toLowerCase()) || (d.description || '').toLowerCase().includes(searchQuery.toLowerCase()))
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search defects..." className="px-3 py-1.5 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm w-48" />
           <Filter className="w-4 h-4 text-muted" />
           <select value={selectedSuite} onChange={e => setSelectedSuite(e.target.value)} className="px-3 py-1.5 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm">
             <option value="">All Suites</option>
@@ -568,7 +579,7 @@ function DefectsTab({ defects, suites, selectedSuite, setSelectedSuite, severity
       </div>
 
       <div className="space-y-3">
-        {defects.map(d => (
+        {filteredDefects.map(d => (
           <Card key={d.id}>
             <div className="flex items-start gap-3">
               <div className="mt-0.5">

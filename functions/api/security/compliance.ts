@@ -45,3 +45,49 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     return json({ error: 'Failed to fetch compliance data' }, 500)
   }
 }
+
+export const onRequestPut: PagesFunction<Env> = async (context) => {
+  try {
+    const db = context.env.DB
+    const body = await context.request.json() as {
+      id: string
+      status?: string
+      notes?: string
+      evidence?: string
+      next_review?: string
+    }
+
+    if (!body.id) return json({ error: 'id is required' }, 400)
+    if (!db) return json({ check: body })
+
+    const updates: string[] = []
+    const bindings: (string | null)[] = []
+
+    const validStatuses = ['compliant', 'partial', 'non_compliant']
+    if (body.status) {
+      if (!validStatuses.includes(body.status)) return json({ error: 'Invalid status' }, 400)
+      updates.push('status = ?'); bindings.push(body.status)
+    }
+    if (body.notes !== undefined) {
+      updates.push('notes = ?'); bindings.push(body.notes)
+    }
+    if (body.evidence !== undefined) {
+      updates.push('evidence = ?'); bindings.push(body.evidence)
+    }
+    if (body.next_review !== undefined) {
+      updates.push('next_review = ?'); bindings.push(body.next_review)
+    }
+    updates.push('last_checked = CURRENT_TIMESTAMP')
+
+    if (updates.length <= 1) return json({ error: 'At least one field to update' }, 400)
+
+    bindings.push(body.id)
+    await db.prepare(`UPDATE compliance_checks SET ${updates.join(', ')} WHERE id = ?`).bind(...bindings).run()
+
+    const check = await db.prepare('SELECT * FROM compliance_checks WHERE id = ?').bind(body.id).first()
+    return json({ check, message: 'Compliance control updated' })
+  } catch (error) {
+    console.error('Error updating compliance:', error)
+    return json({ error: 'Failed to update compliance control' }, 500)
+  }
+}

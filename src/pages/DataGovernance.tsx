@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Database, Shield, FileText, CheckCircle, AlertTriangle, BarChart3, Lock, Eye, ArrowRight, UserCheck, RefreshCw, Layers, Zap, TrendingUp, Loader2 } from 'lucide-react'
+import { Database, Shield, FileText, CheckCircle, AlertTriangle, BarChart3, Lock, Eye, ArrowRight, UserCheck, RefreshCw, Layers, Zap, TrendingUp, Loader2, Plus, X, Ban, RotateCcw } from 'lucide-react'
 import { cn } from '../lib/utils'
 import { analytics as analyticsAPI, claims as claimsAPI } from '../lib/api'
 
@@ -61,6 +61,44 @@ export default function DataGovernance() {
   const [qualityScores, setQualityScores] = useState(DEFAULT_QUALITY_SCORES)
   const [dataClasses, setDataClasses] = useState(DEFAULT_DATA_CLASSES)
   const [consentStats, setConsentStats] = useState(DEFAULT_CONSENT)
+  const [showConsentModal, setShowConsentModal] = useState(false)
+  const [consentForm, setConsentForm] = useState({ patient: '', purpose: 'treatment', expiry: '' })
+  const [consentRecords, setConsentRecords] = useState([
+    { id: 'con-001', patient: 'Ramesh Kumar', purpose: 'Treatment Data Sharing', status: 'active' as const, granted: '2026-01-15', expires: '2027-01-15' },
+    { id: 'con-002', patient: 'Priya Sharma', purpose: 'Insurance Claim Processing', status: 'active' as const, granted: '2026-02-10', expires: '2027-02-10' },
+    { id: 'con-003', patient: 'Amit Patel', purpose: 'Research & Analytics', status: 'expired' as const, granted: '2025-03-01', expires: '2026-03-01' },
+    { id: 'con-004', patient: 'Sunita Devi', purpose: 'Marketing Communications', status: 'revoked' as const, granted: '2025-11-20', expires: '2026-11-20' },
+    { id: 'con-005', patient: 'Vikram Singh', purpose: 'Treatment Data Sharing', status: 'active' as const, granted: '2026-03-05', expires: '2027-03-05' },
+    { id: 'con-006', patient: 'Meena Gupta', purpose: 'Research & Analytics', status: 'expired' as const, granted: '2025-06-15', expires: '2026-06-15' },
+  ])
+
+  const handleCreateConsent = () => {
+    if (!consentForm.patient.trim()) return
+    const purposeMap: Record<string, string> = { treatment: 'Treatment Data Sharing', insurance: 'Insurance Claim Processing', research: 'Research & Analytics', marketing: 'Marketing Communications' }
+    const newConsent = {
+      id: `con-${Date.now()}`,
+      patient: consentForm.patient,
+      purpose: purposeMap[consentForm.purpose] || consentForm.purpose,
+      status: 'active' as const,
+      granted: new Date().toISOString().split('T')[0],
+      expires: consentForm.expiry || new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0],
+    }
+    setConsentRecords(prev => [newConsent, ...prev])
+    setConsentStats(prev => ({ ...prev, total: prev.total + 1, active: prev.active + 1 }))
+    setConsentForm({ patient: '', purpose: 'treatment', expiry: '' })
+    setShowConsentModal(false)
+  }
+
+  const handleRevokeConsent = (id: string) => {
+    setConsentRecords(prev => prev.map(c => c.id === id ? { ...c, status: 'revoked' as const } : c))
+    setConsentStats(prev => ({ ...prev, active: prev.active - 1, revoked: prev.revoked + 1 }))
+  }
+
+  const handleRenewConsent = (id: string) => {
+    const newExpiry = new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0]
+    setConsentRecords(prev => prev.map(c => c.id === id ? { ...c, status: 'active' as const, expires: newExpiry } : c))
+    setConsentStats(prev => ({ ...prev, active: prev.active + 1, expired: prev.expired - 1 }))
+  }
 
   useEffect(() => {
     let mounted = true
@@ -289,9 +327,18 @@ export default function DataGovernance() {
 
       {/* Consent Management */}
       <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-5">
-        <h2 className="font-display font-semibold text-text dark:text-text-dark mb-4 flex items-center gap-2">
-          <UserCheck className="w-5 h-5 text-primary" /> Consent Management
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-display font-semibold text-text dark:text-text-dark flex items-center gap-2">
+            <UserCheck className="w-5 h-5 text-primary" /> Consent Management
+          </h2>
+          <button
+            onClick={() => setShowConsentModal(true)}
+            className="text-xs px-3 py-1.5 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 flex items-center gap-1"
+          >
+            <Plus className="w-3.5 h-3.5" /> New Consent
+          </button>
+        </div>
+
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
           {[
             { label: 'Total Consents', value: consentStats.total.toLocaleString(), color: 'text-primary' },
@@ -305,7 +352,9 @@ export default function DataGovernance() {
             </div>
           ))}
         </div>
-        <div className="space-y-2">
+
+        {/* Consent category summary */}
+        <div className="space-y-2 mb-4">
           {[
             { type: 'Treatment Data Sharing', consent: '98.2%', purpose: 'Clinical care coordination', dpdp: 'Compliant' },
             { type: 'Insurance Claim Processing', consent: '94.7%', purpose: 'Payer claim submission', dpdp: 'Compliant' },
@@ -324,7 +373,93 @@ export default function DataGovernance() {
             </div>
           ))}
         </div>
+
+        {/* Individual consent records with actions */}
+        <div className="border-t border-border dark:border-border-dark pt-4">
+          <h3 className="text-xs font-semibold text-muted uppercase mb-3">Recent Consent Records</h3>
+          <div className="space-y-2">
+            {consentRecords.map(c => (
+              <div key={c.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800 group">
+                <div className={cn('w-2 h-2 rounded-full shrink-0', c.status === 'active' ? 'bg-success' : c.status === 'expired' ? 'bg-warning' : 'bg-error')} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-text dark:text-text-dark">{c.patient}</p>
+                  <p className="text-xs text-muted">{c.purpose} · Granted: {c.granted} · Expires: {c.expires}</p>
+                </div>
+                <span className={cn('px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase shrink-0',
+                  c.status === 'active' ? 'bg-success/10 text-success' : c.status === 'expired' ? 'bg-warning/10 text-warning' : 'bg-error/10 text-error'
+                )}>{c.status}</span>
+                <div className="flex gap-1 shrink-0">
+                  {c.status === 'active' && (
+                    <button onClick={() => handleRevokeConsent(c.id)} className="p-1.5 rounded-lg hover:bg-error/10 text-error opacity-0 group-hover:opacity-100 transition-opacity" title="Revoke Consent">
+                      <Ban className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  {c.status === 'expired' && (
+                    <button onClick={() => handleRenewConsent(c.id)} className="p-1.5 rounded-lg hover:bg-success/10 text-success opacity-0 group-hover:opacity-100 transition-opacity" title="Renew Consent">
+                      <RotateCcw className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
+
+      {/* New Consent Modal */}
+      {showConsentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowConsentModal(false)}>
+          <div className="w-full max-w-md bg-white dark:bg-surface-dark rounded-2xl border border-border dark:border-border-dark shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-border dark:border-border-dark">
+              <h2 className="font-display font-bold text-lg text-text dark:text-text-dark">Record New Consent</h2>
+              <button onClick={() => setShowConsentModal(false)} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-muted"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-text dark:text-text-dark mb-1">Patient Name *</label>
+                <input
+                  type="text"
+                  value={consentForm.patient}
+                  onChange={e => setConsentForm({ ...consentForm, patient: e.target.value })}
+                  placeholder="e.g. Ramesh Kumar"
+                  className="w-full px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-background-dark text-text dark:text-text-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-text dark:text-text-dark mb-1">Consent Purpose *</label>
+                <select
+                  value={consentForm.purpose}
+                  onChange={e => setConsentForm({ ...consentForm, purpose: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-background-dark text-text dark:text-text-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                >
+                  <option value="treatment">Treatment Data Sharing</option>
+                  <option value="insurance">Insurance Claim Processing</option>
+                  <option value="research">Research & Analytics</option>
+                  <option value="marketing">Marketing Communications</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-text dark:text-text-dark mb-1">Expiry Date</label>
+                <input
+                  type="date"
+                  value={consentForm.expiry}
+                  onChange={e => setConsentForm({ ...consentForm, expiry: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-background-dark text-text dark:text-text-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+                <p className="text-[10px] text-muted mt-1">Defaults to 1 year from today if not set</p>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setShowConsentModal(false)} className="flex-1 py-2.5 rounded-lg bg-gray-100 dark:bg-white/10 text-text dark:text-text-dark text-sm font-medium hover:bg-gray-200 dark:hover:bg-white/15 transition-colors">
+                  Cancel
+                </button>
+                <button onClick={handleCreateConsent} disabled={!consentForm.patient.trim()} className="flex-1 py-2.5 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                  <CheckCircle className="w-4 h-4" /> Record Consent
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Data Modernization */}
       <div className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-5">

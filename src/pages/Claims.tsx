@@ -3,7 +3,7 @@ import {
   FileCheck, Plus, LayoutList, Kanban, Clock, CheckCircle2,
   IndianRupee, Loader2, X, Sparkles, Search, User,
   ArrowRight, AlertCircle, ChevronDown, ChevronUp, Send,
-  XCircle, Ban, RotateCcw,
+  XCircle, Ban, RotateCcw, Paperclip, FileText, Upload, Trash2, Eye, Code2, Activity,
 } from 'lucide-react'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
@@ -24,6 +24,37 @@ const statusLabels: Record<string, string> = {
 
 const statusFilters = ['All', 'draft', 'submitted', 'under_review', 'approved', 'rejected', 'paid']
 const kanbanColumns = ['draft', 'submitted', 'under_review', 'approved', 'rejected', 'paid']
+
+interface ClaimDoc {
+  id: string
+  claim_id: string
+  name: string
+  type: string
+  file_url?: string
+  file_size?: number
+  uploaded_at?: string
+  filename?: string
+}
+
+const docTypeLabels: Record<string, string> = {
+  discharge_summary: 'Discharge Summary',
+  lab_report: 'Lab Report',
+  pre_auth: 'Pre-Authorization',
+  treatment_record: 'Treatment Record',
+  prescription: 'Prescription',
+  invoice: 'Invoice / Bill',
+  id_proof: 'ID Proof',
+  insurance_card: 'Insurance Card',
+  other: 'Other',
+}
+
+const docTypeOptions = Object.entries(docTypeLabels).map(([value, label]) => ({ value, label }))
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
 
 const payerSchemes = [
   { value: 'ayushman_bharat', label: 'Ayushman Bharat (PMJAY)' },
@@ -224,6 +255,9 @@ function NewClaimModal({ onClose, onCreated }: { onClose: () => void; onCreated:
     diagnosis: '', amount: '', payer_scheme: '', payer_name: '',
     policy_number: '', admission_date: '', discharge_date: '',
   })
+  const [attachedDocs, setAttachedDocs] = useState<{ name: string; type: string; size: number }[]>([])
+  const [docName, setDocName] = useState('')
+  const [docType, setDocType] = useState('discharge_summary')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [createdClaim, setCreatedClaim] = useState<Claim | null>(null)
@@ -417,6 +451,54 @@ function NewClaimModal({ onClose, onCreated }: { onClose: () => void; onCreated:
               </div>
             </div>
 
+            {/* Attach Documents */}
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-text dark:text-text-dark flex items-center gap-1.5">
+                <Paperclip className="w-3.5 h-3.5 text-muted" /> Supporting Documents
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={docName}
+                  onChange={e => setDocName(e.target.value)}
+                  placeholder="Document name"
+                  className="flex-1 px-2.5 py-1.5 rounded-lg border border-border dark:border-border-dark bg-background dark:bg-background-dark text-text dark:text-text-dark text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+                <select
+                  value={docType}
+                  onChange={e => setDocType(e.target.value)}
+                  className="px-2.5 py-1.5 rounded-lg border border-border dark:border-border-dark bg-background dark:bg-background-dark text-text dark:text-text-dark text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
+                >
+                  {docTypeOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!docName.trim()) return
+                    setAttachedDocs(prev => [...prev, { name: docName, type: docType, size: Math.floor(Math.random() * 400000) + 50000 }])
+                    setDocName('')
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3" /> Add
+                </button>
+              </div>
+              {attachedDocs.length > 0 && (
+                <div className="space-y-1">
+                  {attachedDocs.map((d, i) => (
+                    <div key={i} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-border dark:border-border-dark text-xs">
+                      <FileText className="w-3.5 h-3.5 text-primary shrink-0" />
+                      <span className="flex-1 text-text dark:text-text-dark truncate">{d.name}</span>
+                      <span className="text-muted">{docTypeLabels[d.type] || d.type}</span>
+                      <button type="button" onClick={() => setAttachedDocs(prev => prev.filter((_, j) => j !== i))} className="p-0.5 rounded hover:bg-error/10 text-error">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-lg bg-gray-100 dark:bg-white/10 text-text dark:text-text-dark text-sm font-medium hover:bg-gray-200 dark:hover:bg-white/15 transition-colors">
                 Cancel
@@ -476,12 +558,46 @@ function ClaimDetailModal({ claim, onClose, onStatusChange }: { claim: Claim; on
   const [detail, setDetail] = useState<Claim | null>(null)
   const [patient, setPatient] = useState<Patient | null>(null)
   const [updating, setUpdating] = useState(false)
+  const [docs, setDocs] = useState<ClaimDoc[]>([])
+  const [showUpload, setShowUpload] = useState(false)
+  const [uploadForm, setUploadForm] = useState({ name: '', type: 'discharge_summary' })
+  const [uploading, setUploading] = useState(false)
+  const [showFhir, setShowFhir] = useState(false)
+  const [fhirView, setFhirView] = useState<'summary' | 'json'>('summary')
+
+  const handleUploadDoc = () => {
+    if (!uploadForm.name.trim()) return
+    setUploading(true)
+    // Simulate upload — create metadata entry
+    const newDoc: ClaimDoc = {
+      id: `doc-${Date.now()}`,
+      claim_id: claim.id,
+      name: uploadForm.name,
+      type: uploadForm.type,
+      file_size: Math.floor(Math.random() * 400000) + 50000,
+      uploaded_at: new Date().toISOString(),
+    }
+    setTimeout(() => {
+      setDocs(prev => [newDoc, ...prev])
+      setUploadForm({ name: '', type: 'discharge_summary' })
+      setShowUpload(false)
+      setUploading(false)
+    }, 800)
+  }
+
+  const handleRemoveDoc = (docId: string) => {
+    setDocs(prev => prev.filter(d => d.id !== docId))
+  }
 
   useEffect(() => {
     async function load() {
       try {
         const res = await claimsAPI.get(claim.id)
-        setDetail(res.claim || claim)
+        const claimData = res.claim || claim
+        setDetail(claimData)
+        // Extract documents from claim response (backend embeds them in claim object)
+        const claimDocs = (claimData as unknown as { documents?: ClaimDoc[] }).documents
+        if (Array.isArray(claimDocs)) setDocs(claimDocs)
       } catch {
         setDetail(claim)
       }
@@ -622,6 +738,90 @@ function ClaimDetailModal({ claim, onClose, onStatusChange }: { claim: Claim; on
               </div>
             )}
 
+            {/* FHIR R4 Bundle Viewer */}
+            {(c as unknown as { fhir_bundle?: string }).fhir_bundle && (() => {
+              const fhirRaw = (c as unknown as { fhir_bundle: string }).fhir_bundle
+              let bundle: { resourceType?: string; type?: string; total?: number; entry?: { resource: { resourceType: string; id?: string; identifier?: { value?: string }[]; name?: { text?: string }[]; gender?: string; status?: string; type?: { coding?: { display?: string }[] }; code?: { coding?: { code?: string; display?: string }[]; text?: string }; total?: { value?: number; currency?: string }; billablePeriod?: { start?: string; end?: string }; insurance?: { coverage?: { display?: string } }[]; diagnosis?: { diagnosisReference?: { reference?: string } }[] } }[] } | null = null
+              try { bundle = JSON.parse(fhirRaw) } catch { /* invalid */ }
+              if (!bundle?.entry?.length) return null
+
+              return (
+                <div className="border border-border dark:border-border-dark rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => setShowFhir(!showFhir)}
+                    className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <span className="text-xs font-semibold text-muted flex items-center gap-1.5">
+                      <Activity className="w-3.5 h-3.5 text-primary" /> FHIR R4 Bundle — {bundle.entry.length} Resources
+                    </span>
+                    {showFhir ? <ChevronUp className="w-4 h-4 text-muted" /> : <ChevronDown className="w-4 h-4 text-muted" />}
+                  </button>
+                  {showFhir && (
+                    <div className="p-3 space-y-3">
+                      <div className="flex gap-1">
+                        <button onClick={() => setFhirView('summary')} className={cn('px-2.5 py-1 rounded-lg text-[10px] font-semibold', fhirView === 'summary' ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-muted')}>
+                          Summary
+                        </button>
+                        <button onClick={() => setFhirView('json')} className={cn('px-2.5 py-1 rounded-lg text-[10px] font-semibold flex items-center gap-1', fhirView === 'json' ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-muted')}>
+                          <Code2 className="w-3 h-3" /> JSON
+                        </button>
+                      </div>
+                      {fhirView === 'summary' ? (
+                        <div className="space-y-2">
+                          {bundle.entry.map((e, i) => {
+                            const r = e.resource
+                            return (
+                              <div key={i} className="flex items-start gap-3 p-2.5 rounded-lg bg-gray-50 dark:bg-gray-800">
+                                <span className={cn('px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0',
+                                  r.resourceType === 'Patient' ? 'bg-primary/10 text-primary' :
+                                  r.resourceType === 'Claim' ? 'bg-success/10 text-success' :
+                                  r.resourceType === 'Condition' ? 'bg-warning/10 text-warning' :
+                                  'bg-gray-200 dark:bg-gray-700 text-muted'
+                                )}>{r.resourceType}</span>
+                                <div className="flex-1 min-w-0 text-xs">
+                                  {r.resourceType === 'Patient' && (
+                                    <>
+                                      <p className="font-medium text-text dark:text-text-dark">{r.name?.[0]?.text || r.id}</p>
+                                      <p className="text-muted">{r.gender} · ID: {r.identifier?.[0]?.value || r.id}</p>
+                                    </>
+                                  )}
+                                  {r.resourceType === 'Claim' && (
+                                    <>
+                                      <p className="font-medium text-text dark:text-text-dark">{r.identifier?.[0]?.value || r.id}</p>
+                                      <p className="text-muted">
+                                        {r.type?.coding?.[0]?.display || 'Institutional'}
+                                        {r.total ? ` · ${r.total.currency} ${r.total.value?.toLocaleString()}` : ''}
+                                        {r.billablePeriod ? ` · ${r.billablePeriod.start} → ${r.billablePeriod.end}` : ''}
+                                      </p>
+                                      {r.insurance?.[0] && <p className="text-muted">Coverage: {r.insurance[0].coverage?.display}</p>}
+                                    </>
+                                  )}
+                                  {r.resourceType === 'Condition' && (
+                                    <>
+                                      <p className="font-medium text-text dark:text-text-dark">{r.code?.text || r.code?.coding?.[0]?.display}</p>
+                                      <p className="text-muted font-mono">{r.code?.coding?.[0]?.code}</p>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })}
+                          <div className="flex items-center gap-2 text-[10px] text-muted pt-1">
+                            <span className="px-1.5 py-0.5 rounded bg-success/10 text-success font-semibold">ABDM Compliant</span>
+                            <span>Bundle type: {bundle.type} · Resources: {bundle.total || bundle.entry.length}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <pre className="text-[10px] font-mono bg-gray-900 text-green-400 p-3 rounded-lg overflow-x-auto max-h-64 overflow-y-auto">
+                          {JSON.stringify(bundle, null, 2)}
+                        </pre>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+
             {/* Patient Info */}
             {patient && (
               <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-border dark:border-border-dark">
@@ -635,6 +835,91 @@ function ClaimDetailModal({ claim, onClose, onStatusChange }: { claim: Claim; on
                 </div>
               </div>
             )}
+
+            {/* Supporting Documents */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-muted flex items-center gap-1.5">
+                  <Paperclip className="w-3.5 h-3.5" /> Supporting Documents ({docs.length})
+                </p>
+                <button
+                  onClick={() => setShowUpload(!showUpload)}
+                  className="text-[10px] px-2.5 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 font-medium flex items-center gap-1"
+                >
+                  <Upload className="w-3 h-3" /> Upload
+                </button>
+              </div>
+
+              {showUpload && (
+                <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      value={uploadForm.name}
+                      onChange={e => setUploadForm({ ...uploadForm, name: e.target.value })}
+                      placeholder="Document name (e.g. Discharge Summary)"
+                      className="col-span-2 px-2.5 py-1.5 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-background-dark text-text dark:text-text-dark text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                    <select
+                      value={uploadForm.type}
+                      onChange={e => setUploadForm({ ...uploadForm, type: e.target.value })}
+                      className="px-2.5 py-1.5 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-background-dark text-text dark:text-text-dark text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    >
+                      {docTypeOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleUploadDoc}
+                        disabled={uploading || !uploadForm.name.trim()}
+                        className="flex-1 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-1"
+                      >
+                        {uploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                        {uploading ? 'Uploading...' : 'Upload'}
+                      </button>
+                      <button
+                        onClick={() => setShowUpload(false)}
+                        className="px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-white/10 text-muted text-xs hover:bg-gray-200 dark:hover:bg-white/15"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {docs.length > 0 ? (
+                <div className="space-y-1.5">
+                  {docs.map(doc => (
+                    <div key={doc.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-gray-50 dark:bg-gray-800 border border-border dark:border-border-dark group">
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                        <FileText className="w-4 h-4 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-text dark:text-text-dark truncate">{doc.name || doc.filename}</p>
+                        <p className="text-[10px] text-muted">
+                          {docTypeLabels[doc.type] || doc.type}
+                          {doc.file_size ? ` · ${formatFileSize(doc.file_size)}` : ''}
+                          {doc.uploaded_at ? ` · ${formatDate(doc.uploaded_at)}` : ''}
+                        </p>
+                      </div>
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button className="p-1.5 rounded-lg hover:bg-primary/10 text-primary" title="View">
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => handleRemoveDoc(doc.id)} className="p-1.5 rounded-lg hover:bg-error/10 text-error" title="Remove">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-4 text-xs text-muted">
+                  <FileText className="w-8 h-8 mx-auto mb-1 opacity-30" />
+                  No documents attached. Upload supporting documents to strengthen this claim.
+                </div>
+              )}
+            </div>
 
             {/* Actions based on current status */}
             <div className="flex gap-3 pt-2 border-t border-border dark:border-border-dark">

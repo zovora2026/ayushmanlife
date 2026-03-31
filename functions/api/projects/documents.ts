@@ -55,10 +55,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
       description?: string;
       version?: string;
       uploaded_by?: string;
+      status?: string;
+      uploader_name?: string;
     };
 
     if (!db) {
-      return json({ document: { id: `doc-${Date.now()}`, ...body } }, 201);
+      return json({ document: { id: `doc-${Date.now()}`, ...body, created_at: new Date().toISOString() } }, 201);
     }
 
     if (!body.project_id || !body.title || !body.document_type) {
@@ -67,10 +69,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
     const id = `doc-${Date.now()}`;
     await db.prepare(`
-      INSERT INTO project_documents (id, project_id, document_type, title, filename, description, version, uploaded_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO project_documents (id, project_id, document_type, title, filename, description, version, uploaded_by, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(id, body.project_id, body.document_type, body.title,
-      body.filename || null, body.description || null, body.version || '1.0', body.uploaded_by || 'usr-001').run();
+      body.filename || null, body.description || null, body.version || '1.0', body.uploaded_by || 'usr-001', body.status || 'current').run();
 
     const document = await db.prepare(`
       SELECT pd.*, u.name as uploader_name

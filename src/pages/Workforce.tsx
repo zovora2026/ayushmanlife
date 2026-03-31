@@ -24,6 +24,7 @@ import {
   Zap,
   Star,
   FileText,
+  X,
 } from 'lucide-react'
 import { cn, getInitials, formatDate, formatCurrency } from '../lib/utils'
 import { demoStaff } from '../lib/mock-data'
@@ -246,6 +247,40 @@ export default function Workforce() {
   const [projectsList, setProjectsList] = useState<Project[]>([])
   const [assignmentsList, setAssignmentsList] = useState<ProjectAssignment[]>([])
   const [loading, setLoading] = useState(true)
+  const [showShiftModal, setShowShiftModal] = useState(false)
+  const [showLeaveModal, setShowLeaveModal] = useState(false)
+  const [leaveForm, setLeaveForm] = useState({ staff: '', type: 'casual', from: '', to: '', reason: '' })
+  const [leaveRequests, setLeaveRequests] = useState([
+    { id: 'lv-001', staff: 'Dr. Rajesh Kumar', type: 'Sick Leave', from: '2026-03-28', to: '2026-03-30', days: 3, status: 'approved' as const, reason: 'Medical consultation' },
+    { id: 'lv-002', staff: 'Nurse Priya M.', type: 'Casual Leave', from: '2026-04-02', to: '2026-04-03', days: 2, status: 'pending' as const, reason: 'Family event' },
+    { id: 'lv-003', staff: 'Dr. Ananya Iyer', type: 'Earned Leave', from: '2026-04-10', to: '2026-04-18', days: 9, status: 'pending' as const, reason: 'Vacation' },
+    { id: 'lv-004', staff: 'Tech. Suresh R.', type: 'Sick Leave', from: '2026-03-25', to: '2026-03-26', days: 2, status: 'approved' as const, reason: 'Fever' },
+  ])
+
+  const handleCreateLeave = () => {
+    if (!leaveForm.staff || !leaveForm.from || !leaveForm.to) return
+    const typeLabels: Record<string, string> = { casual: 'Casual Leave', sick: 'Sick Leave', earned: 'Earned Leave', comp_off: 'Compensatory Off' }
+    const from = new Date(leaveForm.from)
+    const to = new Date(leaveForm.to)
+    const days = Math.max(1, Math.ceil((to.getTime() - from.getTime()) / 86400000) + 1)
+    const newLeave = {
+      id: `lv-${Date.now()}`,
+      staff: leaveForm.staff,
+      type: typeLabels[leaveForm.type] || leaveForm.type,
+      from: leaveForm.from,
+      to: leaveForm.to,
+      days,
+      status: 'pending' as const,
+      reason: leaveForm.reason,
+    }
+    setLeaveRequests(prev => [newLeave, ...prev])
+    setLeaveForm({ staff: '', type: 'casual', from: '', to: '', reason: '' })
+    setShowLeaveModal(false)
+  }
+
+  const handleLeaveAction = (id: string, action: 'approved' | 'rejected') => {
+    setLeaveRequests(prev => prev.map(l => l.id === id ? { ...l, status: action } : l))
+  }
 
   useEffect(() => {
     let mounted = true
@@ -309,6 +344,23 @@ export default function Workforce() {
   }, [staffList])
 
   const expiringCount = allCertifications.filter((c) => c.status === 'Expiring').length
+
+  const handleCreateShift = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const form = e.currentTarget
+    const data = Object.fromEntries(new FormData(form))
+    try {
+      await workforce.createShift({
+        staff_id: data.staff_id,
+        schedule_date: data.schedule_date,
+        shift: data.shift,
+        location: data.location,
+      } as unknown as Partial<ShiftSchedule>)
+      setShowShiftModal(false)
+      const scheduleRes = await workforce.schedule()
+      if (scheduleRes.schedules) setScheduleData(scheduleRes.schedules)
+    } catch (err) { console.error('Failed to create shift:', err) }
+  }
 
   const { days, schedule } = useMemo(() => buildWeeklySchedule(staffList), [staffList])
 
@@ -734,9 +786,29 @@ export default function Workforce() {
       {/* ── Staff Scheduler ───────────────────────────────────────── */}
       {activeTab === 'scheduler' && (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            Weekly Schedule
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              Weekly Schedule
+            </h2>
+            <button onClick={() => setShowShiftModal(true)} className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors">+ Create Shift</button>
+          </div>
+
+          {/* D1 Schedule Data */}
+          {scheduleData.length > 0 && (
+            <Card header={<h3 className="font-display font-semibold text-text dark:text-text-dark">Scheduled Shifts from Database ({scheduleData.length})</h3>}>
+              <div className="space-y-2">
+                {scheduleData.map(s => (
+                  <div key={s.id} className="flex items-center gap-4 p-2 rounded-lg bg-gray-50 dark:bg-slate-800">
+                    <span className="text-sm font-medium text-text dark:text-text-dark w-32">{s.user_name || s.user_id}</span>
+                    <Badge variant={s.shift_type === 'Morning' ? 'info' : s.shift_type === 'Afternoon' ? 'warning' : 'neutral'} size="sm">{s.shift_type}</Badge>
+                    <span className="text-xs text-muted">{s.date}</span>
+                    <span className="text-xs text-muted">{s.start_time} — {s.end_time}</span>
+                    <span className="text-xs text-muted">{s.department}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
           <div className="grid grid-cols-7 gap-2">
             {days.map((day) => (
               <div key={day.label}>
@@ -766,6 +838,110 @@ export default function Workforce() {
               </div>
             ))}
           </div>
+
+          {/* Leave Management */}
+          <Card header={
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-2"><Calendar className="h-4 w-4 text-primary" /><h3 className="font-display font-semibold text-text dark:text-text-dark">Leave Management</h3></div>
+              <button onClick={() => setShowLeaveModal(true)} className="text-xs px-3 py-1.5 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 flex items-center gap-1">
+                + Request Leave
+              </button>
+            </div>
+          }>
+            {/* Leave Balance Summary */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              {[
+                { type: 'Casual Leave', balance: 8, total: 12, color: 'text-primary' },
+                { type: 'Sick Leave', balance: 5, total: 10, color: 'text-error' },
+                { type: 'Earned Leave', balance: 15, total: 20, color: 'text-success' },
+                { type: 'Comp Off', balance: 3, total: 5, color: 'text-warning' },
+              ].map(l => (
+                <div key={l.type} className="p-3 rounded-lg bg-gray-50 dark:bg-slate-800 text-center">
+                  <p className={cn('font-display font-bold text-xl', l.color)}>{l.balance}/{l.total}</p>
+                  <p className="text-[10px] text-muted mt-0.5">{l.type}</p>
+                  <div className="mt-1.5 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                    <div className={cn('h-full rounded-full', l.color.replace('text-', 'bg-'))} style={{ width: `${(l.balance / l.total) * 100}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Leave Requests Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr className="border-b text-left text-xs text-gray-500"><th className="p-2">Staff</th><th className="p-2">Type</th><th className="p-2">From</th><th className="p-2">To</th><th className="p-2">Days</th><th className="p-2">Reason</th><th className="p-2">Status</th><th className="p-2">Actions</th></tr></thead>
+                <tbody>
+                  {leaveRequests.map(l => (
+                    <tr key={l.id} className="border-b last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                      <td className="p-2 font-medium text-xs">{l.staff}</td>
+                      <td className="p-2"><Badge variant={l.type.includes('Sick') ? 'error' : l.type.includes('Earned') ? 'success' : l.type.includes('Comp') ? 'warning' : 'info'} size="sm">{l.type}</Badge></td>
+                      <td className="p-2 text-xs">{l.from}</td>
+                      <td className="p-2 text-xs">{l.to}</td>
+                      <td className="p-2 text-xs font-bold">{l.days}</td>
+                      <td className="p-2 text-xs text-muted">{l.reason}</td>
+                      <td className="p-2"><Badge variant={l.status === 'approved' ? 'success' : l.status === 'rejected' ? 'error' : 'warning'} size="sm">{l.status}</Badge></td>
+                      <td className="p-2">
+                        {l.status === 'pending' && (
+                          <div className="flex gap-1">
+                            <button onClick={() => handleLeaveAction(l.id, 'approved')} className="px-2 py-0.5 rounded bg-success/10 text-success text-[10px] font-semibold hover:bg-success/20">Approve</button>
+                            <button onClick={() => handleLeaveAction(l.id, 'rejected')} className="px-2 py-0.5 rounded bg-error/10 text-error text-[10px] font-semibold hover:bg-error/20">Reject</button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Leave Request Modal */}
+      {showLeaveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowLeaveModal(false)}>
+          <div className="w-full max-w-md bg-white dark:bg-surface-dark rounded-2xl border border-border dark:border-border-dark shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-border dark:border-border-dark">
+              <h2 className="font-display font-bold text-lg text-text dark:text-text-dark">Request Leave</h2>
+              <button onClick={() => setShowLeaveModal(false)} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-muted"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-text dark:text-text-dark mb-1">Staff Member *</label>
+                <select value={leaveForm.staff} onChange={e => setLeaveForm({ ...leaveForm, staff: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-background-dark text-text dark:text-text-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+                  <option value="">Select staff...</option>
+                  {staffList.map(s => <option key={s.id} value={s.name}>{s.name} — {s.role}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-text dark:text-text-dark mb-1">Leave Type</label>
+                <select value={leaveForm.type} onChange={e => setLeaveForm({ ...leaveForm, type: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-background-dark text-text dark:text-text-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+                  <option value="casual">Casual Leave</option>
+                  <option value="sick">Sick Leave</option>
+                  <option value="earned">Earned Leave</option>
+                  <option value="comp_off">Compensatory Off</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-text dark:text-text-dark mb-1">From *</label>
+                  <input type="date" value={leaveForm.from} onChange={e => setLeaveForm({ ...leaveForm, from: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-background-dark text-text dark:text-text-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-text dark:text-text-dark mb-1">To *</label>
+                  <input type="date" value={leaveForm.to} onChange={e => setLeaveForm({ ...leaveForm, to: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-background-dark text-text dark:text-text-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-text dark:text-text-dark mb-1">Reason</label>
+                <input type="text" value={leaveForm.reason} onChange={e => setLeaveForm({ ...leaveForm, reason: e.target.value })} placeholder="Reason for leave" className="w-full px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-background-dark text-text dark:text-text-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setShowLeaveModal(false)} className="flex-1 py-2.5 rounded-lg bg-gray-100 dark:bg-white/10 text-text dark:text-text-dark text-sm font-medium hover:bg-gray-200 dark:hover:bg-white/15">Cancel</button>
+                <button onClick={handleCreateLeave} disabled={!leaveForm.staff || !leaveForm.from || !leaveForm.to} className="flex-1 py-2.5 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-50">Submit Request</button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -785,6 +961,46 @@ export default function Workforce() {
             columns={credentialColumns}
             data={allCertifications as unknown as Record<string, unknown>[]}
           />
+        </div>
+      )}
+
+      {/* Shift Creation Modal */}
+      {showShiftModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowShiftModal(false)}>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <h3 className="font-semibold text-lg text-text dark:text-text-dark mb-4">Create Shift Assignment</h3>
+            <form onSubmit={handleCreateShift} className="space-y-3">
+              <div>
+                <label className="text-xs font-medium text-muted block mb-1">Staff Member</label>
+                <select name="staff_id" required className="w-full px-3 py-2 border border-border dark:border-border-dark rounded-lg bg-white dark:bg-slate-700 text-text dark:text-text-dark text-sm">
+                  <option value="">Select Staff</option>
+                  {staffList.filter(s => s.status === 'Active').map(s => (
+                    <option key={s.id} value={s.id}>{s.name} — {s.department}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted block mb-1">Date</label>
+                <input name="schedule_date" type="date" required className="w-full px-3 py-2 border border-border dark:border-border-dark rounded-lg bg-white dark:bg-slate-700 text-text dark:text-text-dark text-sm" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted block mb-1">Shift</label>
+                <select name="shift" required className="w-full px-3 py-2 border border-border dark:border-border-dark rounded-lg bg-white dark:bg-slate-700 text-text dark:text-text-dark text-sm">
+                  <option value="Morning">Morning (7:00 AM — 2:00 PM)</option>
+                  <option value="Afternoon">Afternoon (2:00 PM — 9:00 PM)</option>
+                  <option value="Night">Night (9:00 PM — 7:00 AM)</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted block mb-1">Location/Department</label>
+                <input name="location" placeholder="e.g., OPD-205, Ward-3A, ICU" className="w-full px-3 py-2 border border-border dark:border-border-dark rounded-lg bg-white dark:bg-slate-700 text-text dark:text-text-dark text-sm" />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setShowShiftModal(false)} className="px-4 py-2 text-sm text-muted hover:text-text dark:hover:text-text-dark">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors">Create Shift</button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

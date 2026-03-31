@@ -151,7 +151,7 @@ export const payer = {
 export const fraud = {
   investigations: (params?: Record<string, string>) =>
     fetchAPI<{ investigations: FraudInvestigation[]; summary: FraudInvestigationSummary }>(`/fraud/investigations?${new URLSearchParams(params || {})}`),
-  createInvestigation: (data: { type: 'investigation'; alert_id: string; priority?: string }) =>
+  createInvestigation: (data: { type: 'investigation'; alert_id: string; priority?: string; status?: string; findings?: string; action_taken?: string; recovery_amount?: number }) =>
     fetchAPI<{ investigation: FraudInvestigation }>('/fraud/investigations', { method: 'POST', body: JSON.stringify(data) }),
   addNote: (data: { type: 'note'; investigation_id: string; content: string; note_type?: string }) =>
     fetchAPI<{ note: { id: string } }>('/fraud/investigations', { method: 'POST', body: JSON.stringify(data) }),
@@ -1314,7 +1314,7 @@ export const governance = {
   },
   createRequest: (data: { title: string; description?: string; department: string; requested_by?: string; requester_name?: string; request_type?: string; emr_module?: string; clinical_impact?: number; operational_impact?: number; regulatory_impact?: number; effort_estimate?: string; effort_hours?: number }) =>
     fetchAPI<{ request: EnhancementRequest }>('/governance/requests', { method: 'POST', body: JSON.stringify(data) }),
-  updateRequest: (data: { id: string; status?: string; assigned_to?: string; assignee_name?: string; sprint?: string; target_date?: string; priority_score?: number; effort_estimate?: string; effort_hours?: number }) =>
+  updateRequest: (data: { id: string; title?: string; description?: string; status?: string; assigned_to?: string; assignee_name?: string; sprint?: string; target_date?: string; priority_score?: number; effort_estimate?: string; effort_hours?: number; clinical_impact?: number; operational_impact?: number; regulatory_impact?: number; category?: string }) =>
     fetchAPI<{ request: EnhancementRequest }>('/governance/requests', { method: 'PUT', body: JSON.stringify(data) }),
   getReviews: (params?: { request_id?: string; committee?: string; decision?: string }) => {
     const sp = new URLSearchParams();
@@ -1399,7 +1399,7 @@ export const changes = {
   },
   createRequest: (data: { title: string; description?: string; change_type?: string; category?: string; emr_system?: string; environment?: string; risk_level?: string; impact_assessment?: string; rollback_plan?: string; testing_plan?: string; requested_by?: string; requester_name?: string; scheduled_date?: string; cab_required?: number }) =>
     fetchAPI<{ change: ChangeRequest }>('/changes/requests', { method: 'POST', body: JSON.stringify(data) }),
-  updateRequest: (data: { id: string; status?: string; assigned_to?: string; assignee_name?: string; scheduled_date?: string; implementation_notes?: string; risk_level?: string; cab_meeting_id?: string }) =>
+  updateRequest: (data: { id: string; title?: string; description?: string; status?: string; assigned_to?: string; assignee_name?: string; scheduled_date?: string; implementation_notes?: string; risk_level?: string; cab_meeting_id?: string; impact_assessment?: string; rollback_plan?: string; testing_plan?: string; category?: string }) =>
     fetchAPI<{ change: ChangeRequest }>('/changes/requests', { method: 'PUT', body: JSON.stringify(data) }),
   getCab: (meetingId?: string) => {
     const qs = meetingId ? `?meeting_id=${meetingId}` : '';

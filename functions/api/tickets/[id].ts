@@ -57,7 +57,19 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       return json({ error: 'Ticket not found' }, 404);
     }
 
-    return json({ ticket });
+    // Fetch comments
+    let comments: unknown[] = [];
+    try {
+      const commentsResult = await db
+        .prepare('SELECT * FROM ticket_comments WHERE ticket_id = ? ORDER BY created_at ASC')
+        .bind(ticketId)
+        .all();
+      comments = commentsResult.results || [];
+    } catch {
+      // table may not exist
+    }
+
+    return json({ ticket, comments });
   } catch (error) {
     console.error('Error fetching ticket:', error);
     return json({ error: 'Failed to fetch ticket' }, 500);
@@ -180,5 +192,46 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
   } catch (error) {
     console.error('Error updating ticket:', error);
     return json({ error: 'Failed to update ticket' }, 500);
+  }
+};
+
+export const onRequestPost: PagesFunction<Env> = async (context) => {
+  try {
+    const ticketId = context.params.id as string;
+    const db = context.env.DB;
+    const body = (await context.request.json()) as {
+      author_name: string;
+      author_id?: string;
+      comment: string;
+      type?: string;
+    };
+
+    if (!body.comment || !body.author_name) {
+      return json({ error: 'comment and author_name are required' }, 400);
+    }
+
+    if (!db) {
+      return json({
+        comment: { id: `tc-${Date.now()}`, ticket_id: ticketId, ...body, created_at: new Date().toISOString() },
+      });
+    }
+
+    const id = `tc-${Date.now()}`;
+    await db
+      .prepare(
+        'INSERT INTO ticket_comments (id, ticket_id, author_id, author_name, comment, type) VALUES (?, ?, ?, ?, ?, ?)'
+      )
+      .bind(id, ticketId, body.author_id || null, body.author_name, body.comment, body.type || 'comment')
+      .run();
+
+    const comment = await db
+      .prepare('SELECT * FROM ticket_comments WHERE id = ?')
+      .bind(id)
+      .first();
+
+    return json({ comment, message: 'Comment added' });
+  } catch (error) {
+    console.error('Error adding comment:', error);
+    return json({ error: 'Failed to add comment' }, 500);
   }
 };

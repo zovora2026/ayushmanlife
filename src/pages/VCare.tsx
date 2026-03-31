@@ -198,8 +198,10 @@ export default function VCare() {
     spo2: { value: number; date: string }[]
   }>({ bp: [], hr: [], spo2: [] })
   const [vitalsLoading, setVitalsLoading] = useState(true)
+  const [patientList, setPatientList] = useState<{ id: string; name: string }[]>([])
+  const [selectedPatientId, setSelectedPatientId] = useState('pat-001')
 
-  const PATIENT_ID = 'pat-001'
+  const PATIENT_ID = selectedPatientId
 
   const resetSymptomChecker = () => {
     setScStep(1)
@@ -291,6 +293,15 @@ export default function VCare() {
     } catch { /* keep defaults */ }
 
     setContextLoading(false)
+  }, [selectedPatientId])
+
+  // Load patient list for selector
+  useEffect(() => {
+    patientsAPI.list().then((res: any) => {
+      if (res?.patients?.length) {
+        setPatientList(res.patients.map((p: any) => ({ id: p.id, name: p.name })))
+      }
+    }).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -372,6 +383,13 @@ export default function VCare() {
   const profileConditions = patientProfile?.chronic_conditions?.split(',').map(c => c.trim()).filter(Boolean) || []
   const profileInitials = profileName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
 
+  const handleCancelAppointment = async (aptId: string) => {
+    try {
+      await appointmentsAPI.update(aptId, { status: 'cancelled' })
+      setPatientApts(prev => prev.map(a => a.id === aptId ? { ...a, status: 'cancelled' } : a))
+    } catch (err) { console.error('Failed to cancel appointment:', err) }
+  }
+
   // Upcoming appointments only
   const upcomingApts = patientApts.filter(a => {
     const d = new Date(a.date)
@@ -379,6 +397,23 @@ export default function VCare() {
   }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
   return (
+    <div className="space-y-3">
+      {/* Patient Selector */}
+      <div className="flex items-center gap-3 px-1">
+        <label className="text-sm font-medium text-text dark:text-text-dark">Patient:</label>
+        <select
+          value={selectedPatientId}
+          onChange={e => { setSelectedPatientId(e.target.value); setPatientProfile(null); setPatientMeds([]); setPatientClaims([]); setPatientApts([]) }}
+          className="px-3 py-1.5 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-sm min-w-[200px]"
+        >
+          {patientList.length > 0 ? patientList.map(p => (
+            <option key={p.id} value={p.id}>{p.name} ({p.id})</option>
+          )) : (
+            <option value="pat-001">Ramesh Kumar (pat-001)</option>
+          )}
+        </select>
+        {patientProfile && <span className="text-xs text-muted">{profileGender}, Age {profileAge} | {profileInsurance}</span>}
+      </div>
     <div className="flex flex-col lg:flex-row gap-4" style={{ height: 'auto', minHeight: 'calc(100vh - 8rem)' }}>
       {/* Chat Panel — Left Side */}
       <div className="flex w-full lg:w-3/5 flex-col rounded-xl border border-border bg-white shadow-sm dark:border-border-dark dark:bg-surface-dark" style={{ minHeight: '60vh' }}>
@@ -522,7 +557,21 @@ export default function VCare() {
           )}
 
           {/* Step 2: Symptom Selection */}
-          {scStep === 2 && scSystem && (
+          {scStep === 2 && scSystem && (() => {
+            // Emergency symptom detection
+            const emergencySymptoms = ['Chest Pain', 'Chest Tightness', 'Shortness of Breath', 'Fainting', 'Seizures', 'Vision Changes']
+            const emergencyCombos: [string, string][] = [
+              ['Chest Pain', 'Shortness of Breath'],
+              ['Chest Tightness', 'Rapid Heartbeat'],
+              ['Numbness', 'Vision Changes'],
+              ['Fainting', 'Rapid Heartbeat'],
+              ['Seizures', 'Memory Loss'],
+            ]
+            const hasEmergencySymptom = scSymptoms.some(s => emergencySymptoms.includes(s)) && scSymptoms.length >= 2
+            const hasEmergencyCombo = emergencyCombos.some(([a, b]) => scSymptoms.includes(a) && scSymptoms.includes(b))
+            const isEmergency = hasEmergencySymptom || hasEmergencyCombo
+
+            return (
             <div>
               <div className="flex items-center gap-2 mb-3">
                 <button onClick={() => { setScStep(1); setScSymptoms([]) }} className="flex items-center gap-1 text-xs text-primary hover:underline">
@@ -531,15 +580,45 @@ export default function VCare() {
                 <span className="text-xs text-muted">|</span>
                 <span className="text-xs font-medium text-text dark:text-text-dark">{scSystem.label}</span>
               </div>
+
+              {/* Emergency Triage Alert */}
+              {isEmergency && (
+                <div className="mb-3 rounded-lg border-2 border-red-400 bg-red-50 dark:bg-red-900/20 p-3 animate-pulse">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle className="h-5 w-5 text-red-600" />
+                    <span className="text-sm font-bold text-red-700 dark:text-red-400 uppercase">Emergency Triage Alert</span>
+                  </div>
+                  <p className="text-xs text-red-700 dark:text-red-300 mb-2">
+                    Your symptoms may indicate a medical emergency. Please seek immediate medical attention.
+                  </p>
+                  <div className="flex gap-2">
+                    <a href="tel:108" className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-red-600 text-white text-xs font-bold hover:bg-red-700">
+                      <Phone className="h-3.5 w-3.5" /> Call 108 (Ambulance)
+                    </a>
+                    <a href="tel:112" className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-red-100 text-red-700 text-xs font-bold hover:bg-red-200 dark:bg-red-900/40 dark:text-red-300">
+                      <Phone className="h-3.5 w-3.5" /> Call 112 (Emergency)
+                    </a>
+                  </div>
+                  <div className="mt-2 text-[10px] text-red-600 dark:text-red-400">
+                    <strong>While waiting:</strong> Stay calm, do not eat/drink, lie down if dizzy, loosen tight clothing
+                  </div>
+                </div>
+              )}
+
               <p className="text-xs text-muted mb-3">Select all symptoms that apply:</p>
               <div className="space-y-2">
-                {scSystem.symptoms.map((symptom) => (
-                  <label key={symptom} className="flex items-center gap-2.5 cursor-pointer rounded-lg border border-border dark:border-border-dark px-3 py-2 transition-colors hover:border-primary/40 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                {scSystem.symptoms.map((symptom) => {
+                  const isDangerous = emergencySymptoms.includes(symptom)
+                  return (
+                  <label key={symptom} className={cn('flex items-center gap-2.5 cursor-pointer rounded-lg border px-3 py-2 transition-colors hover:border-primary/40 has-[:checked]:border-primary has-[:checked]:bg-primary/5',
+                    isDangerous && scSymptoms.includes(symptom) ? 'border-red-300 bg-red-50/50 dark:border-red-800 dark:bg-red-900/10' : 'border-border dark:border-border-dark')}>
                     <input type="checkbox" checked={scSymptoms.includes(symptom)} onChange={() => toggleSymptom(symptom)}
                       className="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-primary focus:ring-primary/20" />
                     <span className="text-xs font-medium text-text dark:text-text-dark">{symptom}</span>
+                    {isDangerous && <AlertTriangle className="h-3 w-3 text-red-400 ml-auto" />}
                   </label>
-                ))}
+                  )
+                })}
               </div>
               <button onClick={() => { if (scSymptoms.length > 0) setScStep(3) }} disabled={scSymptoms.length === 0}
                 className={cn('mt-4 w-full flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-medium transition-colors',
@@ -547,7 +626,8 @@ export default function VCare() {
                 Continue <ArrowRight className="h-3.5 w-3.5" />
               </button>
             </div>
-          )}
+            )
+          })()}
 
           {/* Step 3: Duration & Severity */}
           {scStep === 3 && (
@@ -800,6 +880,37 @@ export default function VCare() {
           )}
         </Card>
 
+        {/* Lab Results */}
+        <Card header={<div className="flex items-center gap-2"><FileText className="h-4 w-4 text-primary" /><h3 className="font-display font-semibold text-text dark:text-text-dark">Recent Lab Results</h3></div>} padding="sm">
+          <div className="space-y-2 p-2">
+            {[
+              { test: 'HbA1c', value: '8.2%', ref: '< 6.5%', status: 'high' as const, date: '2026-03-20', interpretation: 'Above target — indicates suboptimal glycemic control over past 3 months' },
+              { test: 'Fasting Blood Sugar', value: '186 mg/dL', ref: '70-100 mg/dL', status: 'high' as const, date: '2026-03-20', interpretation: 'Elevated — correlates with HbA1c findings' },
+              { test: 'Creatinine', value: '1.1 mg/dL', ref: '0.7-1.3 mg/dL', status: 'normal' as const, date: '2026-03-20', interpretation: 'Within normal range — kidney function preserved' },
+              { test: 'Total Cholesterol', value: '210 mg/dL', ref: '< 200 mg/dL', status: 'high' as const, date: '2026-03-18', interpretation: 'Borderline high — lipid management recommended' },
+              { test: 'TSH', value: '3.2 mIU/L', ref: '0.5-5.0 mIU/L', status: 'normal' as const, date: '2026-03-15', interpretation: 'Normal thyroid function' },
+              { test: 'Hemoglobin', value: '13.8 g/dL', ref: '13.5-17.5 g/dL', status: 'normal' as const, date: '2026-03-15', interpretation: 'Normal — no anemia' },
+            ].map((lab) => (
+              <div key={lab.test} className="rounded-lg border border-border dark:border-border-dark p-2.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-semibold text-text dark:text-text-dark">{lab.test}</span>
+                  <span className={cn('px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase',
+                    lab.status === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                    lab.status === 'low' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                    'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                  )}>{lab.status}</span>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className={cn('text-sm font-bold', lab.status === 'normal' ? 'text-success' : 'text-error')}>{lab.value}</span>
+                  <span className="text-[10px] text-muted">Ref: {lab.ref}</span>
+                  <span className="text-[9px] text-muted ml-auto">{lab.date}</span>
+                </div>
+                <p className="text-[10px] text-muted mt-1 italic">{lab.interpretation}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+
         {/* Claims Status — from D1 */}
         <Card header={
           <div className="flex items-center justify-between w-full">
@@ -864,8 +975,11 @@ export default function VCare() {
                     <Clock className="h-3 w-3" />
                     <span>{new Date(apt.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} · {apt.time}</span>
                   </div>
-                  <div className="mt-1">
+                  <div className="mt-1 flex items-center justify-between">
                     <Badge variant={apt.status === 'scheduled' ? 'info' : apt.status === 'confirmed' ? 'success' : 'neutral'} size="sm">{apt.status}</Badge>
+                    {(apt.status === 'scheduled' || apt.status === 'confirmed') && (
+                      <button onClick={() => handleCancelAppointment(apt.id)} className="text-[10px] px-2 py-0.5 rounded bg-red-50 text-red-600 hover:bg-red-100 font-medium">Cancel</button>
+                    )}
                   </div>
                 </li>
               ))}
@@ -1062,6 +1176,7 @@ export default function VCare() {
         </Card>
 
       </div>
+    </div>
     </div>
   )
 }

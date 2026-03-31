@@ -11,6 +11,12 @@ import {
   Target,
   Send,
   Loader2,
+  Upload,
+  Download,
+  Plus,
+  X,
+  Eye,
+  Trash2,
 } from 'lucide-react'
 import { cn, formatCurrency, formatDate } from '../lib/utils'
 import { workforce, projects as projectsAPI } from '../lib/api'
@@ -56,6 +62,49 @@ export default function ClientPortal() {
   const [messages, setMessages] = useState<ProjectMessage[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [sending, setSending] = useState(false)
+  const [showDocUpload, setShowDocUpload] = useState(false)
+  const [docForm, setDocForm] = useState({ title: '', document_type: 'sow', description: '' })
+  const [uploadingDoc, setUploadingDoc] = useState(false)
+
+  const handleUploadDocument = async () => {
+    if (!docForm.title.trim() || !selectedProjectId) return
+    setUploadingDoc(true)
+    try {
+      const res = await projectsAPI.createDocument({
+        project_id: selectedProjectId,
+        title: docForm.title,
+        document_type: docForm.document_type,
+        description: docForm.description || undefined,
+        version: '1.0',
+        status: 'current',
+        uploaded_by: 'client',
+        uploader_name: 'Client Admin',
+      })
+      if (res.document) {
+        setDocuments(prev => [res.document, ...prev])
+      }
+      setDocForm({ title: '', document_type: 'sow', description: '' })
+      setShowDocUpload(false)
+    } catch {
+      // Simulate success locally
+      const newDoc: ProjectDocument = {
+        id: `doc-${Date.now()}`,
+        project_id: selectedProjectId,
+        title: docForm.title,
+        document_type: docForm.document_type,
+        description: docForm.description,
+        version: '1.0',
+        uploaded_by: 'client',
+        uploader_name: 'Client Admin',
+        status: 'current',
+        created_at: new Date().toISOString(),
+      }
+      setDocuments(prev => [newDoc, ...prev])
+      setDocForm({ title: '', document_type: 'sow', description: '' })
+      setShowDocUpload(false)
+    }
+    setUploadingDoc(false)
+  }
 
   useEffect(() => {
     async function load() {
@@ -348,13 +397,70 @@ export default function ClientPortal() {
 
       {/* ── Documents ──────────────────────────────────────── */}
       {activeTab === 'documents' && (
-        <Card header={<div className="flex items-center gap-2"><FileText className="h-4 w-4 text-primary" /><h3 className="font-semibold text-gray-900 dark:text-gray-100">Project Documents</h3></div>}>
+        <Card header={
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2"><FileText className="h-4 w-4 text-primary" /><h3 className="font-semibold text-gray-900 dark:text-gray-100">Project Documents</h3></div>
+            <button
+              onClick={() => setShowDocUpload(!showDocUpload)}
+              className="text-xs px-3 py-1.5 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 flex items-center gap-1"
+            >
+              <Upload className="w-3.5 h-3.5" /> Upload Document
+            </button>
+          </div>
+        }>
+          {showDocUpload && (
+            <div className="p-4 mb-4 rounded-lg bg-primary/5 border border-primary/20 space-y-3">
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Upload New Document</p>
+              <div className="grid grid-cols-2 gap-3">
+                <input
+                  type="text"
+                  value={docForm.title}
+                  onChange={e => setDocForm({ ...docForm, title: e.target.value })}
+                  placeholder="Document title"
+                  className="col-span-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+                <select
+                  value={docForm.document_type}
+                  onChange={e => setDocForm({ ...docForm, document_type: e.target.value })}
+                  className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                >
+                  <option value="sow">Statement of Work</option>
+                  <option value="status_report">Status Report</option>
+                  <option value="change_request">Change Request</option>
+                  <option value="deliverable">Deliverable</option>
+                  <option value="invoice">Invoice</option>
+                  <option value="meeting_notes">Meeting Notes</option>
+                  <option value="other">Other</option>
+                </select>
+                <input
+                  type="text"
+                  value={docForm.description}
+                  onChange={e => setDocForm({ ...docForm, description: e.target.value })}
+                  placeholder="Description (optional)"
+                  className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => setShowDocUpload(false)} className="px-4 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200">
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUploadDocument}
+                  disabled={uploadingDoc || !docForm.title.trim()}
+                  className="px-4 py-1.5 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 flex items-center gap-1"
+                >
+                  {uploadingDoc ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+                  {uploadingDoc ? 'Uploading...' : 'Upload'}
+                </button>
+              </div>
+            </div>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead><tr className="border-b text-left text-xs text-gray-500"><th className="p-3">Title</th><th className="p-3">Type</th><th className="p-3">Version</th><th className="p-3">Uploaded By</th><th className="p-3">Date</th><th className="p-3">Status</th></tr></thead>
+              <thead><tr className="border-b text-left text-xs text-gray-500"><th className="p-3">Title</th><th className="p-3">Type</th><th className="p-3">Version</th><th className="p-3">Uploaded By</th><th className="p-3">Date</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead>
               <tbody>
                 {documents.map((d) => (
-                  <tr key={d.id} className="border-b last:border-0">
+                  <tr key={d.id} className="border-b last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50">
                     <td className="p-3">
                       <div className="font-medium">{d.title}</div>
                       {d.description && <div className="text-xs text-gray-400">{d.description}</div>}
@@ -368,6 +474,16 @@ export default function ClientPortal() {
                     <td className="p-3">{d.uploader_name || d.uploaded_by || '—'}</td>
                     <td className="p-3 text-xs">{formatDate(d.created_at || '')}</td>
                     <td className="p-3">{d.status === 'current' ? <Badge variant="success">Current</Badge> : <Badge variant="neutral">Archived</Badge>}</td>
+                    <td className="p-3">
+                      <div className="flex gap-1">
+                        <button className="p-1.5 rounded-lg hover:bg-primary/10 text-primary" title="View">
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                        <button className="p-1.5 rounded-lg hover:bg-primary/10 text-primary" title="Download">
+                          <Download className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>

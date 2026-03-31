@@ -7,6 +7,7 @@ interface StatProps {
   value: string | number
   change?: number
   changeLabel?: string
+  trend?: string
   icon?: ReactNode
   className?: string
 }

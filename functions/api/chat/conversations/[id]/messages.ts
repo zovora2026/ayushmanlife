@@ -113,6 +113,103 @@ Would you like me to help you check a specific claim status or find empanelled h
   }
 
   if (
+    lower.includes('bp') ||
+    lower.includes('blood pressure') ||
+    lower.includes('heart') ||
+    lower.includes('cholesterol') ||
+    lower.includes('ecg') ||
+    lower.includes('cardiac')
+  ) {
+    return `Here is your cardiovascular health summary:
+
+**Blood Pressure Trends (Last 30 days):**
+| Date | Systolic | Diastolic | Status |
+|------|----------|-----------|--------|
+| 28 Mar | 128 | 82 | ✅ Normal |
+| 21 Mar | 134 | 86 | ⚠️ Slightly High |
+| 14 Mar | 130 | 84 | ✅ Normal |
+| 7 Mar | 138 | 90 | ⚠️ High |
+| 1 Mar | 132 | 85 | ✅ Normal |
+
+**7-Day Average:** 131/84 mmHg
+**30-Day Trend:** ↓ Improving (down from 135/88 avg last month)
+
+**Heart Health Summary:**
+- Resting Heart Rate: 72 bpm (Normal)
+- Total Cholesterol: 195 mg/dL (Normal)
+- LDL: 118 mg/dL (Borderline)
+- Last ECG: Sinus rhythm, no abnormalities (12 Mar 2026)
+
+**Recommendations:**
+1. Continue Amlodipine 5mg as prescribed
+2. Reduce salt intake to <5g/day
+3. Walk 30 minutes daily — your step count has improved this week
+4. Next cardiology follow-up: Dr. Rajesh Sharma, 5 April 2026
+
+Would you like me to schedule an earlier consultation or set BP monitoring reminders?`;
+  }
+
+  if (
+    lower.includes('diabetes') ||
+    lower.includes('sugar') ||
+    lower.includes('hba1c') ||
+    lower.includes('glucose') ||
+    lower.includes('metformin') ||
+    lower.includes('insulin')
+  ) {
+    return `Here is your diabetes management overview:
+
+**Blood Sugar Trends:**
+- Fasting (today): 118 mg/dL ⚠️ (Target: <110)
+- Post-meal avg (7 days): 156 mg/dL (Target: <140)
+- HbA1c (last check): 6.8% ✅ (Target: <7.0%)
+
+**30-Day Glucose Trend:** ↓ Improving — average down 8% from last month
+
+**Current Medications:**
+- Metformin 500mg — twice daily (after meals)
+- Adherence this month: 92% ✅
+
+**Key Recommendations:**
+1. Your fasting sugar is slightly elevated — try having dinner before 8 PM
+2. Include more fiber-rich foods (dal, sabzi, whole grains)
+3. 30 min post-meal walk helps reduce sugar spikes by 20-30%
+4. Schedule eye and foot exam (annual diabetic screening due)
+
+**Next Endocrinology Visit:** Dr. Meera Nair, 15 April 2026
+
+Would you like me to prepare a sugar log for your next doctor visit?`;
+  }
+
+  if (
+    lower.includes('upcoming') ||
+    lower.includes('next appointment') ||
+    lower.includes('my appointment') ||
+    lower.includes('when is my')
+  ) {
+    return `Here are your upcoming appointments:
+
+📅 **Upcoming Appointments:**
+
+1. **Dr. Rajesh Sharma** — Cardiology
+   📍 OPD Block A, Room 204
+   🗓️ 5 April 2026, 9:00 AM
+   📋 Diabetes and cardiac risk follow-up
+
+2. **Dental Check-up** — Dental OPD
+   📍 OPD Block B, Room 102
+   🗓️ 12 April 2026, 10:30 AM
+   📋 Routine 6-month dental checkup
+
+**Reminders:**
+- Carry your previous reports and current medication list
+- Arrive 15 minutes early for registration
+- Fasting required for blood work (no food after 10 PM the night before)
+
+Would you like me to reschedule any appointment, add a new one, or set a reminder?`;
+  }
+
+  if (
     lower.includes('lab') ||
     lower.includes('test') ||
     lower.includes('report') ||

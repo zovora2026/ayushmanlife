@@ -15,6 +15,9 @@ import {
   Filter,
   Loader2,
   Globe,
+  ClipboardCheck,
+  Plus,
+  X,
 } from 'lucide-react'
 import { cn, formatCurrency, formatDate } from '../lib/utils'
 import { payer as payerAPI, claims as claimsAPI, adjudication as adjAPI, fraud as fraudAPI } from '../lib/api'
@@ -252,6 +255,7 @@ const NETWORK_PROVIDERS = [
 const TABS_CONFIG = [
   { id: 'overview', label: 'Overview', icon: <Building2 className="h-4 w-4" /> },
   { id: 'policies', label: 'Policy Manager', icon: <FileCheck className="h-4 w-4" /> },
+  { id: 'preauth', label: 'Pre-Authorization', icon: <ClipboardCheck className="h-4 w-4" /> },
   { id: 'adjudication', label: 'Claims Adjudication', icon: <CheckCircle2 className="h-4 w-4" /> },
   { id: 'tpa', label: 'TPA Management', icon: <Users className="h-4 w-4" /> },
   { id: 'network', label: 'Provider Network', icon: <Globe className="h-4 w-4" /> },
@@ -381,6 +385,42 @@ export default function Payer() {
   // Payer Analytics D1 state
   const [d1PayerAnalytics, setD1PayerAnalytics] = useState<PayerAnalytics | null>(null)
   const [d1IrdaiReport, setD1IrdaiReport] = useState<IRDAIReport | null>(null)
+
+  // Pre-authorization state
+  const [showPreAuthModal, setShowPreAuthModal] = useState(false)
+  const [preAuthForm, setPreAuthForm] = useState({ patient: '', procedure: '', amount: '', scheme: 'ayushman_bharat', urgency: 'routine', justification: '' })
+  const [preAuthRequests, setPreAuthRequests] = useState([
+    { id: 'PA-2026-001', patient: 'Ramesh Kumar', procedure: 'Coronary Angioplasty', scheme: 'Ayushman Bharat', amount: 180000, status: 'approved' as const, requested: '2026-03-15', decided: '2026-03-17', urgency: 'urgent', sla: '48h' },
+    { id: 'PA-2026-002', patient: 'Priya Sharma', procedure: 'Total Knee Replacement', scheme: 'Star Health', amount: 250000, status: 'pending' as const, requested: '2026-03-28', decided: null, urgency: 'routine', sla: '72h' },
+    { id: 'PA-2026-003', patient: 'Amit Patel', procedure: 'MRI Brain with Contrast', scheme: 'CGHS', amount: 12000, status: 'approved' as const, requested: '2026-03-20', decided: '2026-03-21', urgency: 'routine', sla: '72h' },
+    { id: 'PA-2026-004', patient: 'Sunita Devi', procedure: 'Chemotherapy Cycle 3', scheme: 'PMJAY', amount: 85000, status: 'pending' as const, requested: '2026-03-29', decided: null, urgency: 'urgent', sla: '24h' },
+    { id: 'PA-2026-005', patient: 'Vikram Singh', procedure: 'Lumbar Spine Decompression', scheme: 'HDFC ERGO', amount: 320000, status: 'denied' as const, requested: '2026-03-18', decided: '2026-03-22', urgency: 'routine', sla: '72h' },
+    { id: 'PA-2026-006', patient: 'Meena Gupta', procedure: 'Dialysis Session (12 cycles)', scheme: 'ECHS', amount: 96000, status: 'approved' as const, requested: '2026-03-10', decided: '2026-03-11', urgency: 'urgent', sla: '24h' },
+  ])
+
+  const handleCreatePreAuth = () => {
+    if (!preAuthForm.patient.trim() || !preAuthForm.procedure.trim()) return
+    const schemeLabels: Record<string, string> = { ayushman_bharat: 'Ayushman Bharat', cghs: 'CGHS', echs: 'ECHS', star_health: 'Star Health', hdfc_ergo: 'HDFC ERGO', icici_lombard: 'ICICI Lombard' }
+    const newReq = {
+      id: `PA-2026-${String(preAuthRequests.length + 1).padStart(3, '0')}`,
+      patient: preAuthForm.patient,
+      procedure: preAuthForm.procedure,
+      scheme: schemeLabels[preAuthForm.scheme] || preAuthForm.scheme,
+      amount: Number(preAuthForm.amount) || 0,
+      status: 'pending' as const,
+      requested: new Date().toISOString().split('T')[0],
+      decided: null,
+      urgency: preAuthForm.urgency,
+      sla: preAuthForm.urgency === 'urgent' ? '24h' : '72h',
+    }
+    setPreAuthRequests(prev => [newReq, ...prev])
+    setPreAuthForm({ patient: '', procedure: '', amount: '', scheme: 'ayushman_bharat', urgency: 'routine', justification: '' })
+    setShowPreAuthModal(false)
+  }
+
+  const handlePreAuthDecision = (id: string, decision: 'approved' | 'denied') => {
+    setPreAuthRequests(prev => prev.map(r => r.id === id ? { ...r, status: decision, decided: new Date().toISOString().split('T')[0] } : r))
+  }
 
   useEffect(() => {
     let mounted = true
@@ -671,6 +711,18 @@ export default function Payer() {
     } finally {
       setInvestigatingAlert(null)
     }
+  }
+
+  const handleCloseInvestigation = async (alertId: string, findings: string) => {
+    try {
+      await fraudAPI.createInvestigation({ type: 'investigation', alert_id: alertId, status: 'closed', findings, action_taken: 'Investigation concluded' })
+      const [aRes, iRes] = await Promise.all([
+        payerAPI.fraudAlerts().catch(() => null),
+        fraudAPI.investigations().catch(() => null),
+      ])
+      if (aRes) { setD1FraudAlerts((aRes as any).alerts || []); setD1FraudSummary((aRes as any).summary || null) }
+      if (iRes) setD1Investigations((iRes as any).investigations || [])
+    } catch (err) { console.error('Close investigation error:', err) }
   }
 
   // Filtered D1 fraud alerts
@@ -1063,6 +1115,146 @@ export default function Payer() {
       )}
 
       {/* ── Claims Adjudication ──────────────────────────── */}
+      {/* ── Pre-Authorization ─────────────────────────────────── */}
+      {activeTab === 'preauth' && (
+        <div className="space-y-6">
+          {/* Pre-Auth KPIs */}
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            <Stat label="Total Requests" value={preAuthRequests.length} icon={<ClipboardCheck className="h-5 w-5" />} />
+            <Stat label="Pending" value={preAuthRequests.filter(r => r.status === 'pending').length} icon={<Clock className="h-5 w-5" />} />
+            <Stat label="Approved" value={preAuthRequests.filter(r => r.status === 'approved').length} icon={<CheckCircle2 className="h-5 w-5" />} />
+            <Stat label="Approval Rate" value={`${preAuthRequests.length ? Math.round(preAuthRequests.filter(r => r.status === 'approved').length / preAuthRequests.length * 100) : 0}%`} icon={<TrendingUp className="h-5 w-5" />} />
+          </div>
+
+          {/* Pre-Auth Queue */}
+          <Card header={
+            <div className="flex items-center justify-between w-full">
+              <div className="flex items-center gap-2"><ClipboardCheck className="h-4 w-4 text-primary" /><h3 className="font-semibold text-gray-900 dark:text-gray-100">Pre-Authorization Requests</h3></div>
+              <button onClick={() => setShowPreAuthModal(true)} className="text-xs px-3 py-1.5 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 flex items-center gap-1">
+                <Plus className="w-3.5 h-3.5" /> New Request
+              </button>
+            </div>
+          }>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr className="border-b text-left text-xs text-gray-500"><th className="p-3">ID</th><th className="p-3">Patient</th><th className="p-3">Procedure</th><th className="p-3">Scheme</th><th className="p-3">Amount</th><th className="p-3">Urgency</th><th className="p-3">SLA</th><th className="p-3">Status</th><th className="p-3">Actions</th></tr></thead>
+                <tbody>
+                  {preAuthRequests.map(r => (
+                    <tr key={r.id} className="border-b last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                      <td className="p-3 font-mono text-xs">{r.id}</td>
+                      <td className="p-3 font-medium">{r.patient}</td>
+                      <td className="p-3">{r.procedure}</td>
+                      <td className="p-3"><Badge variant="info">{r.scheme}</Badge></td>
+                      <td className="p-3 font-medium">{formatCurrency(r.amount)}</td>
+                      <td className="p-3"><Badge variant={r.urgency === 'urgent' ? 'error' : 'neutral'}>{r.urgency}</Badge></td>
+                      <td className="p-3 text-xs">{r.sla}</td>
+                      <td className="p-3">
+                        <Badge variant={r.status === 'approved' ? 'success' : r.status === 'denied' ? 'error' : 'warning'}>
+                          {r.status}
+                        </Badge>
+                      </td>
+                      <td className="p-3">
+                        {r.status === 'pending' && (
+                          <div className="flex gap-1">
+                            <button onClick={() => handlePreAuthDecision(r.id, 'approved')} className="px-2 py-1 rounded bg-success/10 text-success text-xs font-semibold hover:bg-success/20">
+                              Approve
+                            </button>
+                            <button onClick={() => handlePreAuthDecision(r.id, 'denied')} className="px-2 py-1 rounded bg-error/10 text-error text-xs font-semibold hover:bg-error/20">
+                              Deny
+                            </button>
+                          </div>
+                        )}
+                        {r.status !== 'pending' && r.decided && (
+                          <span className="text-xs text-muted">{r.decided}</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          {/* Pre-Auth SLA Compliance */}
+          <Card header={<div className="flex items-center gap-2"><Clock className="h-4 w-4 text-primary" /><h3 className="font-semibold text-gray-900 dark:text-gray-100">SLA Compliance</h3></div>}>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="rounded-lg border border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950 p-4 text-center">
+                <p className="text-2xl font-bold text-success">94%</p>
+                <p className="text-xs text-gray-500 mt-1">Routine (72h SLA)</p>
+              </div>
+              <div className="rounded-lg border border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950 p-4 text-center">
+                <p className="text-2xl font-bold text-warning">87%</p>
+                <p className="text-xs text-gray-500 mt-1">Urgent (24h SLA)</p>
+              </div>
+              <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950 p-4 text-center">
+                <p className="text-2xl font-bold text-primary">100%</p>
+                <p className="text-xs text-gray-500 mt-1">Emergency (4h SLA)</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Pre-Auth Modal */}
+      {showPreAuthModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowPreAuthModal(false)}>
+          <div className="w-full max-w-lg bg-white dark:bg-surface-dark rounded-2xl border border-border dark:border-border-dark shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-border dark:border-border-dark">
+              <h2 className="font-display font-bold text-lg text-text dark:text-text-dark">New Pre-Authorization Request</h2>
+              <button onClick={() => setShowPreAuthModal(false)} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-muted"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-text dark:text-text-dark mb-1">Patient Name *</label>
+                <input type="text" value={preAuthForm.patient} onChange={e => setPreAuthForm({ ...preAuthForm, patient: e.target.value })} placeholder="e.g. Ramesh Kumar" className="w-full px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-background-dark text-text dark:text-text-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-text dark:text-text-dark mb-1">Procedure / Treatment *</label>
+                <input type="text" value={preAuthForm.procedure} onChange={e => setPreAuthForm({ ...preAuthForm, procedure: e.target.value })} placeholder="e.g. Coronary Angioplasty" className="w-full px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-background-dark text-text dark:text-text-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-text dark:text-text-dark mb-1">Estimated Amount (INR)</label>
+                  <input type="number" value={preAuthForm.amount} onChange={e => setPreAuthForm({ ...preAuthForm, amount: e.target.value })} placeholder="180000" className="w-full px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-background-dark text-text dark:text-text-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-text dark:text-text-dark mb-1">Payer Scheme</label>
+                  <select value={preAuthForm.scheme} onChange={e => setPreAuthForm({ ...preAuthForm, scheme: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-background-dark text-text dark:text-text-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+                    <option value="ayushman_bharat">Ayushman Bharat (PMJAY)</option>
+                    <option value="cghs">CGHS</option>
+                    <option value="echs">ECHS</option>
+                    <option value="star_health">Star Health</option>
+                    <option value="hdfc_ergo">HDFC ERGO</option>
+                    <option value="icici_lombard">ICICI Lombard</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-text dark:text-text-dark mb-1">Urgency</label>
+                <div className="flex gap-3">
+                  {['routine', 'urgent', 'emergency'].map(u => (
+                    <label key={u} className="flex items-center gap-1.5 cursor-pointer">
+                      <input type="radio" name="urgency" value={u} checked={preAuthForm.urgency === u} onChange={e => setPreAuthForm({ ...preAuthForm, urgency: e.target.value })} className="text-primary" />
+                      <span className="text-sm capitalize text-text dark:text-text-dark">{u}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-text dark:text-text-dark mb-1">Clinical Justification</label>
+                <textarea rows={2} value={preAuthForm.justification} onChange={e => setPreAuthForm({ ...preAuthForm, justification: e.target.value })} placeholder="Reason for the procedure..." className="w-full px-3 py-2 rounded-lg border border-border dark:border-border-dark bg-white dark:bg-background-dark text-text dark:text-text-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setShowPreAuthModal(false)} className="flex-1 py-2.5 rounded-lg bg-gray-100 dark:bg-white/10 text-text dark:text-text-dark text-sm font-medium hover:bg-gray-200 dark:hover:bg-white/15">Cancel</button>
+                <button onClick={handleCreatePreAuth} disabled={!preAuthForm.patient.trim() || !preAuthForm.procedure.trim()} className="flex-1 py-2.5 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2">
+                  <ClipboardCheck className="w-4 h-4" /> Submit Request
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeTab === 'adjudication' && (
         <div className="space-y-4">
           {/* Queue Stats */}
@@ -1714,12 +1906,22 @@ export default function Payer() {
                         {inv.notes_count != null && <span>{inv.notes_count} notes</span>}
                       </div>
                     </div>
-                    {inv.claimed_amount != null && (
-                      <div className="text-right shrink-0">
-                        <p className="text-sm font-bold text-text dark:text-text-dark">{formatCurrency(inv.claimed_amount)}</p>
-                        <p className="text-xs text-muted">flagged</p>
-                      </div>
-                    )}
+                    <div className="flex flex-col items-end gap-2 shrink-0">
+                      {inv.claimed_amount != null && (
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-text dark:text-text-dark">{formatCurrency(inv.claimed_amount)}</p>
+                          <p className="text-xs text-muted">flagged</p>
+                        </div>
+                      )}
+                      {inv.status !== 'closed' && (
+                        <button
+                          onClick={() => handleCloseInvestigation(inv.alert_id, 'Investigation concluded - no further action required')}
+                          className="text-xs px-2.5 py-1 rounded bg-green-50 text-green-700 hover:bg-green-100 font-medium"
+                        >
+                          Close
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

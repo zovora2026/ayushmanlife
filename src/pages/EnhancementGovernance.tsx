@@ -4,13 +4,13 @@ import { Tabs } from '../components/ui/Tabs'
 import { Badge } from '../components/ui/Badge'
 import { Stat } from '../components/ui/Stat'
 
-const statusColors: Record<string, 'default' | 'info' | 'warning' | 'success' | 'error'> = {
+const statusColors: Record<string, 'neutral' | 'info' | 'warning' | 'success' | 'error'> = {
   submitted: 'info',
   in_review: 'warning',
   approved: 'success',
   in_development: 'info',
   completed: 'success',
-  deferred: 'default',
+  deferred: 'neutral',
   rejected: 'error',
 }
 
@@ -33,6 +33,8 @@ export default function EnhancementGovernance() {
   const [reviewCommittees, setReviewCommittees] = useState<Record<string, { total: number; approved: number; pending: number; deferred: number }>>({})
   const [statusFilter, setStatusFilter] = useState('')
   const [deptFilter, setDeptFilter] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activeTab, setActiveTab] = useState('dashboard')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showReviewModal, setShowReviewModal] = useState(false)
   const [selectedRequest, setSelectedRequest] = useState<EnhancementRequest | null>(null)
@@ -104,20 +106,52 @@ export default function EnhancementGovernance() {
     } catch (err) { console.error(err) }
   }
 
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editRequest, setEditRequest] = useState<EnhancementRequest | null>(null)
+
   const handleStatusChange = async (id: string, newStatus: string) => {
     await governance.updateRequest({ id, status: newStatus })
     loadRequests()
     governance.getDashboard().then(setDashboard)
   }
 
+  const handleEditRequest = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!editRequest) return
+    const form = e.currentTarget
+    const data = Object.fromEntries(new FormData(form))
+    try {
+      await governance.updateRequest({
+        id: editRequest.id,
+        title: data.title as string,
+        description: data.description as string,
+        clinical_impact: Number(data.clinical_impact),
+        operational_impact: Number(data.operational_impact),
+        regulatory_impact: Number(data.regulatory_impact),
+        effort_estimate: data.effort_estimate as string,
+        effort_hours: Number(data.effort_hours) || undefined,
+        assigned_to: data.assigned_to as string || undefined,
+        target_date: data.target_date as string || undefined,
+      })
+      setShowEditModal(false)
+      setEditRequest(null)
+      loadRequests()
+      governance.getDashboard().then(setDashboard)
+    } catch (err) { console.error(err) }
+  }
+
   if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" /></div>
 
   const departments = [...new Set(requests.map(r => r.department))].sort()
 
-  const tabs = [
-    {
-      label: 'Dashboard',
-      content: dashboard && (
+  const TABS = [
+    { id: 'dashboard', label: 'Dashboard' },
+    { id: 'requests', label: 'Requests' },
+    { id: 'governance', label: 'Governance' },
+    { id: 'backlog', label: 'Backlog' },
+  ]
+
+  const dashboardContent = dashboard && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Stat label="Total Requests" value={dashboard.total} />
@@ -133,7 +167,7 @@ export default function EnhancementGovernance() {
               <div className="space-y-2">
                 {Object.entries(dashboard.by_status).sort((a, b) => b[1] - a[1]).map(([status, count]) => (
                   <div key={status} className="flex items-center justify-between">
-                    <Badge variant={statusColors[status] || 'default'}>{status.replace(/_/g, ' ')}</Badge>
+                    <Badge variant={statusColors[status] || 'neutral'}>{status.replace(/_/g, ' ')}</Badge>
                     <div className="flex items-center gap-2 flex-1 ml-3">
                       <div className="flex-1 bg-gray-100 dark:bg-slate-700 rounded-full h-2">
                         <div className="bg-primary rounded-full h-2" style={{ width: `${(count / dashboard.total) * 100}%` }} />
@@ -213,7 +247,7 @@ export default function EnhancementGovernance() {
                   {dashboard.backlog_aging.slice(0, 10).map(item => (
                     <tr key={item.id} className="border-b border-border/50 dark:border-border-dark/50">
                       <td className="py-2 px-3 text-text dark:text-text-dark">{item.title}</td>
-                      <td className="py-2 px-3"><Badge variant={statusColors[item.status] || 'default'}>{item.status.replace(/_/g, ' ')}</Badge></td>
+                      <td className="py-2 px-3"><Badge variant={statusColors[item.status] || 'neutral'}>{item.status.replace(/_/g, ' ')}</Badge></td>
                       <td className="py-2 px-3 text-right">
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${priorityColor(item.priority_score)}`}>{item.priority_score}</span>
                       </td>
@@ -225,14 +259,13 @@ export default function EnhancementGovernance() {
             </div>
           </div>
         </div>
-      ),
-    },
-    {
-      label: 'Requests',
-      content: (
+  )
+
+  const requestsContent = (
         <div className="space-y-4">
           <div className="flex flex-wrap gap-3 items-center justify-between">
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search requests..." className="text-sm border border-border dark:border-border-dark rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 text-text dark:text-text-dark w-48" />
               <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="text-sm border border-border dark:border-border-dark rounded-lg px-3 py-1.5 bg-white dark:bg-slate-800 text-text dark:text-text-dark">
                 <option value="">All Statuses</option>
                 {['submitted', 'in_review', 'approved', 'in_development', 'completed', 'deferred'].map(s => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
@@ -248,7 +281,7 @@ export default function EnhancementGovernance() {
           </div>
 
           <div className="space-y-3">
-            {requests.map(req => (
+            {requests.filter(req => !searchQuery || req.title.toLowerCase().includes(searchQuery.toLowerCase()) || (req.description || '').toLowerCase().includes(searchQuery.toLowerCase()) || (req.requester_name || '').toLowerCase().includes(searchQuery.toLowerCase())).map(req => (
               <div key={req.id} className="bg-white dark:bg-slate-800 rounded-xl border border-border dark:border-border-dark p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
@@ -258,7 +291,7 @@ export default function EnhancementGovernance() {
                     </div>
                     <p className="text-sm text-muted line-clamp-2 mb-2">{req.description}</p>
                     <div className="flex flex-wrap gap-2 text-xs">
-                      <Badge variant={statusColors[req.status] || 'default'}>{req.status.replace(/_/g, ' ')}</Badge>
+                      <Badge variant={statusColors[req.status] || 'neutral'}>{req.status.replace(/_/g, ' ')}</Badge>
                       <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-slate-700 text-muted">{req.department}</span>
                       {req.emr_module && <span className="px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-600">{req.emr_module}</span>}
                       {req.effort_estimate && <span className={`px-2 py-0.5 rounded text-xs font-medium ${effortColors[req.effort_estimate] || ''}`}>{req.effort_estimate}{req.effort_hours ? ` (${req.effort_hours}h)` : ''}</span>}
@@ -266,6 +299,7 @@ export default function EnhancementGovernance() {
                     </div>
                   </div>
                   <div className="flex flex-col gap-1 shrink-0">
+                    <button onClick={() => { setEditRequest(req); setShowEditModal(true) }} className="text-xs px-3 py-1 rounded bg-gray-50 dark:bg-slate-700 text-muted hover:text-text font-medium">Edit</button>
                     {req.status === 'submitted' && (
                       <button onClick={() => handleStatusChange(req.id, 'in_review')} className="text-xs px-3 py-1 rounded bg-amber-50 text-amber-700 hover:bg-amber-100 font-medium">Send to Review</button>
                     )}
@@ -291,11 +325,9 @@ export default function EnhancementGovernance() {
             ))}
           </div>
         </div>
-      ),
-    },
-    {
-      label: 'Governance',
-      content: (
+  )
+
+  const governanceContent = (
         <div className="space-y-6">
           {/* Committee Summary */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -331,7 +363,7 @@ export default function EnhancementGovernance() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm font-medium text-text dark:text-text-dark truncate">{rev.request_title}</span>
-                      <Badge variant={rev.decision === 'approved' ? 'success' : rev.decision === 'pending' ? 'warning' : 'default'}>{rev.decision}</Badge>
+                      <Badge variant={rev.decision === 'approved' ? 'success' : rev.decision === 'pending' ? 'warning' : 'neutral'}>{rev.decision}</Badge>
                     </div>
                     <p className="text-xs text-muted">{rev.comments}</p>
                     <div className="flex gap-3 mt-1 text-xs text-muted">
@@ -346,11 +378,9 @@ export default function EnhancementGovernance() {
             </div>
           </div>
         </div>
-      ),
-    },
-    {
-      label: 'Backlog',
-      content: dashboard && (
+  )
+
+  const backlogContent = dashboard && (
         <div className="space-y-6">
           {/* EMR Module breakdown */}
           <div className="bg-white dark:bg-slate-800 rounded-xl border border-border dark:border-border-dark p-5">
@@ -398,7 +428,7 @@ export default function EnhancementGovernance() {
                       <td className="py-2 px-3">
                         {req.effort_estimate && <span className={`px-2 py-0.5 rounded text-xs font-medium ${effortColors[req.effort_estimate] || ''}`}>{req.effort_estimate}</span>}
                       </td>
-                      <td className="py-2 px-3"><Badge variant={statusColors[req.status] || 'default'}>{req.status.replace(/_/g, ' ')}</Badge></td>
+                      <td className="py-2 px-3"><Badge variant={statusColors[req.status] || 'neutral'}>{req.status.replace(/_/g, ' ')}</Badge></td>
                     </tr>
                   ))}
                 </tbody>
@@ -406,9 +436,7 @@ export default function EnhancementGovernance() {
             </div>
           </div>
         </div>
-      ),
-    },
-  ]
+  )
 
   return (
     <div className="space-y-6">
@@ -417,7 +445,12 @@ export default function EnhancementGovernance() {
         <p className="text-sm text-muted mt-1">EMR change request intake, scoring, prioritization, and governance review</p>
       </div>
 
-      <Tabs tabs={tabs} />
+      <Tabs tabs={TABS} activeTab={activeTab} onChange={setActiveTab} />
+
+      {activeTab === 'dashboard' && dashboardContent}
+      {activeTab === 'requests' && requestsContent}
+      {activeTab === 'governance' && governanceContent}
+      {activeTab === 'backlog' && backlogContent}
 
       {/* Create Request Modal */}
       {showCreateModal && (
@@ -466,6 +499,49 @@ export default function EnhancementGovernance() {
               <div className="flex justify-end gap-2 pt-2">
                 <button type="button" onClick={() => setShowCreateModal(false)} className="px-4 py-2 text-sm text-muted hover:text-text dark:hover:text-text-dark">Cancel</button>
                 <button type="submit" className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors">Submit Request</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && editRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => { setShowEditModal(false); setEditRequest(null) }}>
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <h3 className="font-semibold text-lg text-text dark:text-text-dark mb-4">Edit Enhancement Request</h3>
+            <form onSubmit={handleEditRequest} className="space-y-3">
+              <input name="title" required defaultValue={editRequest.title} placeholder="Title" className="w-full px-3 py-2 border border-border dark:border-border-dark rounded-lg bg-white dark:bg-slate-700 text-text dark:text-text-dark text-sm" />
+              <textarea name="description" required defaultValue={editRequest.description} rows={3} placeholder="Description" className="w-full px-3 py-2 border border-border dark:border-border-dark rounded-lg bg-white dark:bg-slate-700 text-text dark:text-text-dark text-sm" />
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs text-muted block mb-1">Clinical Impact</label>
+                  <input name="clinical_impact" type="number" min="0" max="10" defaultValue={editRequest.clinical_impact} className="w-full px-3 py-2 border border-border dark:border-border-dark rounded-lg bg-white dark:bg-slate-700 text-text dark:text-text-dark text-sm" />
+                </div>
+                <div>
+                  <label className="text-xs text-muted block mb-1">Operational Impact</label>
+                  <input name="operational_impact" type="number" min="0" max="10" defaultValue={editRequest.operational_impact} className="w-full px-3 py-2 border border-border dark:border-border-dark rounded-lg bg-white dark:bg-slate-700 text-text dark:text-text-dark text-sm" />
+                </div>
+                <div>
+                  <label className="text-xs text-muted block mb-1">Regulatory Impact</label>
+                  <input name="regulatory_impact" type="number" min="0" max="10" defaultValue={editRequest.regulatory_impact} className="w-full px-3 py-2 border border-border dark:border-border-dark rounded-lg bg-white dark:bg-slate-700 text-text dark:text-text-dark text-sm" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <select name="effort_estimate" defaultValue={editRequest.effort_estimate} className="px-3 py-2 border border-border dark:border-border-dark rounded-lg bg-white dark:bg-slate-700 text-text dark:text-text-dark text-sm">
+                  <option value="small">Small</option>
+                  <option value="medium">Medium</option>
+                  <option value="large">Large</option>
+                </select>
+                <input name="effort_hours" type="number" defaultValue={editRequest.effort_hours} placeholder="Effort (hours)" className="px-3 py-2 border border-border dark:border-border-dark rounded-lg bg-white dark:bg-slate-700 text-text dark:text-text-dark text-sm" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <input name="assigned_to" defaultValue={editRequest.assigned_to || ''} placeholder="Assigned To (user ID)" className="px-3 py-2 border border-border dark:border-border-dark rounded-lg bg-white dark:bg-slate-700 text-text dark:text-text-dark text-sm" />
+                <input name="target_date" type="date" defaultValue={editRequest.target_date || ''} className="px-3 py-2 border border-border dark:border-border-dark rounded-lg bg-white dark:bg-slate-700 text-text dark:text-text-dark text-sm" />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => { setShowEditModal(false); setEditRequest(null) }} className="px-4 py-2 text-sm text-muted hover:text-text dark:hover:text-text-dark">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors">Save Changes</button>
               </div>
             </form>
           </div>

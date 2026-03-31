@@ -122,7 +122,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     }
 
     // Fetch related data in parallel
-    const [vitalsResult, medsResult, appointmentsResult, claimsResult] = await Promise.all([
+    const [vitalsResult, medsResult, upcomingApptsResult, pastApptsResult, claimsResult, feedbackResult] = await Promise.all([
       context.env.DB.prepare(
         'SELECT * FROM vitals WHERE patient_id = ? ORDER BY recorded_at DESC LIMIT 10'
       ).bind(id).all(),
@@ -132,20 +132,55 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       ).bind(id).all(),
 
       context.env.DB.prepare(
-        "SELECT * FROM appointments WHERE patient_id = ? AND date >= date('now') ORDER BY date ASC LIMIT 5"
+        "SELECT a.*, u.name as doctor_name FROM appointments a LEFT JOIN users u ON a.doctor_id = u.id WHERE a.patient_id = ? AND a.date >= date('now') ORDER BY a.date ASC LIMIT 5"
+      ).bind(id).all(),
+
+      context.env.DB.prepare(
+        "SELECT a.*, u.name as doctor_name FROM appointments a LEFT JOIN users u ON a.doctor_id = u.id WHERE a.patient_id = ? AND a.date < date('now') ORDER BY a.date DESC LIMIT 10"
       ).bind(id).all(),
 
       context.env.DB.prepare(
         'SELECT * FROM claims WHERE patient_id = ? ORDER BY created_at DESC LIMIT 5'
       ).bind(id).all(),
+
+      context.env.DB.prepare(
+        'SELECT * FROM feedback WHERE patient_id = ? ORDER BY created_at DESC LIMIT 5'
+      ).bind(id).all(),
     ]);
+
+    // Compute care summary
+    const vitals = vitalsResult.results as Array<Record<string, unknown>>;
+    const conditions = ((patient.chronic_conditions as string) || '').split(',').filter(Boolean);
+    const riskScore = (patient.risk_score as number) || 0;
+    const alerts: string[] = [];
+
+    // Check for concerning vitals
+    for (const v of vitals) {
+      if (v.type === 'bp_systolic' && (v.value as number) > 140) alerts.push('Elevated blood pressure');
+      if (v.type === 'blood_glucose_fasting' && (v.value as number) > 126) alerts.push('High fasting glucose');
+      if (v.type === 'spo2' && (v.value as number) < 95) alerts.push('Low SpO2');
+      if (v.type === 'heart_rate' && (v.value as number) > 100) alerts.push('Elevated heart rate');
+    }
+    if (riskScore > 0.7) alerts.push('High risk patient');
 
     return json({
       patient,
-      vitals: vitalsResult.results,
+      vitals,
       medications: medsResult.results,
-      appointments: appointmentsResult.results,
+      upcoming_appointments: upcomingApptsResult.results,
+      visit_history: pastApptsResult.results,
       claims: claimsResult.results,
+      feedback: feedbackResult.results,
+      care_summary: {
+        chronic_conditions: conditions,
+        active_medications: (medsResult.results || []).length,
+        risk_level: riskScore > 0.7 ? 'high' : riskScore > 0.4 ? 'medium' : 'low',
+        risk_score: riskScore,
+        alerts: [...new Set(alerts)],
+        total_claims: (claimsResult.results || []).length,
+        total_visits: (pastApptsResult.results || []).length,
+        satisfaction: patient.satisfaction_score || 0,
+      },
     });
   } catch (err) {
     return json({ message: 'Failed to fetch patient', error: String(err) }, 500);

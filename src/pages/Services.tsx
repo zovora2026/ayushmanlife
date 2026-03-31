@@ -1151,12 +1151,80 @@ export default function Services() {
                     </select>
                   </div>
                 </div>
-                {newTicket.title && (
-                  <div className="p-2.5 rounded-lg bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-400 flex items-center gap-2">
-                    <Bot className="h-3.5 w-3.5" />
-                    <span>AI Triage suggestion: <span className="font-bold">{triageTicket(newTicket.title, newTicket.description).priority.toUpperCase()}</span> priority, <span className="font-bold">{triageTicket(newTicket.title, newTicket.description).category}</span> category</span>
-                  </div>
-                )}
+                {newTicket.title && (() => {
+                  const triage = triageTicket(newTicket.title, newTicket.description)
+                  const teamRouting: Record<string, string> = {
+                    'Infrastructure': 'Network & Infrastructure Team',
+                    'EMR/EHR': 'Clinical Systems Team',
+                    'Security': 'Security Operations Center (SOC)',
+                    'ServiceNow': 'ITSM Platform Team',
+                    'General': 'L1 Help Desk',
+                  }
+                  const actionLabels: Record<string, string> = {
+                    'escalate': 'Auto-escalate to L2/L3',
+                    'auto-resolve': 'Self-service resolution available',
+                    'classify': 'Route to specialist queue',
+                  }
+                  // Find related KB articles
+                  const allKb = kbArticles.length > 0 ? kbArticles : []
+                  const ticketText = `${newTicket.title} ${newTicket.description}`.toLowerCase()
+                  const suggestedArticles = allKb.filter(a =>
+                    ticketText.split(' ').some(word => word.length > 3 && (a.title?.toLowerCase().includes(word) || a.category?.toLowerCase().includes(word)))
+                  ).slice(0, 3)
+
+                  return (
+                    <div className="space-y-2">
+                      <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Bot className="h-4 w-4 text-blue-600" />
+                          <span className="text-xs font-bold text-blue-700 dark:text-blue-400">AI Triage & Auto-Routing</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="text-blue-600 dark:text-blue-500">Priority:</span>{' '}
+                            <span className="font-bold text-blue-800 dark:text-blue-300 uppercase">{triage.priority}</span>
+                          </div>
+                          <div>
+                            <span className="text-blue-600 dark:text-blue-500">Category:</span>{' '}
+                            <span className="font-bold text-blue-800 dark:text-blue-300">{triage.category}</span>
+                          </div>
+                          <div>
+                            <span className="text-blue-600 dark:text-blue-500">Route to:</span>{' '}
+                            <span className="font-bold text-blue-800 dark:text-blue-300">{teamRouting[triage.category] || 'L1 Help Desk'}</span>
+                          </div>
+                          <div>
+                            <span className="text-blue-600 dark:text-blue-500">Action:</span>{' '}
+                            <span className="font-bold text-blue-800 dark:text-blue-300">{actionLabels[triage.action] || 'Classify & route'}</span>
+                          </div>
+                        </div>
+                        {triage.action === 'auto-resolve' && (
+                          <div className="mt-2 p-2 rounded bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-[11px] text-green-700 dark:text-green-400">
+                            <strong>Suggested Resolution:</strong> This appears to be a password/access issue. Try the self-service password reset portal at <span className="underline">portal.ayushmanlife.in/reset</span> or contact L1 Help Desk.
+                          </div>
+                        )}
+                        {triage.action === 'escalate' && (
+                          <div className="mt-2 p-2 rounded bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-[11px] text-red-700 dark:text-red-400">
+                            <strong>Auto-Escalation:</strong> This ticket will be automatically escalated to {teamRouting[triage.category] || 'senior engineers'} due to critical keywords detected.
+                          </div>
+                        )}
+                      </div>
+                      {suggestedArticles.length > 0 && (
+                        <div className="p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-border dark:border-border-dark">
+                          <p className="text-[10px] font-bold uppercase text-muted mb-2">Related Knowledge Base Articles</p>
+                          <div className="space-y-1.5">
+                            {suggestedArticles.map(a => (
+                              <div key={a.id} className="flex items-center gap-2 text-xs">
+                                <FileText className="h-3 w-3 text-primary shrink-0" />
+                                <span className="text-primary font-medium truncate">{a.title}</span>
+                                <Badge variant="neutral" size="sm" className="shrink-0">{a.category}</Badge>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
                 <button
                   onClick={handleCreateTicket}
                   disabled={creating || !newTicket.title || !newTicket.description}
