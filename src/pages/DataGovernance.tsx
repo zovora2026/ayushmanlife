@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Database, Shield, FileText, CheckCircle, AlertTriangle, BarChart3, Lock, Eye, ArrowRight, UserCheck, RefreshCw, Layers, Zap, TrendingUp, Loader2, Plus, X, Ban, RotateCcw } from 'lucide-react'
 import { cn } from '../lib/utils'
-import { analytics as analyticsAPI, claims as claimsAPI } from '../lib/api'
+import { analytics as analyticsAPI, claims as claimsAPI, dataGovernance as dgAPI } from '../lib/api'
 
 function formatCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
@@ -17,9 +17,9 @@ interface DashboardStats {
 }
 
 const DEFAULT_STATS: DashboardStats = {
-  totalPatients: 24853,
-  activeClaims: 1247,
-  claimsThisMonth: 3842,
+  totalPatients: 0,
+  activeClaims: 0,
+  claimsThisMonth: 0,
   totalRecords: 0,
 }
 
@@ -104,19 +104,21 @@ export default function DataGovernance() {
     let mounted = true
     async function load() {
       try {
-        const [dashRes, claimStatsRes] = await Promise.all([
+        const [dashRes, claimStatsRes, dgRes] = await Promise.all([
           analyticsAPI.dashboard().catch(() => null),
           claimsAPI.stats().catch(() => null),
+          dgAPI.stats().catch(() => null),
         ])
 
-        if (mounted && dashRes) {
+        if (mounted && (dashRes || dgRes)) {
           const d = dashRes as any
-          const totalPatients = d.total_patients || DEFAULT_STATS.totalPatients
-          const activeClaims = d.active_claims || DEFAULT_STATS.activeClaims
-          const claimsMonth = d.claims_this_month || DEFAULT_STATS.claimsThisMonth
+          const dg = dgRes as any
+          const totalPatients = dg?.stats?.total_patients || d?.total_patients || 0
+          const activeClaims = dg?.stats?.total_claims || d?.active_claims || 0
+          const claimsMonth = d?.claims_this_month || 0
 
           // Derive total records from real data: patients + claims as base for data volumes
-          const totalClaimsCount = claimStatsRes ? (claimStatsRes as any).total_claims || 0 : 0
+          const totalClaimsCount = dg?.stats?.total_claims || (claimStatsRes ? (claimStatsRes as any).total_claims || 0 : 0)
           const totalRecords = totalPatients + totalClaimsCount
 
           setStats({

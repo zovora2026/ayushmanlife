@@ -30,7 +30,7 @@ export default function Landing() {
       <PlatformPreview />
       <ServiceStack />
       <HowItWorks />
-      <Testimonials />
+      <Testimonials stats={stats ? { total_patients: stats.total_patients, active_claims: stats.active_claims, monthly_revenue: stats.monthly_revenue } : undefined} />
       <Pricing />
       <Partners />
       <CTA />

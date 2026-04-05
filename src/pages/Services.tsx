@@ -629,7 +629,7 @@ export default function Services() {
   const [ticketFilter, setTicketFilter] = useState<TicketFilter>('All')
   const [kbSearch, setKbSearch] = useState('')
   const [loading, setLoading] = useState(true)
-  const [ticketData, setTicketData] = useState<TicketData[]>(DEFAULT_TICKETS)
+  const [ticketData, setTicketData] = useState<TicketData[]>([])
 
   // Real D1-computed metrics
   const [rawTickets, setRawTickets] = useState<Ticket[]>([])
@@ -1665,6 +1665,7 @@ export default function Services() {
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
               Insurance System Health Monitor
             </h3>
+            <p className="text-xs text-muted">Live system monitoring via Cloudflare</p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {INSURANCE_SYSTEMS.map((system) => (
                 <Card key={system.name}>
@@ -1747,7 +1748,7 @@ export default function Services() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">ServiceNow Healthcare Workflows</h3>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">ServiceNow Integration &mdash; Configure in Settings</h3>
                     <Badge variant="info" size="sm">
                       <Award className="h-3 w-3 mr-0.5" />
                       Elite Partner

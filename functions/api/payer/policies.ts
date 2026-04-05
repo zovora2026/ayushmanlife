@@ -18,127 +18,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const status = url.searchParams.get('status');
 
     if (!db) {
-      let policies = [
-        {
-          id: 'POL-PMJAY-001',
-          policy_name: 'Ayushman Bharat PMJAY',
-          payer: 'National Health Authority (NHA)',
-          type: 'Government',
-          coverage_amount: 500000,
-          beneficiaries: 12450,
-          active: true,
-          packages_covered: 1950,
-          start_date: '2025-04-01',
-          end_date: '2026-03-31',
-          description:
-            'Pradhan Mantri Jan Arogya Yojana — covers secondary and tertiary hospitalization up to ₹5 lakh per family per year for BPL families.',
-          empanelled_hospitals: 156,
-          claims_ytd: 8450,
-          amount_settled_ytd: 245000000,
-        },
-        {
-          id: 'POL-CGHS-001',
-          policy_name: 'CGHS Panel Agreement',
-          payer: 'Central Government Health Scheme',
-          type: 'Government',
-          coverage_amount: 0, // No upper limit for CGHS
-          beneficiaries: 3200,
-          active: true,
-          packages_covered: 2100,
-          start_date: '2025-01-01',
-          end_date: '2026-12-31',
-          description:
-            'CGHS empanelment for central government employees and pensioners. Cashless treatment as per CGHS rates.',
-          empanelled_hospitals: 1,
-          claims_ytd: 2860,
-          amount_settled_ytd: 89000000,
-        },
-        {
-          id: 'POL-STAR-001',
-          policy_name: 'Star Comprehensive Health',
-          payer: 'Star Health & Allied Insurance',
-          type: 'Private',
-          coverage_amount: 1000000,
-          beneficiaries: 5680,
-          active: true,
-          packages_covered: 1200,
-          start_date: '2025-06-01',
-          end_date: '2026-05-31',
-          description:
-            'Comprehensive health insurance with cashless facility. Covers hospitalization, day care procedures, and pre/post hospitalization expenses.',
-          empanelled_hospitals: 1,
-          claims_ytd: 3420,
-          amount_settled_ytd: 152000000,
-        },
-        {
-          id: 'POL-NIA-001',
-          policy_name: 'New India Mediclaim',
-          payer: 'New India Assurance Co. Ltd.',
-          type: 'PSU Insurer',
-          coverage_amount: 500000,
-          beneficiaries: 2840,
-          active: true,
-          packages_covered: 950,
-          start_date: '2025-04-01',
-          end_date: '2026-03-31',
-          description:
-            'Standard mediclaim policy covering hospitalization expenses. Sub-limits apply on room rent and specific procedures.',
-          empanelled_hospitals: 1,
-          claims_ytd: 1680,
-          amount_settled_ytd: 68000000,
-        },
-        {
-          id: 'POL-ICICI-001',
-          policy_name: 'ICICI Lombard Health Protect',
-          payer: 'ICICI Lombard General Insurance',
-          type: 'Private',
-          coverage_amount: 2000000,
-          beneficiaries: 1950,
-          active: true,
-          packages_covered: 1100,
-          start_date: '2025-07-01',
-          end_date: '2026-06-30',
-          description:
-            'Health insurance with ₹20 lakh coverage, restoration benefit, and no room rent capping. Includes wellness benefits.',
-          empanelled_hospitals: 1,
-          claims_ytd: 1240,
-          amount_settled_ytd: 73000000,
-        },
-        {
-          id: 'POL-ESI-001',
-          policy_name: 'ESIC Medical Benefit',
-          payer: "Employees' State Insurance Corporation",
-          type: 'Government',
-          coverage_amount: 0,
-          beneficiaries: 4200,
-          active: true,
-          packages_covered: 800,
-          start_date: '2025-04-01',
-          end_date: '2026-03-31',
-          description:
-            'ESIC medical benefits for insured workers and their dependents. Full medical care including specialist consultation, hospitalization, and medicines.',
-          empanelled_hospitals: 1,
-          claims_ytd: 3100,
-          amount_settled_ytd: 45000000,
-        },
-      ];
-
-      if (payer) {
-        policies = policies.filter((p) =>
-          p.payer.toLowerCase().includes(payer.toLowerCase())
-        );
-      }
-      if (status === 'active') {
-        policies = policies.filter((p) => p.active);
-      } else if (status === 'inactive') {
-        policies = policies.filter((p) => !p.active);
-      }
-
-      return json({
-        policies,
-        total: policies.length,
-        currency: 'INR',
-      });
+      return json({ error: 'Database not available', policies: [], total: 0, currency: 'INR' }, 503);
     }
 
     let query = `SELECT * FROM policies WHERE 1=1`;
@@ -206,25 +86,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     const id = `POL-${Date.now()}`;
 
     if (!db) {
-      return json(
-        {
-          policy: {
-            id,
-            policy_name: body.policy_name,
-            payer: body.payer,
-            type: body.type,
-            coverage_amount: body.coverage_amount || 0,
-            beneficiaries: 0,
-            active: true,
-            packages_covered: body.packages_covered || 0,
-            start_date: body.start_date,
-            end_date: body.end_date,
-            description: body.description || '',
-            created_at: new Date().toISOString(),
-          },
-        },
-        201
-      );
+      return json({ error: 'Database not available', policy: null }, 503);
     }
 
     const policyNumber = `POL-${Date.now()}`;

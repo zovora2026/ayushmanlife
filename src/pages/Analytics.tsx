@@ -39,7 +39,7 @@ import { Stat } from '../components/ui/Stat'
 import { Chart } from '../components/ui/Chart'
 import { Tabs } from '../components/ui/Tabs'
 import { Button } from '../components/ui/Button'
-import { demoPatients, chartData } from '../lib/mock-data'
+// Mock data imports removed — all data now from D1 APIs
 import { analytics } from '../lib/api'
 import type { DashboardKPIs, PatientRiskData, OperationsData, SatisfactionData, RevenueData, ChurnData } from '../lib/api'
 import { cn, formatCurrency, getRiskColor } from '../lib/utils'
@@ -217,19 +217,12 @@ export default function Analytics() {
         conditions: Array.isArray((p as unknown as Record<string, unknown>).conditions) ? (p as unknown as Record<string, unknown>).conditions as string[] : p.chronic_conditions ? p.chronic_conditions.split(',').map((s) => s.trim()) : [],
         insuranceType: p.insurance_type ?? 'N/A',
       }))
-    : demoPatients.map((p) => ({
-        id: p.id,
-        name: p.name,
-        age: p.age,
-        riskScore: p.riskScore,
-        conditions: p.conditions,
-        insuranceType: p.insuranceType,
-      }))
+    : []
 
   const sortedPatients = [...riskPatients].sort((a, b) => b.riskScore - a.riskScore)
-  const highRisk = riskData ? riskData.total_high : demoPatients.filter((p) => p.riskScore >= 70).length
-  const mediumRisk = riskData ? riskData.total_medium : demoPatients.filter((p) => p.riskScore >= 40 && p.riskScore < 70).length
-  const lowRisk = riskData ? riskData.total_low : demoPatients.filter((p) => p.riskScore < 40).length
+  const highRisk = riskData ? riskData.total_high : 0
+  const mediumRisk = riskData ? riskData.total_medium : 0
+  const lowRisk = riskData ? riskData.total_low : 0
 
   // ── Operations display data ──
   const opsClaimsPerDay = opsData ? `${opsData.claims_per_day}` : '0'
@@ -257,7 +250,7 @@ export default function Analytics() {
   const npsLabel = npsScore >= 70 ? 'Excellent' : npsScore >= 50 ? 'Good' : 'Needs Work'
   const satDeptChart = satData?.by_department
     ? satData.by_department.map((d) => ({ name: d.department, score: d.avg_rating ?? d.score ?? 0 }))
-    : (chartData.departmentSatisfaction as Record<string, unknown>[])
+    : []
   const satFeedback = satData?.recent_feedback
     ? satData.recent_feedback.map((f, i) => ({ id: i + 1, rating: f.rating, comment: f.comment, department: f.department, date: f.date }))
     : feedbackItems
@@ -277,10 +270,10 @@ export default function Analytics() {
     : departmentRevenueTable.map((d) => ({ ...d, percentage: 0, avgTicket: 0 }))
   const revByPayer = revData?.by_payer
     ? revData.by_payer.map((p) => ({ name: p.payer, revenue: p.revenue ?? p.amount ?? 0, percentage: p.percentage ?? 0 }))
-    : (chartData.payerMix as Record<string, unknown>[])
+    : []
   const revByMonth = revData?.monthly
     ? revData.monthly.map((m) => ({ name: m.month, revenue: m.revenue, claims: m.claims_settled ?? m.claims ?? 0 }))
-    : (chartData.revenueByMonth as Record<string, unknown>[])
+    : []
 
   // ── Loading spinner helper ──
   const LoadingSpinner = () => (
@@ -322,10 +315,10 @@ export default function Analytics() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card header={<div className="flex items-center justify-between"><h3 className="font-display font-semibold text-text dark:text-text-dark">Patient Visits & Claims (7-Day)</h3><Badge variant="info" size="sm">Weekly</Badge></div>} padding="sm">
-              <Chart type="line" data={chartData.patientVisits} dataKeys={['visits', 'claims']} xAxisKey="name" height={260} />
+              <Chart type="line" data={[]} dataKeys={['visits', 'claims']} xAxisKey="name" height={260} />
             </Card>
             <Card header={<div className="flex items-center justify-between"><h3 className="font-display font-semibold text-text dark:text-text-dark">Revenue by Department</h3><Badge variant="info" size="sm">MTD</Badge></div>} padding="sm">
-              <Chart type="bar" data={chartData.departmentRevenue.slice(0, 6)} dataKeys={['revenue']} xAxisKey="name" height={260} />
+              <Chart type="bar" data={[]} dataKeys={['revenue']} xAxisKey="name" height={260} />
             </Card>
           </div>
 
@@ -402,7 +395,7 @@ export default function Analytics() {
           </div>
 
           <Card header={<div className="flex items-center justify-between"><h3 className="font-display font-semibold text-text dark:text-text-dark">Revenue by Payer Mix</h3><Badge variant="info" size="sm">MTD</Badge></div>} padding="sm">
-            <Chart type="bar" data={chartData.payerMix as Record<string, unknown>[]} dataKeys={['revenue']} xAxisKey="name" height={260} />
+            <Chart type="bar" data={[]} dataKeys={['revenue']} xAxisKey="name" height={260} />
           </Card>
         </div>
         )
@@ -426,7 +419,7 @@ export default function Analytics() {
                   <Badge variant="info" size="sm" dot>Live</Badge>
                 </div>
                 <p className="text-sm font-medium text-error">
-                  AI has identified 12 high-risk patients requiring immediate intervention
+                  AI risk predictions from D1 patient data
                 </p>
               </div>
             </div>
@@ -700,7 +693,8 @@ export default function Analytics() {
             <Stat label="Total Active Patients" value={churnData ? `${churnData.total_active_patients}` : '—'} icon={<Users className="h-5 w-5" />} />
           </div>
 
-          {/* AI Model Performance + 30-Day Forecast */}
+          {/* Platform Intelligence Metrics + 30-Day Forecast */}
+          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">Platform Intelligence Metrics</h3>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <Card className="border-2 border-primary/20">
               <div className="flex items-center gap-2 mb-4">
@@ -803,7 +797,7 @@ export default function Analytics() {
           {/* Churn Trend Chart */}
           <Card header={<div className="flex items-center justify-between"><h3 className="font-display font-semibold text-text dark:text-text-dark">Churn Rate Trend (AI Prediction)</h3><Badge variant="info" size="sm">12 Months</Badge></div>} padding="sm">
             <p className="mb-4 px-4 text-xs text-muted">Predicted churn rate declining with proactive AI interventions — target: 10%</p>
-            <Chart type="line" data={chartData.churnData as Record<string, unknown>[]} dataKeys={['rate']} xAxisKey="name" height={300} />
+            <Chart type="line" data={[]} dataKeys={['rate']} xAxisKey="name" height={300} />
             {churnData && (
               <div className="mt-4 px-4 flex gap-6 text-sm">
                 <span className="text-muted">Churn Rate: <span className="font-semibold text-error">{churnData.churn_rate}%</span></span>
@@ -979,7 +973,7 @@ export default function Analytics() {
           >
             <Chart
               type="bar"
-              data={chartData.bedOccupancy as Record<string, unknown>[]}
+              data={[]}
               dataKeys={['occupied', 'total']}
               xAxisKey="name"
               height={320}

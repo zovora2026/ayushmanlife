@@ -20,7 +20,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const limit = parseInt(url.searchParams.get('limit') || '50');
 
     if (!db) {
-      return json({ claims: [], summary: {}, queue_stats: {} });
+      return json({ error: 'Database not available', claims: [], queue_stats: {}, by_payer_scheme: [], currency: 'INR' }, 503);
     }
 
     // Build query for adjudication queue

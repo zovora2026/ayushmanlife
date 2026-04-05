@@ -277,6 +277,157 @@ export const insurance = {
     fetchAPI<{ request: UnderwritingRequest }>('/insurance/underwriting', { method: 'PUT', body: JSON.stringify(data) }),
 };
 
+// Uploads (R2 file storage)
+async function fetchUpload(path: string, options?: RequestInit): Promise<Response> {
+  return fetch(`${API_BASE}${path}`, {
+    ...options,
+    credentials: 'include',
+  });
+}
+
+export const uploads = {
+  upload: (file: File, entityType: string, entityId: string) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('entity_type', entityType);
+    formData.append('entity_id', entityId);
+    return fetchUpload('/uploads', { method: 'POST', body: formData }).then(r => r.json()) as Promise<{ file: UploadedFile; message: string }>;
+  },
+  list: (entityType: string, entityId: string) =>
+    fetchAPI<{ files: UploadedFile[] }>(`/uploads?entity_type=${entityType}&entity_id=${entityId}`),
+  downloadUrl: (fileId: string) => `${API_BASE}/uploads/${fileId}`,
+  delete: (fileId: string) =>
+    fetchUpload(`/uploads/${fileId}`, { method: 'DELETE' }).then(r => r.json()) as Promise<{ message: string }>,
+};
+
+export interface UploadedFile {
+  id: string;
+  r2_key: string;
+  entity_type: string;
+  entity_id: string;
+  filename: string;
+  content_type?: string;
+  size_bytes?: number;
+  uploaded_by?: string;
+  created_at?: string;
+}
+
+// Payer extensions (TPA, Network, Pre-Auth)
+export const payerExtended = {
+  tpa: () => fetchAPI<{ partners: TPAPartner[]; summary: TPASummary }>('/payer/tpa'),
+  createTpa: (data: Partial<TPAPartner>) =>
+    fetchAPI<{ partner: TPAPartner }>('/payer/tpa', { method: 'POST', body: JSON.stringify(data) }),
+  network: () => fetchAPI<{ providers: NetworkProvider[]; summary: NetworkSummary }>('/payer/network'),
+  createProvider: (data: Partial<NetworkProvider>) =>
+    fetchAPI<{ provider: NetworkProvider }>('/payer/network', { method: 'POST', body: JSON.stringify(data) }),
+  preauth: (params?: Record<string, string>) =>
+    fetchAPI<{ requests: PreAuthRequest[]; summary: PreAuthSummary }>(`/payer/preauth?${new URLSearchParams(params || {})}`),
+  createPreauth: (data: Partial<PreAuthRequest>) =>
+    fetchAPI<{ request: PreAuthRequest }>('/payer/preauth', { method: 'POST', body: JSON.stringify(data) }),
+  updatePreauth: (data: { id: string; status?: string; reviewer?: string; approved_amount?: number; remarks?: string }) =>
+    fetchAPI<{ request: PreAuthRequest }>('/payer/preauth', { method: 'PUT', body: JSON.stringify(data) }),
+};
+
+export interface TPAPartner {
+  id: string;
+  name: string;
+  code?: string;
+  region?: string;
+  partner_hospitals: number;
+  settlement_rate: number;
+  avg_tat_days: number;
+  status: string;
+  contact_email?: string;
+  created_at?: string;
+}
+
+export interface TPASummary {
+  total: number;
+  active: number;
+  avg_settlement_rate: number;
+  total_partner_hospitals: number;
+}
+
+export interface NetworkProvider {
+  id: string;
+  name: string;
+  city: string;
+  state?: string;
+  type?: string;
+  bed_count: number;
+  specialties?: string;
+  empanelment_status: string;
+  utilization_pct: number;
+  created_at?: string;
+}
+
+export interface NetworkSummary {
+  total: number;
+  active: number;
+  total_beds: number;
+  avg_utilization: number;
+  by_state: { state: string; count: number }[];
+  by_type: { type: string; count: number }[];
+}
+
+export interface PreAuthRequest {
+  id: string;
+  claim_id?: string;
+  patient_id?: string;
+  policy_id?: string;
+  procedure_name?: string;
+  estimated_cost: number;
+  status: string;
+  reviewer?: string;
+  approved_amount?: number;
+  remarks?: string;
+  requested_at?: string;
+  decided_at?: string;
+  patient_name?: string;
+  claim_number?: string;
+}
+
+export interface PreAuthSummary {
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+  total_estimated: number;
+  total_approved: number;
+}
+
+// Data Governance
+export const dataGovernance = {
+  stats: () => fetchAPI<{ stats: DataGovernanceStats; tables: string[] }>('/analytics/data-governance'),
+};
+
+export interface DataGovernanceStats {
+  total_patients: number;
+  total_claims: number;
+  total_appointments: number;
+  total_policies: number;
+  total_users: number;
+  total_tickets: number;
+  total_staff: number;
+  total_projects: number;
+  total_tables: number;
+  database_type: string;
+  region: string;
+}
+
+// Workforce extensions
+export const workforceExtended = {
+  skillGaps: () => fetchAPI<{ gaps: SkillGap[]; by_category: Record<string, SkillGap[]>; total_staff_with_skills: number }>('/workforce/skill-gaps'),
+};
+
+export interface SkillGap {
+  skill: string;
+  category: string;
+  staff_count: number;
+  avg_proficiency: number;
+  gap_level: 'critical' | 'moderate' | 'adequate';
+}
+
 // Academy
 export const academy = {
   paths: () => fetchAPI<{ paths: LearningPath[] }>('/academy/paths'),

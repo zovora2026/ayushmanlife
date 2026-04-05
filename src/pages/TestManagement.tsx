@@ -7,8 +7,10 @@ import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { Stat } from '../components/ui/Stat'
 import { Tabs } from '../components/ui/Tabs'
+import FileUpload from '../components/ui/FileUpload'
 import { testing } from '../lib/api'
 import type { TestDashboard, TestSuite, TestScript, TestDefect } from '../lib/api'
+import { generateTestReport } from '../lib/pdf'
 
 const TABS = [
   { id: 'dashboard', label: 'Dashboard' },
@@ -255,6 +257,16 @@ function DashboardTab({ dashboard, suites, onSuiteClick }: { dashboard: TestDash
 
   return (
     <div className="space-y-6">
+      {/* Export Button */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => { const doc = generateTestReport(dashboard as unknown as Record<string, unknown>); doc.save('EMR_Test_Report.pdf'); }}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 transition-colors"
+        >
+          <BarChart3 className="h-4 w-4" /> Export Report PDF
+        </button>
+      </div>
+
       {/* KPI Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Stat label="Test Suites" value={summary.total_suites} />
@@ -543,6 +555,16 @@ function ScriptsTab({ scripts, suites, selectedSuite, setSelectedSuite, statusFi
           </table>
         </div>
       </Card>
+
+      {/* Screenshot Attachments for selected suite */}
+      {selectedSuite && (
+        <Card>
+          <h3 className="text-sm font-semibold text-text dark:text-text-dark mb-3 flex items-center gap-2">
+            <ClipboardCheck className="w-4 h-4 text-primary" /> Test Evidence & Screenshots
+          </h3>
+          <FileUpload entityType="test" entityId={selectedSuite} accept="image/*,.pdf,.png,.jpg,.jpeg" />
+        </Card>
+      )}
     </div>
   )
 }

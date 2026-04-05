@@ -199,7 +199,7 @@ export default function VCare() {
   }>({ bp: [], hr: [], spo2: [] })
   const [vitalsLoading, setVitalsLoading] = useState(true)
   const [patientList, setPatientList] = useState<{ id: string; name: string }[]>([])
-  const [selectedPatientId, setSelectedPatientId] = useState('pat-001')
+  const [selectedPatientId, setSelectedPatientId] = useState('')
 
   const PATIENT_ID = selectedPatientId
 
@@ -295,11 +295,13 @@ export default function VCare() {
     setContextLoading(false)
   }, [selectedPatientId])
 
-  // Load patient list for selector
+  // Load patient list for selector — auto-select first patient when list arrives
   useEffect(() => {
     patientsAPI.list().then((res: any) => {
       if (res?.patients?.length) {
-        setPatientList(res.patients.map((p: any) => ({ id: p.id, name: p.name })))
+        const list = res.patients.map((p: any) => ({ id: p.id, name: p.name }))
+        setPatientList(list)
+        setSelectedPatientId((prev) => (prev ? prev : list[0].id))
       }
     }).catch(() => {})
   }, [])
@@ -409,11 +411,18 @@ export default function VCare() {
           {patientList.length > 0 ? patientList.map(p => (
             <option key={p.id} value={p.id}>{p.name} ({p.id})</option>
           )) : (
-            <option value="pat-001">Ramesh Kumar (pat-001)</option>
+            <option value="">Loading patients…</option>
           )}
         </select>
         {patientProfile && <span className="text-xs text-muted">{profileGender}, Age {profileAge} | {profileInsurance}</span>}
       </div>
+      {/* Demo Mode Banner */}
+      {patientList.length === 0 && (
+        <div className="mb-4 rounded-lg bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-800 px-4 py-2 text-sm text-amber-800 dark:text-amber-200 flex items-center gap-2">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          Demo Mode — AI responses use Claude API. Select a patient from your D1 database to see real clinical context.
+        </div>
+      )}
     <div className="flex flex-col lg:flex-row gap-4" style={{ height: 'auto', minHeight: 'calc(100vh - 8rem)' }}>
       {/* Chat Panel — Left Side */}
       <div className="flex w-full lg:w-3/5 flex-col rounded-xl border border-border bg-white shadow-sm dark:border-border-dark dark:bg-surface-dark" style={{ minHeight: '60vh' }}>
@@ -895,13 +904,13 @@ export default function VCare() {
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-semibold text-text dark:text-text-dark">{lab.test}</span>
                   <span className={cn('px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase',
-                    lab.status === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                    lab.status === 'low' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                    (lab.status as string) === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                    (lab.status as string) === 'low' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
                     'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                   )}>{lab.status}</span>
                 </div>
                 <div className="flex items-baseline gap-2">
-                  <span className={cn('text-sm font-bold', lab.status === 'normal' ? 'text-success' : 'text-error')}>{lab.value}</span>
+                  <span className={cn('text-sm font-bold', (lab.status as string) === 'normal' ? 'text-success' : 'text-error')}>{lab.value}</span>
                   <span className="text-[10px] text-muted">Ref: {lab.ref}</span>
                   <span className="text-[9px] text-muted ml-auto">{lab.date}</span>
                 </div>

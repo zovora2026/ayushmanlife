@@ -1,6 +1,7 @@
 // Global API middleware: CORS + auth context
 interface Env {
   DB: D1Database;
+  UPLOADS?: R2Bucket;
   ANTHROPIC_API_KEY?: string;
 }
 

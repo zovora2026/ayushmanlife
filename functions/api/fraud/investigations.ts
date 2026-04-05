@@ -18,7 +18,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const alertId = url.searchParams.get('alert_id');
 
     if (!db) {
-      return json({ investigations: [], total: 0 });
+      return json({ error: 'Database not available', investigations: [], total: 0 }, 503);
     }
 
     let query = `SELECT fi.*, fa.alert_type, fa.risk_score, fa.description as alert_description,
@@ -93,7 +93,7 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     };
 
     if (!db) {
-      return json({ id: `inv-${Date.now()}` }, 201);
+      return json({ error: 'Database not available' }, 503);
     }
 
     if (body.type === 'note') {

@@ -25,6 +25,7 @@ import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { Stat } from '../components/ui/Stat'
 import { Tabs } from '../components/ui/Tabs'
+import FileUpload from '../components/ui/FileUpload'
 
 const TABS = [
   { id: 'overview', label: 'Overview' },
@@ -490,6 +491,13 @@ export default function ClientPortal() {
             </table>
             {!documents.length && <div className="p-8 text-center text-gray-400">No documents uploaded</div>}
           </div>
+          {/* R2 File Storage */}
+          {selectedProjectId && (
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2">Attached Files (R2 Storage)</p>
+              <FileUpload entityType="project" entityId={selectedProjectId} />
+            </div>
+          )}
         </Card>
       )}
 

@@ -108,9 +108,9 @@ export default function Hero({ stats }: { stats?: DashboardKPIs | null }) {
         {/* Trust Indicators */}
         <div className="flex flex-wrap justify-center gap-4 sm:gap-8 mb-12">
           {[
-            { icon: Building2, value: '50+', label: 'Hospitals Trust Us' },
-            { icon: IndianRupee, value: '\u20B9283L+', label: 'Processed Monthly' },
-            { icon: Users, value: '24,853', label: 'Patients Served' },
+            { icon: Building2, value: `${stats?.total_patients || 50}+`, label: 'Patient Records' },
+            { icon: IndianRupee, value: `${stats?.active_claims || 100}+`, label: 'Claims Processed' },
+            { icon: Users, value: '16', label: 'Integrated Apps' },
           ].map((trust) => (
             <div key={trust.label} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 backdrop-blur-sm">
               <trust.icon className="w-4 h-4 text-teal-300" />
@@ -126,8 +126,8 @@ export default function Hero({ stats }: { stats?: DashboardKPIs | null }) {
           {[
             { icon: Shield, label: 'Ayushman Bharat' },
             { icon: Globe, label: 'ABDM Integrated' },
-            { icon: Shield, label: 'HIPAA Aligned' },
-            { icon: Award, label: 'SOC 2 Ready' },
+            { icon: Shield, label: 'HIPAA Tracking' },
+            { icon: Award, label: 'SOC 2 Framework' },
           ].map((badge) => (
             <div key={badge.label} className={cn(
               'flex items-center gap-2 px-3 py-1.5 rounded-full',

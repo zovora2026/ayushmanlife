@@ -15,24 +15,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const db = context.env.DB;
 
     if (!db) {
-      return json({
-        total_patients: 24853,
-        active_claims: 1247,
-        monthly_revenue: 1852000000, // ₹185.2 Cr
-        satisfaction_score: 4.3,
-        claims_this_month: 3842,
-        appointments_today: 187,
-        avg_wait_time: 23, // minutes
-        bed_occupancy: 78.5, // percentage
-        trends: {
-          patients_change: 5.2,
-          claims_change: -2.1,
-          revenue_change: 8.7,
-          satisfaction_change: 0.3,
-        },
-        period: 'March 2026',
-        currency: 'INR',
-      });
+      return json({ error: 'Database not available' }, 503);
     }
 
     // Real DB queries

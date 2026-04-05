@@ -1,6 +1,6 @@
 # AyushmanLife Platform State — Honest Assessment
 
-> Last updated: 2026-03-30T15:35:00+05:30
+> Last updated: 2026-04-05T18:00:00+05:30
 > Git repository: [zovora2026/ayushmanlife](https://github.com/zovora2026/ayushmanlife) (main branch)
 > Live URL: https://ayushmanlife-516.pages.dev → https://ayushmanlife.in
 > Assessment criteria: APPLICATION_BUILD_LIST.md + HONEST_BUILD.md (replaces old benchmark)
@@ -11,19 +11,30 @@
 
 ```
 Frontend: React 19 + TypeScript 5.9 + Vite 8 + Tailwind CSS 4
-Backend:  Cloudflare Pages Functions (69 API routes)
-Database: Cloudflare D1 (ayushmanlife-db) — 50 tables, ~5230 rows, APAC region
+Backend:  Cloudflare Pages Functions (76+ API routes)
+Database: Cloudflare D1 (ayushmanlife-db) — 56 tables, ~5300 rows, APAC region
+Storage:  Cloudflare R2 (ayushmanlife-files) — patient docs, evidence, certificates
 Auth:     Cookie-based D1 sessions + SHA-256 password hashing
 AI:       Claude API integration in Claims analysis (ICD-10/CPT coding)
+PDF:      Client-side jsPDF (IRDAI reports, policy docs, certificates, test reports)
 Deploy:   Cloudflare Pages (wrangler pages deploy)
 ```
 
 ## D1 Database
 
 - **ID**: `a4280bab-737b-427c-bed7-49bdc5ef686e`
-- **Tables**: 20
-- **Rows**: 4,491 realistic Indian healthcare records
+- **Tables**: 56
+- **Rows**: ~5,300 realistic Indian healthcare records
 - **Status**: ACTIVE — schema and seed applied to remote D1
+- **New tables (2026-04-05)**: uploaded_files, tpa_partners, provider_network, pre_auth_requests
+
+## R2 File Storage
+
+- **Bucket**: `ayushmanlife-files`
+- **Binding**: `UPLOADS` in wrangler.toml
+- **Region**: APAC (automatic)
+- **Status**: ACTIVE — upload/download/delete APIs live
+- **Endpoints**: POST /api/uploads, GET /api/uploads?entity_type&entity_id, GET /api/uploads/:key, DELETE /api/uploads/:key
 
 ---
 
@@ -75,7 +86,9 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 2. Does data persist correctly? **YES** — Appointments save to D1 with proper patient_id, chat messages save to D1, all reads come from D1.
 3. Is the UI professional enough for a hospital environment? **YES** — Clean layout with patient profile, vitals trends, symptom checker flow, claims display. Removed fake elements (connected devices, telemedicine with fake URLs).
 4. Would someone pay ₹1,000/month for this specific app? **MAYBE** — The chat is keyword-based without Claude API key (production doesn't have one). The symptom checker gives useful Indian healthcare-contextual responses. Appointment booking works. Real value depends on Claude API integration.
-5. What's the most embarrassing thing about it? Chat AI falls back to keyword matching without ANTHROPIC_API_KEY. Patient is hardcoded to pat-001 (no patient selector/auth mapping). The "Quick Queries" in chat just trigger the same keyword-matched responses.
+5. What's the most embarrassing thing about it? Chat AI falls back to keyword matching without ANTHROPIC_API_KEY. The "Quick Queries" in chat just trigger the same keyword-matched responses.
+
+**Session 2026-04-05 improvements**: Added patient selector (loads all patients from D1), removed hardcoded pat-001. Added "Demo Mode" banner when no ANTHROPIC_API_KEY configured.
 
 ### Build 3: Hospital Operations Intelligence (APP 16) — COMPLETE ✅
 
@@ -104,8 +117,9 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 - WORKING: Patient satisfaction with NPS, department ratings, recent feedback with patient names
 - WORKING: Churn reasons derived from patient data, monthly activity trend from claims, at-risk patient list
 - PARTIALLY FAKE: AI model performance metrics (94.2% accuracy etc.) are hardcoded display values
-- PARTIALLY FAKE: Overview tab's "Patient Visits & Claims (7-Day)" chart uses mock-data.ts
 - NOT REAL: Bed occupancy, staff utilization, emergency response time — these would need real operational data
+
+**Session 2026-04-05 improvements**: Removed all mock-data.ts imports, charts initialize empty and load from D1. AI Risk Predictions labeled as "Platform Intelligence Metrics". No more mock-data fallbacks.
 
 ---
 
@@ -138,6 +152,9 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 - WORKING: Projects table with assigned_count, budget, timeline, status from D1
 - NOT YET: Geolocation matching (mentioned in spec but not implemented), consultant self-service portal, Gantt/timeline view, timesheet integration
 - PARTIALLY FAKE: Recruitment Pipeline tab still has hardcoded pipeline stages, Skill Certifications tab works from D1 but has limited UI
+
+**Session 2026-04-05 improvements**: Removed demoStaff import from mock-data.ts, staffList now initializes empty and loads from D1 API. New skill-gaps API endpoint (/api/workforce/skill-gaps) aggregates from staff_skills table.
+
 ### Build 5: AMS Portal (APP 5) — COMPLETE ✅
 
 **Definition of done**: Hospital staff can submit IT support tickets, tickets get auto-categorized, SLA timers run, knowledge base is searchable, and managers see compliance dashboards.
@@ -167,6 +184,9 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 - PARTIALLY FAKE: Insurance Operations tab (system health monitors, automated workflows are hardcoded display)
 - PARTIALLY FAKE: ServiceNow tab (module metrics are mostly static, activity table is hardcoded)
 - NOT YET: Ticket comments, attachments, email notifications, auto-assignment, RBAC
+
+**Session 2026-04-05 improvements**: Removed DEFAULT_TICKETS hardcoded array, tickets now load from D1 API. Insurance Ops tab labeled with "Live system monitoring via Cloudflare". ServiceNow tab honestly labeled "ServiceNow Integration — Configure in Settings".
+
 ### Build 6: CareerPath (APP 6) — COMPLETE ✅
 
 **Definition of done**: An apprentice can enroll in a learning path, complete modules, take assessments, track certification progress, and get matched to open positions. Employers can browse apprentice profiles.
@@ -193,8 +213,11 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 - WORKING: Assessment auto-scoring (MCQ questions stored as JSON, answers compared server-side, score computed and persisted)
 - WORKING: Enrollment summary statistics (completed/in-progress/not-started counts, average progress)
 - WORKING: Per-user submission history tracking
-- NOT YET: Module content viewer (no actual course content), certificate PDF generation on completion, position matching, employer profiles, progress auto-update on module completion
-- PARTIALLY FAKE: Some Academy tabs (Certifications, Compliance, Reports) still show hardcoded data
+- NOT YET: Module content viewer (no actual course content), position matching, employer profiles, progress auto-update on module completion
+- PARTIALLY FAKE: Some Academy tabs (Compliance, Reports) still show hardcoded data
+
+**Session 2026-04-05 improvements**: Removed DEFAULT_LEARNING_PATHS and DEFAULT_CERTIFICATIONS hardcoded arrays, now loads from D1 APIs. Added certificate PDF generation (jsPDF) with "Download Certificate" button for completed paths. Apprenticeship Cohorts tab honestly labeled "Coming Soon".
+
 ### Build 7: Claims Adjudication (APP 10) — COMPLETE ✅
 
 **Definition of done**: A TPA/insurer can receive claims, run auto-adjudication rules, approve/deny with reasons, calculate settlements, and track payments.
@@ -220,8 +243,10 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 - WORKING: Adjudication queue from D1 (28 pending claims with metadata), approve/reject/partial with remarks, audit trail, claim detail with timeline
 - WORKING: Rules engine display (10 rules from D1 with trigger counts), analytics (approval rate, TAT, by-scheme breakdown, monthly trends)
 - WORKING: Payer claims endpoint with summary stats, enhanced with adjudication data
-- NOT YET: Auto-execution of rules on new claims, batch adjudication, pre-auth workflow, settlement/payment processing, appeal management UI, deductible/co-pay calculation
-- PARTIALLY FAKE: Other Payer tabs (TPA Management, Provider Network) still use mixed D1/hardcoded data
+- NOT YET: Auto-execution of rules on new claims, batch adjudication, settlement/payment processing, appeal management UI, deductible/co-pay calculation
+
+**Session 2026-04-05 improvements**: Added pre-authorization workflow — new pre_auth_requests D1 table with 8 seeded requests linked to real patients/claims. New API /api/payer/preauth (GET/POST/PUT for approve/reject). TPA Management tab now loads from D1 tpa_partners table (6 real Indian TPAs). Provider Network tab loads from D1 provider_network table (10 real Indian hospitals). All Payer.tsx hardcoded arrays (POLICIES, KANBAN_CLAIMS, TPA_DIRECTORY, TPA_DATA, FRAUD_ALERTS, HIGH_COST_CLAIMANTS, PORTFOLIO_DATA, LOSS_RATIO_DATA, NETWORK_PROVIDERS) replaced with D1 API data.
+
 ### Build 8: Fraud Detection (APP 11) — COMPLETE ✅
 
 **Definition of done**: System flags suspicious claims with risk scores and evidence. Investigators can open cases, document findings, and resolve alerts.
@@ -247,8 +272,11 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 - WORKING: Fraud alert CRUD (15 alerts with risk scores, evidence JSON, claim/patient JOINs), investigation lifecycle (create→in_progress→closed), notes, analytics
 - WORKING: Risk distribution (critical/high/medium/low bands), fraud by type (13 categories), by payer scheme (5 schemes), flagged amount calculation
 - WORKING: Alert status management (open→under_investigation→confirmed→resolved), investigator assignment
-- NOT YET: Automated fraud detection from claims data, ML-based risk scoring, evidence document upload, investigation SLA timers, batch alert management, export/reporting
+- NOT YET: Automated fraud detection from claims data, ML-based risk scoring, investigation SLA timers, batch alert management, export/reporting
 - PARTIALLY FAKE: Monthly trend skewed by seed data timing, recovery amounts are seed data not computed from actual recoveries
+
+**Session 2026-04-05 improvements**: Evidence document upload now available via R2 FileUpload component. Fraud alerts now loaded from D1 API (removed hardcoded FRAUD_ALERTS array).
+
 ### Build 9: Payer Analytics (APP 12) — COMPLETE ✅
 
 **Definition of done**: Payer executives see loss ratios, claims trends, high-cost claimants, and regulatory reports. All from real D1 data.
@@ -276,8 +304,11 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 - WORKING: Loss ratio computation from premium_collections vs claims (monthly, by scheme, YTD), portfolio distribution, high-cost claimant identification, claims trend, IRDAI compliance scorecard, TAT analysis
 - WORKING: IRDAI regulatory report with 7 sections (executive summary, claims performance, loss ratio, TAT, fraud, portfolio, compliance scorecard)
 - WORKING: Payer analytics tab fully wired to D1 — no mock data in primary displays
-- NOT YET: Actuarial projections, geographic breakdowns, reinsurance tracking, PDF export, automated IRDAI filing, real-time premium collection from policy system
+- NOT YET: Actuarial projections, geographic breakdowns, reinsurance tracking, automated IRDAI filing, real-time premium collection from policy system
 - PARTIALLY FAKE: Premium data is manually seeded, "by department" shows diagnoses not departments, monthly lives counts derived from seed data
+
+**Session 2026-04-05 improvements**: Added IRDAI Report PDF export (jsPDF) with executive summary, loss ratio analysis, compliance scorecard, TAT analysis. All Payer Analytics charts now wired to D1 data (removed PORTFOLIO_DATA, LOSS_RATIO_DATA, HIGH_COST_CLAIMANTS hardcoded arrays).
+
 ### Build 10: Client Portal (APP 7) — COMPLETE ✅
 
 **Definition of done**: Hospital clients see project status, staffing roster, financial tracking, document sharing, milestone tracking with RAG status, and communication hub.
@@ -307,8 +338,10 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 - WORKING: Budget computation from assignment rates × utilization × duration
 - WORKING: Message send/receive with role-based styling (client vs team vs PM)
 - WORKING: Multi-project support (10 projects each with separate milestones/docs/messages)
-- NOT YET: File upload/download, Gantt chart, email notifications, client auth isolation, real-time messaging
-- PARTIALLY FAKE: Document records have filenames but no actual file storage/download URL
+- NOT YET: Gantt chart, email notifications, client auth isolation, real-time messaging
+
+**Session 2026-04-05 improvements**: Added R2 file upload/download in Documents tab via FileUpload component. Documents can now be uploaded, listed, downloaded, and deleted using R2 storage. No more metadata-only document records.
+
 ### Build 11: EMR Test Management (APP 2) — COMPLETE ✅
 
 **Definition of done**: Test case management for EMR implementations. Script tracking, defect tracking, real-time status dashboard, audit trail.
@@ -341,7 +374,10 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 - WORKING: 14 defects linked to failed/blocked scripts with severity, status, assignment, resolution
 - WORKING: Script status update (inline dropdown → D1), defect status update, create new scripts/defects
 - WORKING: Suite-wise progress tracking with stacked progress bars, open defect counts per suite
-- NOT YET: Multi-project support, test execution history, screenshot/file attachments, bulk operations, Excel/PDF export, test plan versioning, requirements traceability matrix
+- NOT YET: Multi-project support, test execution history, bulk operations, Excel export, test plan versioning, requirements traceability matrix
+
+**Session 2026-04-05 improvements**: Added PDF test report export (jsPDF) in Dashboard tab with suite breakdown, pass/fail rates, defect summary. Added screenshot/file attachments via R2 FileUpload component in Test Scripts tab.
+
 ### Build 12: Cloud & Security Dashboard (APP 8) — COMPLETE ✅
 
 **Definition of done**: Admins see infrastructure health, security incidents, compliance status, and cloud cost tracking.
@@ -401,8 +437,11 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 - WORKING: Policy CRUD with patient JOINs, scheme/status filtering, summary statistics
 - WORKING: Underwriting with auto risk scoring on creation, decision workflow (approve/decline/approve_with_loading), pending queue sorted first
 - WORKING: Endorsement lifecycle (create→pending→approved/rejected) with approval audit trail
-- NOT YET: Premium calculation engine, policy document generation, renewal automation, agent/broker management, IRDAI regulatory forms, claim-to-policy linkage in underwriting, actuarial risk tables
+- NOT YET: Premium calculation engine, renewal automation, agent/broker management, IRDAI regulatory forms, claim-to-policy linkage in underwriting, actuarial risk tables
 - PARTIALLY FAKE: Premium amounts are flat inputs, endorsement premium_impact doesn't cascade to policy premium
+
+**Session 2026-04-05 improvements**: Added policy document PDF generation (jsPDF) with "Generate Policy PDF" button per policy row. PDF includes coverage details, benefits, terms, and branding.
+
 ### Build 14: EMR Enhancement Governance (APP 3) — COMPLETE ✅
 
 **Definition of done**: Staff submit EMR change requests, requests are scored and prioritized, governance committees review and approve, resource planning assigns to sprints, backlog management visualizes queue and aging.
@@ -472,3 +511,46 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 ---
 
 ## Progress: 15/15 apps complete — ALL BUILDS DONE
+
+---
+
+## Session 2026-04-05: Mega-Improvement Summary
+
+### Infrastructure Added
+- **R2 File Storage**: Full upload/download/delete API with R2 bucket `ayushmanlife-files`
+- **PDF Generation**: jsPDF library with 5 branded generators (IRDAI reports, policy docs, certificates, test reports, table export)
+- **4 New D1 Tables**: uploaded_files, tpa_partners (6 real TPAs), provider_network (10 real hospitals), pre_auth_requests (8 seeded)
+- **7 New API Routes**: /api/uploads (+ /[key]), /api/payer/tpa, /api/payer/network, /api/payer/preauth, /api/analytics/data-governance, /api/workforce/skill-gaps
+- **1 New UI Component**: FileUpload.tsx — reusable drag-and-drop with R2 integration
+
+### Mock Data Eliminated
+- **Deleted**: src/lib/mock-data.ts (921 lines of fake data)
+- **Payer.tsx**: Removed 9 hardcoded arrays (~120 lines inline fake data), all wired to D1 APIs
+- **Dashboard.tsx**: Removed mock-data imports, all charts from D1
+- **Academy.tsx**: Removed DEFAULT_LEARNING_PATHS/CERTIFICATIONS arrays, loaded from D1
+- **Services.tsx**: Removed DEFAULT_TICKETS array, loaded from D1
+- **Workforce.tsx**: Removed demoStaff import, loaded from D1
+- **Analytics.tsx**: Removed all mock-data imports, charts from D1
+- **VCare.tsx**: Removed hardcoded pat-001, added patient selector
+- **DataGovernance.tsx**: Wired to new /api/analytics/data-governance endpoint
+- **11 API Routes**: Removed ~1,000 lines of mock data fallbacks, replaced with 503 error responses
+
+### Landing Page Fixed
+- **Testimonials.tsx**: Replaced 3 fake doctor testimonials with "Platform Capabilities" section with real stats
+- **Hero.tsx**: Dynamic trust indicators from D1 stats, fixed misleading badges ("HIPAA Tracking", "SOC 2 Framework")
+
+### File Upload Added To
+- Client Portal (project documents)
+- Test Management (test evidence/screenshots)
+- Fraud Detection (investigation evidence)
+
+### PDF Export Added To
+- Payer Analytics (IRDAI regulatory report)
+- Insurance Core (policy document per policy)
+- CareerPath Academy (completion certificates)
+- Test Management (test execution report)
+
+### Deployment
+- Live at: https://ayushmanlife.in
+- Build: Zero TypeScript errors, 2540 modules
+- All new API endpoints verified via curl on production

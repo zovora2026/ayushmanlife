@@ -20,8 +20,9 @@ import {
   X,
 } from 'lucide-react'
 import { cn, formatCurrency, formatDate } from '../lib/utils'
-import { payer as payerAPI, claims as claimsAPI, adjudication as adjAPI, fraud as fraudAPI } from '../lib/api'
+import { payer as payerAPI, claims as claimsAPI, adjudication as adjAPI, fraud as fraudAPI, payerExtended, type TPAPartner, type NetworkProvider, type PreAuthRequest } from '../lib/api'
 import type { AdjudicationQueueClaim, AdjudicationRule, AdjudicationAnalytics, FraudAlertDetail, FraudAlertsSummary, FraudInvestigation, FraudAnalytics, PayerAnalytics, IRDAIReport } from '../lib/api'
+import { generateIRDAIReport } from '../lib/pdf'
 import { Card } from '../components/ui/Card'
 import { Badge } from '../components/ui/Badge'
 import { Stat } from '../components/ui/Stat'
@@ -346,24 +347,29 @@ export default function Payer() {
   const [schemeFilter, setSchemeFilter] = useState<SchemeFilter>('All')
   const [fraudSearch, setFraudSearch] = useState('')
   const [loading, setLoading] = useState(true)
-  const [policies, setPolicies] = useState<PolicyData[]>(POLICIES)
-  const [fraudAlerts, setFraudAlerts] = useState<FraudAlertData[]>(FRAUD_ALERTS)
+  const [policies, setPolicies] = useState<PolicyData[]>([])
+  const [fraudAlerts, setFraudAlerts] = useState<FraudAlertData[]>([])
+
+  // D1-backed TPA/Network/PreAuth state
+  const [d1TpaPartners, setD1TpaPartners] = useState<TPAPartner[]>([])
+  const [d1NetworkProviders, setD1NetworkProviders] = useState<NetworkProvider[]>([])
+  const [d1PreAuthRequests, setD1PreAuthRequests] = useState<PreAuthRequest[]>([])
 
   // Real D1-derived aggregate state
   const [policyLifecycle, setPolicyLifecycle] = useState<PolicyLifecycleCounts>({
-    active: 8, expired: 1, pending: 1, lapsed: 1, total: 12,
+    active: 0, expired: 0, pending: 0, lapsed: 0, total: 0,
   })
   const [fraudStats, setFraudStats] = useState<FraudStats>({
-    totalAlerts: 6, highSeverity: 2, criticalSeverity: 0, resolved: 1, investigating: 3, open: 2, totalFlaggedAmount: 0,
+    totalAlerts: 0, highSeverity: 0, criticalSeverity: 0, resolved: 0, investigating: 0, open: 0, totalFlaggedAmount: 0,
   })
   const [tpaDerivedStats, setTpaDerivedStats] = useState<TPADerivedStats>({
-    totalTPAs: TPA_DATA.length, totalClaimsViaTPAs: 0, avgProcessingDays: 3.2, approvalRate: 91, tpaBreakdown: [],
+    totalTPAs: 0, totalClaimsViaTPAs: 0, avgProcessingDays: 0, approvalRate: 0, tpaBreakdown: [],
   })
   const [providerNetworkStats, setProviderNetworkStats] = useState<ProviderNetworkStats>({
-    totalProviders: NETWORK_PROVIDERS.length, uniqueSpecialties: 12, credentialedCount: 7, totalClaimsByProvider: [],
+    totalProviders: 0, uniqueSpecialties: 0, credentialedCount: 0, totalClaimsByProvider: [],
   })
   const [cloudMigrationStats, setCloudMigrationStats] = useState<CloudMigrationStats>({
-    totalClaimsProcessed: 0, digitalCount: 0, manualCount: 0, digitalRatio: 78, avgProcessingDays: 3.5,
+    totalClaimsProcessed: 0, digitalCount: 0, manualCount: 0, digitalRatio: 0, avgProcessingDays: 0,
   })
 
   // Adjudication state
@@ -389,14 +395,7 @@ export default function Payer() {
   // Pre-authorization state
   const [showPreAuthModal, setShowPreAuthModal] = useState(false)
   const [preAuthForm, setPreAuthForm] = useState({ patient: '', procedure: '', amount: '', scheme: 'ayushman_bharat', urgency: 'routine', justification: '' })
-  const [preAuthRequests, setPreAuthRequests] = useState([
-    { id: 'PA-2026-001', patient: 'Ramesh Kumar', procedure: 'Coronary Angioplasty', scheme: 'Ayushman Bharat', amount: 180000, status: 'approved' as const, requested: '2026-03-15', decided: '2026-03-17', urgency: 'urgent', sla: '48h' },
-    { id: 'PA-2026-002', patient: 'Priya Sharma', procedure: 'Total Knee Replacement', scheme: 'Star Health', amount: 250000, status: 'pending' as const, requested: '2026-03-28', decided: null, urgency: 'routine', sla: '72h' },
-    { id: 'PA-2026-003', patient: 'Amit Patel', procedure: 'MRI Brain with Contrast', scheme: 'CGHS', amount: 12000, status: 'approved' as const, requested: '2026-03-20', decided: '2026-03-21', urgency: 'routine', sla: '72h' },
-    { id: 'PA-2026-004', patient: 'Sunita Devi', procedure: 'Chemotherapy Cycle 3', scheme: 'PMJAY', amount: 85000, status: 'pending' as const, requested: '2026-03-29', decided: null, urgency: 'urgent', sla: '24h' },
-    { id: 'PA-2026-005', patient: 'Vikram Singh', procedure: 'Lumbar Spine Decompression', scheme: 'HDFC ERGO', amount: 320000, status: 'denied' as const, requested: '2026-03-18', decided: '2026-03-22', urgency: 'routine', sla: '72h' },
-    { id: 'PA-2026-006', patient: 'Meena Gupta', procedure: 'Dialysis Session (12 cycles)', scheme: 'ECHS', amount: 96000, status: 'approved' as const, requested: '2026-03-10', decided: '2026-03-11', urgency: 'urgent', sla: '24h' },
-  ])
+  const [preAuthRequests, setPreAuthRequests] = useState<{ id: string; patient: string; procedure: string; scheme: string; amount: number; status: 'approved' | 'pending' | 'denied'; requested: string; decided: string | null; urgency: string; sla: string }[]>([])
 
   const handleCreatePreAuth = () => {
     if (!preAuthForm.patient.trim() || !preAuthForm.procedure.trim()) return
@@ -546,7 +545,7 @@ export default function Payer() {
           const approvalRate = totalClaims > 0 ? Math.round((totalApproved / totalClaims) * 100) : 91
 
           setTpaDerivedStats({
-            totalTPAs: Math.max(tpaBreakdown.length, TPA_DATA.length),
+            totalTPAs: Math.max(tpaBreakdown.length, 6),
             totalClaimsViaTPAs: totalClaims,
             avgProcessingDays: avgProc,
             approvalRate,
@@ -583,7 +582,7 @@ export default function Payer() {
           })).sort((a, b) => b.count - a.count)
 
           setProviderNetworkStats({
-            totalProviders: Math.max(byProvider.size, NETWORK_PROVIDERS.length),
+            totalProviders: Math.max(byProvider.size, 10),
             uniqueSpecialties: Math.max(allSpecialties.size, 12),
             credentialedCount: Math.max(providerBreakdown.filter((p) => p.count >= 1).length, 7),
             totalClaimsByProvider: providerBreakdown,
@@ -626,13 +625,16 @@ export default function Payer() {
           setAdjAnalytics(adjAnalyticsRes as AdjudicationAnalytics)
         }
 
-        // ── 5. Fraud D1 data + Payer Analytics ───────────────────
-        const [fraudAlertsRes, fraudInvRes, fraudAnalRes, payerAnalRes, irdaiRes] = await Promise.all([
+        // ── 5. Fraud D1 data + Payer Analytics + TPA/Network/PreAuth ──
+        const [fraudAlertsRes, fraudInvRes, fraudAnalRes, payerAnalRes, irdaiRes, tpaRes, networkRes, preauthRes] = await Promise.all([
           payerAPI.fraudAlerts().catch(() => null),
           fraudAPI.investigations().catch(() => null),
           fraudAPI.analytics().catch(() => null),
           payerAPI.analytics().catch(() => null),
           payerAPI.irdaiReport().catch(() => null),
+          payerExtended.tpa().catch(() => null),
+          payerExtended.network().catch(() => null),
+          payerExtended.preauth().catch(() => null),
         ])
         if (mounted && fraudAlertsRes) {
           setD1FraudAlerts((fraudAlertsRes as any).alerts || [])
@@ -651,6 +653,54 @@ export default function Payer() {
         }
         if (mounted && irdaiRes) {
           setD1IrdaiReport(irdaiRes as IRDAIReport)
+        }
+
+        // ── 7. TPA Partners from D1 ──────────────────────────────
+        if (mounted && tpaRes?.partners?.length) {
+          setD1TpaPartners(tpaRes.partners)
+          setTpaDerivedStats(prev => ({
+            ...prev,
+            totalTPAs: Math.max(tpaRes.partners.length, prev.totalTPAs),
+          }))
+        }
+
+        // ── 8. Network Providers from D1 ──────────────────────────
+        if (mounted && networkRes?.providers?.length) {
+          setD1NetworkProviders(networkRes.providers)
+          setProviderNetworkStats(prev => ({
+            ...prev,
+            totalProviders: Math.max(networkRes.providers.length, prev.totalProviders),
+            uniqueSpecialties: Math.max(
+              new Set(networkRes.providers.flatMap((p: NetworkProvider) => (p.specialties || '').split(',').map((s: string) => s.trim()).filter(Boolean))).size,
+              prev.uniqueSpecialties
+            ),
+            credentialedCount: networkRes.providers.filter((p: NetworkProvider) => p.empanelment_status === 'active').length,
+          }))
+        }
+
+        // ── 9. Pre-Auth Requests from D1 ──────────────────────────
+        if (mounted && preauthRes?.requests?.length) {
+          setD1PreAuthRequests(preauthRes.requests)
+          setPreAuthRequests(preauthRes.requests.map((r: PreAuthRequest) => ({
+            id: r.id,
+            patient: r.patient_name || r.patient_id || '',
+            procedure: r.procedure_name || '',
+            scheme: r.policy_id || '',
+            amount: r.estimated_cost || 0,
+            status: r.status === 'approved' ? 'approved' as const : r.status === 'rejected' ? 'denied' as const : 'pending' as const,
+            requested: r.requested_at?.split('T')[0] || r.requested_at?.split(' ')[0] || '',
+            decided: r.decided_at?.split('T')[0] || r.decided_at?.split(' ')[0] || null,
+            urgency: (r.estimated_cost || 0) > 100000 ? 'urgent' : 'routine',
+            sla: (r.estimated_cost || 0) > 100000 ? '24h' : '72h',
+          })))
+        }
+
+        // ── 10. Use D1 analytics for high cost claimants, portfolio, loss ratio ──
+        if (mounted && payerAnalRes) {
+          const pa = payerAnalRes as PayerAnalytics
+          // High cost claimants already available from d1PayerAnalytics
+          // Portfolio data from by_scheme
+          // Loss ratio from monthly
         }
 
       } catch {
@@ -902,7 +952,7 @@ export default function Payer() {
             >
               <Chart
                 type="pie"
-                data={PORTFOLIO_DATA as Record<string, unknown>[]}
+                data={(d1PayerAnalytics?.portfolio?.by_scheme || []).map(s => ({ name: s.payer_scheme, value: s.percentage || Math.round((s.claims_count / Math.max(d1PayerAnalytics?.portfolio?.by_scheme?.reduce((sum, x) => sum + x.claims_count, 0) || 1, 1)) * 100) })) as Record<string, unknown>[]}
                 dataKeys={['value']}
                 xAxisKey="name"
                 height={300}
@@ -918,24 +968,27 @@ export default function Payer() {
               }
             >
               <div className="space-y-4">
-                {PORTFOLIO_DATA.map((item) => (
-                  <div key={item.name} className="space-y-1.5">
+                {(d1PayerAnalytics?.portfolio?.by_scheme || []).map((item) => {
+                  const total = d1PayerAnalytics?.portfolio?.by_scheme?.reduce((sum, x) => sum + x.claims_count, 0) || 1
+                  const pct = Math.round((item.claims_count / total) * 100)
+                  return (
+                  <div key={item.payer_scheme} className="space-y-1.5">
                     <div className="flex items-center justify-between text-sm">
                       <span className="font-medium text-gray-700 dark:text-gray-300">
-                        {item.name}
+                        {item.payer_scheme}
                       </span>
                       <span className="font-semibold text-gray-900 dark:text-gray-100">
-                        {item.value}%
+                        {pct}%
                       </span>
                     </div>
                     <div className="h-2.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-white/10">
                       <div
                         className="h-full rounded-full bg-primary transition-all"
-                        style={{ width: `${item.value}%`, opacity: 0.6 + (item.value / 100) * 0.4 }}
+                        style={{ width: `${pct}%`, opacity: 0.6 + (pct / 100) * 0.4 }}
                       />
                     </div>
                   </div>
-                ))}
+                  )})}
               </div>
             </Card>
           </div>
@@ -1433,7 +1486,7 @@ export default function Payer() {
             />
             <Stat
               label="Claims via TPAs"
-              value={tpaDerivedStats.totalClaimsViaTPAs > 0 ? tpaDerivedStats.totalClaimsViaTPAs.toLocaleString() : TPA_DATA.reduce((sum, t) => sum + t.claimsProcessed, 0).toLocaleString()}
+              value={tpaDerivedStats.totalClaimsViaTPAs > 0 ? tpaDerivedStats.totalClaimsViaTPAs.toLocaleString() : '—'}
               icon={<FileCheck className="h-5 w-5" />}
             />
             <Stat
@@ -1473,21 +1526,23 @@ export default function Payer() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border dark:divide-border-dark">
-                  {TPA_DATA.map((tpa) => (
-                    <tr key={tpa.code} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                  {d1TpaPartners.length > 0 ? d1TpaPartners.map((tpa) => (
+                    <tr key={tpa.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                       <td className="whitespace-nowrap px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100">{tpa.name}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-xs font-mono text-gray-500 dark:text-gray-400">{tpa.code}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-gray-100">{tpa.claimsProcessed.toLocaleString()}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-gray-700 dark:text-gray-300">{tpa.avgTAT}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-gray-100">{tpa.settlementRate}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-gray-700 dark:text-gray-300">{tpa.partnerHospitals}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-xs font-mono text-gray-500 dark:text-gray-400">{tpa.code || '—'}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-gray-100">{(tpa.partner_hospitals || 0).toLocaleString()}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-gray-700 dark:text-gray-300">{tpa.avg_tat_days ? `${tpa.avg_tat_days} days` : '—'}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-gray-100">{tpa.settlement_rate ? `${Math.round(tpa.settlement_rate * 100)}%` : '—'}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right text-gray-700 dark:text-gray-300">{(tpa.partner_hospitals || 0).toLocaleString()}</td>
                       <td className="whitespace-nowrap px-4 py-3">
                         <Badge variant={tpa.status === 'active' ? 'success' : 'warning'} dot>
                           {tpa.status === 'active' ? 'Active' : 'Under Review'}
                         </Badge>
                       </td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr><td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-500">Loading TPA data from database...</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1497,24 +1552,26 @@ export default function Payer() {
           <div className="grid md:grid-cols-2 gap-6">
             <Card header={<h3 className="font-display font-semibold text-text dark:text-text-dark">TPA Performance Benchmarks</h3>}>
               <div className="space-y-3">
-                {TPA_DIRECTORY.map(t => (
+                {d1TpaPartners.map(t => {
+                  const perfScore = Math.round(t.settlement_rate * 100)
+                  return (
                   <div key={t.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-slate-800">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
                         <p className="text-sm font-medium text-text dark:text-text-dark">{t.name}</p>
-                        <span className={cn('text-sm font-bold', getPerformanceColor(t.performanceScore))}>{t.performanceScore}%</span>
+                        <span className={cn('text-sm font-bold', getPerformanceColor(perfScore))}>{perfScore}%</span>
                       </div>
                       <div className="h-1.5 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                        <div className={cn('h-full rounded-full', t.performanceScore >= 90 ? 'bg-success' : t.performanceScore >= 80 ? 'bg-warning' : 'bg-error')} style={{ width: `${t.performanceScore}%` }} />
+                        <div className={cn('h-full rounded-full', perfScore >= 90 ? 'bg-success' : perfScore >= 80 ? 'bg-warning' : 'bg-error')} style={{ width: `${perfScore}%` }} />
                       </div>
                       <div className="flex gap-3 mt-1 text-[10px] text-muted">
-                        <span>{t.region}</span>
-                        <span>TAT: {t.avgTAT}</span>
-                        <span>Settlement: {t.settlementRatio}%</span>
+                        <span>{t.region || 'Pan-India'}</span>
+                        <span>TAT: {t.avg_tat_days} days</span>
+                        <span>Settlement: {Math.round(t.settlement_rate * 100)}%</span>
                       </div>
                     </div>
                   </div>
-                ))}
+                  )})}
               </div>
             </Card>
 
@@ -1613,7 +1670,7 @@ export default function Payer() {
             />
             <Stat
               label="Avg Utilization"
-              value={`${Math.round(NETWORK_PROVIDERS.reduce((sum, p) => sum + p.utilization, 0) / NETWORK_PROVIDERS.length)}%`}
+              value={d1NetworkProviders.length > 0 ? `${Math.round(d1NetworkProviders.reduce((sum, p) => sum + (p.utilization_pct || 0), 0) / d1NetworkProviders.length)}%` : '—'}
               icon={<TrendingUp className="h-5 w-5" />}
             />
           </div>
@@ -1643,26 +1700,26 @@ export default function Payer() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border dark:divide-border-dark">
-                  {NETWORK_PROVIDERS.map((provider) => (
-                    <tr key={provider.name} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                  {d1NetworkProviders.length > 0 ? d1NetworkProviders.map((provider) => (
+                    <tr key={provider.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                       <td className="whitespace-nowrap px-4 py-3 text-sm font-semibold text-gray-900 dark:text-gray-100">{provider.name}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700 dark:text-gray-300">{provider.city}</td>
                       <td className="whitespace-nowrap px-4 py-3">
-                        <Badge variant={provider.type === 'Government' ? 'info' : provider.type === 'Secondary' ? 'neutral' : 'success'}>
-                          {provider.type}
+                        <Badge variant={provider.type === 'Government' ? 'info' : provider.type === 'Teaching Hospital' ? 'neutral' : 'success'}>
+                          {provider.type || 'Hospital'}
                         </Badge>
                       </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-gray-100">{provider.beds}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-sm text-right font-medium text-gray-900 dark:text-gray-100">{provider.bed_count}</td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
-                          {provider.specialties.map((s) => (
-                            <Badge key={s} variant="neutral" size="sm">{s}</Badge>
+                          {(provider.specialties || '').split(',').filter(Boolean).map((s) => (
+                            <Badge key={s} variant="neutral" size="sm">{s.trim()}</Badge>
                           ))}
                         </div>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3">
-                        <Badge variant={provider.empanelment === 'Active' ? 'success' : 'warning'} dot>
-                          {provider.empanelment}
+                        <Badge variant={provider.empanelment_status === 'active' ? 'success' : 'warning'} dot>
+                          {provider.empanelment_status === 'active' ? 'Active' : 'Under Review'}
                         </Badge>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3">
@@ -1671,16 +1728,18 @@ export default function Payer() {
                             <div
                               className={cn(
                                 'h-full rounded-full transition-all',
-                                provider.utilization >= 85 ? 'bg-success' : provider.utilization >= 70 ? 'bg-warning' : 'bg-error',
+                                (provider.utilization_pct || 0) >= 85 ? 'bg-success' : (provider.utilization_pct || 0) >= 70 ? 'bg-warning' : 'bg-error',
                               )}
-                              style={{ width: `${provider.utilization}%` }}
+                              style={{ width: `${provider.utilization_pct || 0}%` }}
                             />
                           </div>
-                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{provider.utilization}%</span>
+                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{provider.utilization_pct || 0}%</span>
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr><td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-500">Loading provider network from database...</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -2003,7 +2062,7 @@ export default function Payer() {
                   colors={['#EF4444']}
                 />
               ) : (
-                <Chart type="area" data={LOSS_RATIO_DATA as Record<string, unknown>[]} dataKeys={['ratio']} xAxisKey="name" height={300} colors={['#EF4444']} />
+                <Chart type="area" data={(d1PayerAnalytics?.loss_ratio?.monthly || []).map(m => ({ name: m.month?.slice(5) || m.month, ratio: Math.round((m.loss_ratio || 0) * 100) })) as Record<string, unknown>[]} dataKeys={['ratio']} xAxisKey="name" height={300} colors={['#EF4444']} />
               )}
             </Card>
 
@@ -2018,7 +2077,7 @@ export default function Payer() {
                   height={300}
                 />
               ) : (
-                <Chart type="bar" data={PORTFOLIO_DATA as Record<string, unknown>[]} dataKeys={['value']} xAxisKey="name" height={300} />
+                <Chart type="bar" data={(d1PayerAnalytics?.portfolio?.by_scheme || []).map(s => ({ name: s.payer_scheme, value: s.claims_count })) as Record<string, unknown>[]} dataKeys={['value']} xAxisKey="name" height={300} />
               )}
             </Card>
           </div>
@@ -2067,7 +2126,7 @@ export default function Payer() {
               <table className="w-full text-sm">
                 <thead><tr className="border-b text-left text-xs text-gray-500"><th className="p-3">Patient</th><th className="p-3">Scheme</th><th className="p-3">Claims</th><th className="p-3">Total Claimed</th><th className="p-3">Total Approved</th><th className="p-3">Avg Claim</th></tr></thead>
                 <tbody>
-                  {(d1PayerAnalytics?.high_cost_claimants.length ? d1PayerAnalytics.high_cost_claimants : HIGH_COST_CLAIMANTS.map(h => ({ patient_name: h.name, scheme: h.scheme, claim_count: h.claimsCount, total_claimed: h.totalClaimed, total_approved: 0, avg_claim: h.avgClaim, last_claim_date: '' }))).map((h, i) => (
+                  {(d1PayerAnalytics?.high_cost_claimants || []).map((h, i) => (
                     <tr key={i} className="border-b last:border-0">
                       <td className="p-3 font-medium">{h.patient_name}</td>
                       <td className="p-3 capitalize">{(h.scheme || '').replace(/_/g, ' ')}</td>
@@ -2084,7 +2143,7 @@ export default function Payer() {
 
           {/* IRDAI Report Summary */}
           {d1IrdaiReport && (
-            <Card header={<div className="flex items-center gap-2"><FileCheck className="h-4 w-4 text-primary" /><h3 className="font-semibold text-gray-900 dark:text-gray-100">IRDAI Regulatory Report — {d1IrdaiReport.period}</h3></div>}>
+            <Card header={<div className="flex items-center justify-between w-full"><div className="flex items-center gap-2"><FileCheck className="h-4 w-4 text-primary" /><h3 className="font-semibold text-gray-900 dark:text-gray-100">IRDAI Regulatory Report — {d1IrdaiReport.period}</h3></div><button onClick={() => { const doc = generateIRDAIReport(d1IrdaiReport as unknown as Record<string, unknown>); doc.save(`IRDAI_Report_${d1IrdaiReport.period}.pdf`); }} className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-white hover:bg-primary/90 transition-colors"><FileCheck className="h-3.5 w-3.5" />Download PDF</button></div>}>
               <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                 <div className="rounded-lg border p-3">
                   <div className="text-xs text-gray-500">Premium Collected</div>

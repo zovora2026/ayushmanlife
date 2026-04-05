@@ -28,7 +28,7 @@ import { Stat } from '../components/ui/Stat'
 import { Badge } from '../components/ui/Badge'
 import { Chart } from '../components/ui/Chart'
 import { analytics, appointments as aptAPI, claims as claimsAPI, tickets as ticketsAPI, workforce as workforceAPI } from '../lib/api'
-import { demoAppointments, demoActivities, chartData } from '../lib/mock-data'
+// Mock data imports removed — all data now from D1 APIs
 import { cn, formatDate, getRelativeTime, getStatusColor } from '../lib/utils'
 import type { DashboardKPIs, Appointment, Claim, ClaimStats, RevenueData, PatientRiskData, Ticket, Certification } from '../lib/api'
 import type { ActivityItem } from '../types'
@@ -162,11 +162,11 @@ export default function Dashboard() {
           // Sort by timestamp descending
           realActivities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 
-          setActivities(realActivities.length > 0 ? realActivities : demoActivities)
+          setActivities(realActivities)
         }
       } catch {
         // API unavailable — use fallback mock data
-        if (mounted) setActivities(demoActivities)
+        if (mounted) setActivities([])
       }
       if (mounted) setLoading(false)
     }
@@ -192,7 +192,7 @@ export default function Dashboard() {
         time: a.time,
         status: a.status || 'Scheduled',
       }))
-    : demoAppointments.slice(0, 5)
+    : []
 
   const lastUpdatedTime = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
 
@@ -353,7 +353,7 @@ export default function Dashboard() {
           ) : (
             <Chart
               type="line"
-              data={chartData.patientVisits}
+              data={[]}
               dataKeys={['visits', 'claims']}
               xAxisKey="name"
               height={280}
@@ -385,7 +385,7 @@ export default function Dashboard() {
                       name: d.department,
                       revenue: (d as unknown as Record<string, number>).revenue ?? d.amount ?? 0,
                     }))
-                  : chartData.departmentRevenue.slice(0, 5)
+                  : []
               }
               dataKeys={['revenue']}
               xAxisKey="name"

@@ -27,7 +27,6 @@ import {
   X,
 } from 'lucide-react'
 import { cn, getInitials, formatDate, formatCurrency } from '../lib/utils'
-import { demoStaff } from '../lib/mock-data'
 import { workforce } from '../lib/api'
 import type { StaffMember, ShiftSchedule, Project, ProjectAssignment } from '../lib/api'
 import { Card } from '../components/ui/Card'
@@ -242,7 +241,7 @@ function buildWeeklySchedule(staffList: Staff[]) {
 export default function Workforce() {
   const [activeTab, setActiveTab] = useState('talent')
   const [departmentFilter, setDepartmentFilter] = useState('')
-  const [staffList, setStaffList] = useState<Staff[]>(demoStaff)
+  const [staffList, setStaffList] = useState<Staff[]>([])
   const [scheduleData, setScheduleData] = useState<ShiftSchedule[]>([])
   const [projectsList, setProjectsList] = useState<Project[]>([])
   const [assignmentsList, setAssignmentsList] = useState<ProjectAssignment[]>([])
@@ -250,11 +249,11 @@ export default function Workforce() {
   const [showShiftModal, setShowShiftModal] = useState(false)
   const [showLeaveModal, setShowLeaveModal] = useState(false)
   const [leaveForm, setLeaveForm] = useState({ staff: '', type: 'casual', from: '', to: '', reason: '' })
-  const [leaveRequests, setLeaveRequests] = useState([
-    { id: 'lv-001', staff: 'Dr. Rajesh Kumar', type: 'Sick Leave', from: '2026-03-28', to: '2026-03-30', days: 3, status: 'approved' as const, reason: 'Medical consultation' },
-    { id: 'lv-002', staff: 'Nurse Priya M.', type: 'Casual Leave', from: '2026-04-02', to: '2026-04-03', days: 2, status: 'pending' as const, reason: 'Family event' },
-    { id: 'lv-003', staff: 'Dr. Ananya Iyer', type: 'Earned Leave', from: '2026-04-10', to: '2026-04-18', days: 9, status: 'pending' as const, reason: 'Vacation' },
-    { id: 'lv-004', staff: 'Tech. Suresh R.', type: 'Sick Leave', from: '2026-03-25', to: '2026-03-26', days: 2, status: 'approved' as const, reason: 'Fever' },
+  const [leaveRequests, setLeaveRequests] = useState<{ id: string; staff: string; type: string; from: string; to: string; days: number; status: string; reason: string }[]>([
+    { id: 'lv-001', staff: 'Dr. Rajesh Kumar', type: 'Sick Leave', from: '2026-03-28', to: '2026-03-30', days: 3, status: 'approved', reason: 'Medical consultation' },
+    { id: 'lv-002', staff: 'Nurse Priya M.', type: 'Casual Leave', from: '2026-04-02', to: '2026-04-03', days: 2, status: 'pending', reason: 'Family event' },
+    { id: 'lv-003', staff: 'Dr. Ananya Iyer', type: 'Earned Leave', from: '2026-04-10', to: '2026-04-18', days: 9, status: 'pending', reason: 'Vacation' },
+    { id: 'lv-004', staff: 'Tech. Suresh R.', type: 'Sick Leave', from: '2026-03-25', to: '2026-03-26', days: 2, status: 'approved', reason: 'Fever' },
   ])
 
   const handleCreateLeave = () => {
@@ -306,7 +305,7 @@ export default function Workforce() {
           setAssignmentsList(asgnRes.assignments)
         }
       } catch {
-        // keep demoStaff defaults on failure
+        // D1 API failed, staffList stays empty
       }
       if (mounted) setLoading(false)
     }

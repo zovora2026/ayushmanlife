@@ -17,7 +17,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     const status = url.searchParams.get('status');
 
     if (!db) {
-      return json({ alerts: [], summary: {}, currency: 'INR' });
+      return json({ error: 'Database not available', alerts: [], summary: {}, currency: 'INR' }, 503);
     }
 
     let query = `SELECT fa.*, c.claim_number, c.claimed_amount, c.payer_scheme, c.payer_name,
@@ -113,7 +113,7 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     }
 
     if (!db) {
-      return json({ alert: { id: body.alert_id, ...body } });
+      return json({ error: 'Database not available', alert: null }, 503);
     }
 
     const updates: string[] = [];

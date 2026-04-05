@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { GraduationCap, Users, Award, Clock, BookOpen, Star, ChevronRight, BarChart3, CheckCircle, AlertTriangle, Loader2, Target, TrendingUp, Database, RefreshCw, Layers, Calendar, Rocket, Shield, ArrowRight, Zap, Activity, PlayCircle, FileText, X } from 'lucide-react'
 import { cn } from '../lib/utils'
+import { generateCertificate } from '../lib/pdf'
 import { academy as academyAPI, workforce as workforceAPI } from '../lib/api'
 import type { LearningModule, Assessment } from '../lib/api'
 
@@ -102,9 +103,9 @@ function DiffBadge({ d }: { d: string }) {
 export default function Academy() {
   const [activeTab, setActiveTab] = useState('Dashboard')
   const [loading, setLoading] = useState(true)
-  const [learningPaths, setLearningPaths] = useState<LearningPathData[]>(DEFAULT_LEARNING_PATHS)
+  const [learningPaths, setLearningPaths] = useState<LearningPathData[]>([])
   const [enrollmentSummary, setEnrollmentSummary] = useState<EnrollmentSummary>(DEFAULT_ENROLLMENT_SUMMARY)
-  const [certifications, setCertifications] = useState<CertificationRow[]>(DEFAULT_CERTIFICATIONS)
+  const [certifications, setCertifications] = useState<CertificationRow[]>([])
   const [certSummary, setCertSummary] = useState<CertSummary>(DEFAULT_CERT_SUMMARY)
   const [selectedPathId, setSelectedPathId] = useState<string | null>(null)
   const [pathModules, setPathModules] = useState<LearningModule[]>([])
@@ -466,6 +467,14 @@ export default function Academy() {
                     </button>
                   )}
                 </div>
+                {lp.modules > 0 && lp.completed === lp.modules && (
+                  <button
+                    onClick={() => generateCertificate({ name: 'User', course: lp.title, date: new Date().toLocaleDateString('en-IN'), score: Math.round((lp.completed / lp.modules) * 100) }).save(`Certificate_${lp.title}.pdf`)}
+                    className="w-full flex items-center justify-center gap-1 rounded-lg bg-success/10 text-success px-3 py-1.5 text-xs font-medium hover:bg-success/20 transition-colors mt-2"
+                  >
+                    <Award className="w-3 h-3" /> Download Certificate
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -568,6 +577,10 @@ export default function Academy() {
 
       {activeTab === 'Apprenticeship' && (
         <div className="space-y-6">
+          <div className="p-4 rounded-lg bg-primary/10 border border-primary/20 flex items-center gap-3">
+            <Rocket className="w-5 h-5 text-primary shrink-0" />
+            <p className="text-sm font-medium text-primary">Apprenticeship Cohorts — Coming Soon</p>
+          </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {cohorts.map(c => (
               <div key={c.name} className="bg-white dark:bg-surface-dark rounded-xl border border-border dark:border-border-dark p-5">

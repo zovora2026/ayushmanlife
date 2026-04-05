@@ -7,3 +7,7 @@ pages_build_output_dir = "dist"
 binding = "DB"
 database_name = "ayushmanlife-db"
 database_id = "a4280bab-737b-427c-bed7-49bdc5ef686e"
+
+[[r2_buckets]]
+binding = "UPLOADS"
+bucket_name = "ayushmanlife-files"

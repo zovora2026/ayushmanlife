@@ -9,6 +9,7 @@ import { Stat } from '../components/ui/Stat'
 import { Tabs } from '../components/ui/Tabs'
 import { insurance } from '../lib/api'
 import type { InsuranceProduct, InsurancePolicy, PolicyEndorsement, UnderwritingRequest } from '../lib/api'
+import { generatePolicyDocument } from '../lib/pdf'
 
 const TABS = [
   { id: 'products', label: 'Products' },
@@ -307,12 +308,21 @@ function PoliciesTab({ policies, summary, filter, setFilter, onStatusChange, sho
                     <Badge variant={p.status === 'active' ? 'success' : p.status === 'expired' ? 'warning' : p.status === 'cancelled' ? 'error' : 'neutral'} dot>{p.status}</Badge>
                   </td>
                   <td className="py-2 px-3 text-center">
-                    <select value={p.status} onChange={e => onStatusChange(p.id, e.target.value)} className="px-2 py-1 rounded border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-xs">
-                      <option value="active">Active</option>
-                      <option value="expired">Expired</option>
-                      <option value="cancelled">Cancelled</option>
-                      <option value="suspended">Suspended</option>
-                    </select>
+                    <div className="flex items-center gap-1 justify-center">
+                      <select value={p.status} onChange={e => onStatusChange(p.id, e.target.value)} className="px-2 py-1 rounded border border-border dark:border-border-dark bg-white dark:bg-slate-900 text-xs">
+                        <option value="active">Active</option>
+                        <option value="expired">Expired</option>
+                        <option value="cancelled">Cancelled</option>
+                        <option value="suspended">Suspended</option>
+                      </select>
+                      <button
+                        onClick={() => { const doc = generatePolicyDocument(p as unknown as Record<string, unknown>); doc.save(`Policy_${p.policy_number}.pdf`); }}
+                        title="Download Policy PDF"
+                        className="p-1 rounded text-primary hover:bg-primary/10 transition-colors"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
