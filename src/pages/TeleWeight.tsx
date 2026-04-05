@@ -3,6 +3,7 @@ import {
   Scale, Activity, UserSearch, LayoutDashboard, MessageSquare,
   Pill, Package, Loader2, Heart, TrendingDown, Users, Video,
   Star, IndianRupee, ShieldCheck, ArrowRight, CheckCircle,
+  Stethoscope, BarChart3, MonitorPlay,
 } from 'lucide-react'
 import { Tabs } from '../components/ui/Tabs'
 import { Card } from '../components/ui/Card'
@@ -17,6 +18,9 @@ import PatientDashboard from '../components/teleweight/PatientDashboard'
 import ConsultationsList from '../components/teleweight/ConsultationsList'
 import PrescriptionView from '../components/teleweight/PrescriptionView'
 import PharmacyOrders from '../components/teleweight/PharmacyOrders'
+import DoctorPanel from '../components/teleweight/DoctorPanel'
+import AdminAnalytics from '../components/teleweight/AdminAnalytics'
+import ConsultationRoom from '../components/teleweight/ConsultationRoom'
 import { useAuthStore } from '../store/authStore'
 
 const tabs = [
@@ -25,8 +29,11 @@ const tabs = [
   { id: 'doctors', label: 'Find Doctors', icon: <UserSearch className="w-4 h-4" /> },
   { id: 'dashboard', label: 'My Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
   { id: 'consultations', label: 'Consultations', icon: <MessageSquare className="w-4 h-4" /> },
+  { id: 'room', label: 'Consult Room', icon: <MonitorPlay className="w-4 h-4" /> },
   { id: 'prescriptions', label: 'Prescriptions', icon: <Pill className="w-4 h-4" /> },
   { id: 'pharmacy', label: 'Pharmacy', icon: <Package className="w-4 h-4" /> },
+  { id: 'doctor-panel', label: 'Doctor Panel', icon: <Stethoscope className="w-4 h-4" /> },
+  { id: 'admin', label: 'Analytics', icon: <BarChart3 className="w-4 h-4" /> },
 ]
 
 // Demo patient for the current session (linked to logged-in user context)
@@ -75,8 +82,11 @@ export default function TeleWeight() {
         {activeTab === 'doctors' && <DoctorDiscovery patientId={patientId} />}
         {activeTab === 'dashboard' && <PatientDashboard patientId={patientId} />}
         {activeTab === 'consultations' && <ConsultationsList patientId={patientId} />}
+        {activeTab === 'room' && <ConsultationRoom patientId={patientId} />}
         {activeTab === 'prescriptions' && <PrescriptionView patientId={patientId} />}
         {activeTab === 'pharmacy' && <PharmacyOrders patientId={patientId} />}
+        {activeTab === 'doctor-panel' && <DoctorPanel defaultDoctorId="doc-tw-001" />}
+        {activeTab === 'admin' && <AdminAnalytics />}
       </div>
     </div>
   )

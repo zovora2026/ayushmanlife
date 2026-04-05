@@ -512,7 +512,7 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 
 ## Progress: 15/15 apps complete + TeleWeight Session 1 (Schema + APIs) — ALL BUILDS DONE
 
-### Build 16: TeleWeight — Telemedicine Weight Management (APP 16+) — SESSIONS 1+2 COMPLETE ✅
+### Build 16: TeleWeight — Telemedicine Weight Management (APP 16+) — ALL 3 SESSIONS COMPLETE ✅
 
 **Definition of done (Session 1)**: Database schema with 11 tables, realistic seed data, 19 API route files covering 26+ endpoints, all tested on production.
 
@@ -562,12 +562,42 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 - Build: 85KB bundle (17KB gzipped), zero TypeScript errors
 - Deployed: https://ayushmanlife.in/teleweight
 
-**What's working vs what's pending**:
-- WORKING: Full API layer — doctors, intake, weight log, consultations, prescriptions, pharmacy, subscriptions, consent, dashboard, analytics
+**Session 3: Doctor Panel, Admin Analytics, Consultation Room (completed 2026-04-05)**:
+- DoctorPanel.tsx (1,372 lines): Doctor selector, 5 sub-tabs:
+  - Today's Schedule: filtered to today's consultations, start/view actions
+  - All Consultations: full history with expandable details, summary stats
+  - My Patients: unique patients derived from consultations, visit count, last visit
+  - Earnings: total payout, monthly aggregation, per-consultation breakdown (doctor_payout vs platform_fee)
+  - Write Prescription: full prescription form with dynamic medication rows, ICD-10, lifestyle recs, lab tests
+- AdminAnalytics.tsx: Platform-wide analytics dashboard with 6 chart/table sections:
+  - KPI cards (patients, consultations, revenue, subscriptions)
+  - Monthly consultation trend (line chart), Revenue breakdown (pie chart)
+  - Doctor utilization table (sorted by revenue, top performer highlighted)
+  - Subscription distribution (bar chart), BMI distribution (bar chart)
+  - Pharmacy metrics, Consent compliance table with rates
+  - Prescription stats
+- ConsultationRoom.tsx (754 lines): Video consultation room with:
+  - Lobby: scheduled consultation list with "Enter Room" buttons
+  - Active room: video area placeholder (WebRTC integration point), controls bar (mic/camera/screen)
+  - Patient info sidebar with weight profile and comorbidities
+  - Live consultation notes textarea
+  - Quick actions (prescription, lab tests, follow-up, consent — post-consultation)
+  - End consultation flow with duration tracking, notes, API update
+  - Regulatory notice per TPG 2020
+- TeleWeight.tsx: expanded to 10 tabs (added Consult Room, Doctor Panel, Analytics)
+- Build: 156KB bundle (28KB gzipped), zero TypeScript errors
+- Deployed: https://ayushmanlife.in/teleweight
+
+**What's working (ALL SESSIONS COMPLETE)**:
+- WORKING: Full API layer — 19 route files, 26+ endpoints, all tested on production
 - WORKING: Regulatory enforcement (video-first, consent gates, NMC registration)
 - WORKING: Fee computation (25/75 split), subscription management, pharmacy order routing
 - WORKING: Full frontend patient journey — overview, intake, doctor discovery, dashboard, consultations, prescriptions, pharmacy
-- SESSION 3 (PENDING): Doctor panel UI, admin analytics dashboard, video consultation room (WebRTC placeholder)
+- WORKING: Doctor panel with schedule, patients, earnings, prescription writing
+- WORKING: Admin analytics dashboard with charts (Recharts), tables, KPIs
+- WORKING: Consultation room with WebRTC integration placeholder
+- INTEGRATION POINT: WebRTC video provider (Daily.co, Twilio, Agora) for live video calls
+- INTEGRATION POINT: Payment gateway for subscription billing (Razorpay/Paytm)
 
 ---
 
