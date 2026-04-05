@@ -11,8 +11,8 @@
 
 ```
 Frontend: React 19 + TypeScript 5.9 + Vite 8 + Tailwind CSS 4
-Backend:  Cloudflare Pages Functions (76+ API routes)
-Database: Cloudflare D1 (ayushmanlife-db) — 56 tables, ~5300 rows, APAC region
+Backend:  Cloudflare Pages Functions (95+ API routes)
+Database: Cloudflare D1 (ayushmanlife-db) — 65 tables, ~5600 rows, APAC region
 Storage:  Cloudflare R2 (ayushmanlife-files) — patient docs, evidence, certificates
 Auth:     Cookie-based D1 sessions + SHA-256 password hashing
 AI:       Claude API integration in Claims analysis (ICD-10/CPT coding)
@@ -512,7 +512,7 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 
 ## Progress: 15/15 apps complete + TeleWeight Session 1 (Schema + APIs) — ALL BUILDS DONE
 
-### Build 16: TeleWeight — Telemedicine Weight Management (APP 16+) — SESSION 1 COMPLETE ✅
+### Build 16: TeleWeight — Telemedicine Weight Management (APP 16+) — SESSIONS 1+2 COMPLETE ✅
 
 **Definition of done (Session 1)**: Database schema with 11 tables, realistic seed data, 19 API route files covering 26+ endpoints, all tested on production.
 
@@ -549,12 +549,25 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 
 **Seed Data**: 8 doctors, 3 plans, 5 pharmacies, 10 weight profiles, 20 weight logs, 8 consultations, 5 prescriptions, 3 pharmacy orders, 6 subscriptions, 8 consent entries
 
+**Session 2: Frontend Patient Journey (completed 2026-04-05)**:
+- TeleWeight.tsx main page with 7-tab navigation: Overview, Health Intake, Find Doctors, My Dashboard, Consultations, Prescriptions, Pharmacy
+- Route: /teleweight in App.tsx (lazy-loaded), added to Sidebar under TELEHEALTH group with Scale icon
+- Overview tab: hero banner, platform stats from D1 admin analytics, how-it-works guide, subscription plan cards, regulatory compliance notice
+- IntakeForm.tsx: 4-step form (Physical Metrics → Medical History → Lifestyle → Consent), real-time BMI computation, loads existing profile, submit/update via API
+- DoctorDiscovery.tsx: 3-view component (grid → detail → booking), filter by specialty/fee/language, available slots, consultation booking with video-first enforcement and consent gates
+- PatientDashboard.tsx: stats bar (weight, BMI, weight change, target progress), weight trend chart, quick weight log form, upcoming consultations, active prescriptions, subscription status
+- ConsultationsList.tsx: history list with expandable details, mode/status badges, fee breakdown
+- PrescriptionView.tsx: prescription cards with parsed medication JSON, lifestyle recommendations, lab tests, Schedule H1 warnings
+- PharmacyOrders.tsx: order tracker with 5-step status timeline, delivery info, payment details, tracking number
+- Build: 85KB bundle (17KB gzipped), zero TypeScript errors
+- Deployed: https://ayushmanlife.in/teleweight
+
 **What's working vs what's pending**:
 - WORKING: Full API layer — doctors, intake, weight log, consultations, prescriptions, pharmacy, subscriptions, consent, dashboard, analytics
 - WORKING: Regulatory enforcement (video-first, consent gates, NMC registration)
 - WORKING: Fee computation (25/75 split), subscription management, pharmacy order routing
-- SESSION 2 (PENDING): Frontend patient journey — landing page, intake form, doctor discovery, patient dashboard, consultation room
-- SESSION 3 (PENDING): Doctor panel, admin analytics UI, navigation integration
+- WORKING: Full frontend patient journey — overview, intake, doctor discovery, dashboard, consultations, prescriptions, pharmacy
+- SESSION 3 (PENDING): Doctor panel UI, admin analytics dashboard, video consultation room (WebRTC placeholder)
 
 ---
 

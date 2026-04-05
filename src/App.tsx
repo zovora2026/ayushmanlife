@@ -28,6 +28,7 @@ const SecurityDashboard = lazy(() => import('./pages/SecurityDashboard'))
 const InsuranceCore = lazy(() => import('./pages/InsuranceCore'))
 const EnhancementGovernance = lazy(() => import('./pages/EnhancementGovernance'))
 const ChangeManagement = lazy(() => import('./pages/ChangeManagement'))
+const TeleWeight = lazy(() => import('./pages/TeleWeight'))
 
 function LoadingSpinner() {
   return (
@@ -149,6 +150,7 @@ export default function App() {
               <Route path="/insurance-core" element={<InsuranceCore />} />
               <Route path="/enhancement-governance" element={<EnhancementGovernance />} />
               <Route path="/change-management" element={<ChangeManagement />} />
+              <Route path="/teleweight" element={<TeleWeight />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

@@ -3,6 +3,7 @@ import {
   LayoutDashboard, MessageSquareHeart, FileCheck, TrendingUp, Database,
   Headphones, Users, Building2, Briefcase, GraduationCap, Lightbulb, Settings,
   ClipboardCheck, Shield, FileText, GitPullRequest, ChevronLeft, ChevronRight, Heart, LogOut,
+  Scale,
 } from 'lucide-react'
 import { useAppStore } from '../../store/appStore'
 import { useAuthStore } from '../../store/authStore'
@@ -12,7 +13,7 @@ import type { LucideIcon } from 'lucide-react'
 const iconMap: Record<string, LucideIcon> = {
   LayoutDashboard, MessageSquareHeart, FileCheck, TrendingUp, Database,
   Headphones, Users, Building2, Briefcase, GraduationCap, Lightbulb, Settings,
-  ClipboardCheck, Shield, FileText, GitPullRequest,
+  ClipboardCheck, Shield, FileText, GitPullRequest, Scale,
 }
 
 interface NavGroup {
@@ -52,6 +53,12 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'Payer Platform', href: '/payer', icon: 'Building2' },
       { label: 'Insurance Core', href: '/insurance-core', icon: 'FileText' },
+    ],
+  },
+  {
+    label: 'TELEHEALTH',
+    items: [
+      { label: 'TeleWeight', href: '/teleweight', icon: 'Scale' },
     ],
   },
   {
