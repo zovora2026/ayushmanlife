@@ -510,7 +510,51 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 
 ---
 
-## Progress: 15/15 apps complete — ALL BUILDS DONE
+## Progress: 15/15 apps complete + TeleWeight Session 1 (Schema + APIs) — ALL BUILDS DONE
+
+### Build 16: TeleWeight — Telemedicine Weight Management (APP 16+) — SESSION 1 COMPLETE ✅
+
+**Definition of done (Session 1)**: Database schema with 11 tables, realistic seed data, 19 API route files covering 26+ endpoints, all tested on production.
+
+**E2E Test Results** (verified via curl on ayushmanlife.in):
+1. Doctors GET: 8 specialists (3 endocrinologists, 2 diabetologists, 2 internal medicine, 1 nutritionist), avg fee ₹1050, avg rating 4.7 ✅
+2. Doctor Detail: Full profile with NMC reg, consultation stats, upcoming appointments ✅
+3. Doctor Slots: Weekly availability with booked/available tracking, 7-day lookahead ✅
+4. Intake GET: Weight profile for pat-001 — BMI 33.9, 98→78kg target, vegetarian, risk flags ✅
+5. Weight Log: 4 entries for pat-001, trend: -2.5kg weight change, -0.9 BMI change ✅
+6. Consultations: 8 total (5 completed, 2 scheduled, 1 cancelled), ₹5600 revenue ✅
+7. Consultation booking: Auto-computes fees (25% platform / 75% doctor) ✅
+8. **Regulatory enforcement**: Initial consult MUST be video (TPG 2020) → 400 error if audio/chat ✅
+9. **Consent enforcement**: Telemedicine + data sharing consent MUST be given → 400 error if not ✅
+10. Prescriptions: 5 prescriptions with ICD-10 codes, medication JSON, lifestyle recommendations ✅
+11. Plans: Basic ₹999, Standard ₹1999, Premium ₹3999 with feature tiers ✅
+12. Subscriptions: 6 subscriptions (5 active), MRR ₹10,995 ✅
+13. Pharmacy Partners: 5 licensed partners across 5 metro cities ✅
+14. Pharmacy Orders: 3 orders (2 delivered, 1 dispatched) with tracking ✅
+15. Consent Audit: DPDP-compliant audit trail with IP, user agent, timestamps ✅
+16. Patient Dashboard: Aggregated view — weight trend, target progress (13%), consults, prescriptions, orders, subscription ✅
+17. Admin Analytics: 10 patients, 5 active subs, 8 consults, ₹13,399 revenue, BMI distribution ✅
+
+**Regulatory Compliance (verified)**:
+- ✅ First consultation MUST be video (Telemedicine Practice Guidelines 2020)
+- ✅ Telemedicine + data sharing consent required before booking
+- ✅ Consent audit log with DPDP compliance (IP, user agent, timestamps, withdrawal tracking)
+- ✅ Doctor NMC registration numbers on all profiles and prescriptions
+- ✅ Platform never prescribes — prescriptions created by doctor_id only
+- ✅ No drug names in marketing context — only in prescription data after consultation
+
+**New D1 Tables (11)**: doctors, patient_weight_profiles, weight_logs, consultations, prescriptions, pharmacy_partners, pharmacy_orders, subscription_plans, patient_subscriptions, consent_audit_log + 15 indexes
+
+**New API Routes (19 files)**: functions/api/teleweight/ — doctors, doctors/[id], doctors/[id]/slots, intake, weight-log, consultations, consultations/patient/[id], consultations/doctor/[id], prescriptions, prescriptions/patient/[id], pharmacy-partners, pharmacy-orders, pharmacy-orders/[id], plans, subscriptions, subscriptions/[patientId], consent, dashboard/[patientId], admin/analytics
+
+**Seed Data**: 8 doctors, 3 plans, 5 pharmacies, 10 weight profiles, 20 weight logs, 8 consultations, 5 prescriptions, 3 pharmacy orders, 6 subscriptions, 8 consent entries
+
+**What's working vs what's pending**:
+- WORKING: Full API layer — doctors, intake, weight log, consultations, prescriptions, pharmacy, subscriptions, consent, dashboard, analytics
+- WORKING: Regulatory enforcement (video-first, consent gates, NMC registration)
+- WORKING: Fee computation (25/75 split), subscription management, pharmacy order routing
+- SESSION 2 (PENDING): Frontend patient journey — landing page, intake form, doctor discovery, patient dashboard, consultation room
+- SESSION 3 (PENDING): Doctor panel, admin analytics UI, navigation integration
 
 ---
 

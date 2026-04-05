@@ -1635,3 +1635,341 @@ export interface CabDecision {
   voter_summary?: string;
   created_at: string;
 }
+
+// ============================================================
+// TeleWeight — Telemedicine Weight Management
+// ============================================================
+
+export interface TWDoctor {
+  id: string;
+  full_name: string;
+  registration_number: string;
+  council_name: string;
+  specialty: string;
+  qualifications: string;
+  experience_years: number;
+  languages: string;
+  consultation_fee: number;
+  platform_commission_pct: number;
+  availability_slots: string;
+  rating: number;
+  total_consultations: number;
+  is_active: number;
+  profile_photo_r2_key: string | null;
+  bio: string;
+  created_at: string;
+}
+
+export interface TWWeightProfile {
+  id: string;
+  patient_id: string;
+  height_cm: number;
+  current_weight_kg: number;
+  target_weight_kg: number;
+  bmi: number;
+  waist_circumference_cm: number;
+  comorbidities: string;
+  current_medications: string;
+  allergies: string;
+  previous_weight_treatments: string;
+  dietary_preference: string;
+  exercise_frequency: string;
+  smoking_status: string;
+  alcohol_status: string;
+  family_history: string;
+  intake_completed: number;
+  intake_completed_at: string | null;
+  risk_flags: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TWWeightLog {
+  id: string;
+  patient_id: string;
+  weight_kg: number;
+  bmi: number;
+  waist_cm: number;
+  blood_glucose: number | null;
+  hba1c: number | null;
+  blood_pressure_systolic: number | null;
+  blood_pressure_diastolic: number | null;
+  notes: string;
+  logged_at: string;
+}
+
+export interface TWConsultation {
+  id: string;
+  patient_id: string;
+  doctor_id: string;
+  consultation_type: string;
+  mode: string;
+  status: string;
+  scheduled_at: string;
+  started_at: string | null;
+  ended_at: string | null;
+  duration_minutes: number | null;
+  consultation_fee: number;
+  platform_fee: number;
+  doctor_payout: number;
+  consultation_notes: string | null;
+  follow_up_recommended: number;
+  follow_up_weeks: number | null;
+  patient_name?: string;
+  doctor_name?: string;
+  doctor_specialty?: string;
+  created_at: string;
+}
+
+export interface TWPrescription {
+  id: string;
+  consultation_id: string;
+  patient_id: string;
+  doctor_id: string;
+  doctor_registration_number: string;
+  prescription_date: string;
+  diagnosis: string;
+  medications: string;
+  lifestyle_recommendations: string;
+  lab_tests_ordered: string;
+  follow_up_date: string | null;
+  special_instructions: string;
+  is_controlled_substance: number;
+  prescription_pdf_r2_key: string | null;
+  status: string;
+  doctor_name?: string;
+  patient_name?: string;
+  created_at: string;
+}
+
+export interface TWPharmacyPartner {
+  id: string;
+  name: string;
+  license_number: string;
+  license_expiry: string;
+  city: string;
+  state: string;
+  pincode: string;
+  phone: string;
+  supports_home_delivery: number;
+  avg_delivery_days: number;
+  is_active: number;
+}
+
+export interface TWPharmacyOrder {
+  id: string;
+  prescription_id: string;
+  patient_id: string;
+  pharmacy_id: string;
+  order_status: string;
+  delivery_address: string;
+  delivery_pincode: string;
+  estimated_delivery_date: string | null;
+  actual_delivery_date: string | null;
+  total_amount: number;
+  payment_status: string;
+  payment_method: string;
+  tracking_number: string | null;
+  pharmacy_name?: string;
+  patient_name?: string;
+  created_at: string;
+}
+
+export interface TWSubscriptionPlan {
+  id: string;
+  name: string;
+  description: string;
+  price_monthly: number;
+  price_quarterly: number;
+  price_annual: number;
+  features: string;
+  features_parsed?: string[];
+  consultations_included: number;
+  messaging_unlimited: number;
+  nutrition_coaching: number;
+  priority_booking: number;
+  wearable_integration: number;
+}
+
+export interface TWPatientSubscription {
+  id: string;
+  patient_id: string;
+  plan_id: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+  auto_renew: number;
+  payment_method: string;
+  next_payment_date: string | null;
+  plan_name?: string;
+  price_monthly?: number;
+  patient_name?: string;
+}
+
+export interface TWConsentEntry {
+  id: string;
+  patient_id: string;
+  consent_type: string;
+  consent_given: number;
+  consent_text: string;
+  ip_address: string;
+  user_agent: string;
+  given_at: string;
+  withdrawn_at: string | null;
+}
+
+export const teleweight = {
+  // Doctors
+  doctors: (params?: { specialty?: string; language?: string; max_fee?: string }) => {
+    const qs = new URLSearchParams(params as Record<string, string>).toString()
+    return fetchAPI<{ doctors: TWDoctor[]; total: number; summary: any }>(`/teleweight/doctors${qs ? `?${qs}` : ''}`)
+  },
+  doctorDetail: (id: string) =>
+    fetchAPI<{ doctor: TWDoctor; consultation_stats: any; upcoming_appointments: any[] }>(`/teleweight/doctors/${id}`),
+  doctorSlots: (id: string, date?: string, days?: number) => {
+    const params = new URLSearchParams()
+    if (date) params.set('date', date)
+    if (days) params.set('days', String(days))
+    const qs = params.toString()
+    return fetchAPI<{ doctor_id: string; slots: Record<string, any> }>(`/teleweight/doctors/${id}/slots${qs ? `?${qs}` : ''}`)
+  },
+
+  // Intake
+  submitIntake: (data: Partial<TWWeightProfile> & { patient_id: string }) =>
+    fetchAPI<{ profile: TWWeightProfile }>('/teleweight/intake', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  getIntake: (patientId: string) =>
+    fetchAPI<{ profile: TWWeightProfile; patient: any }>(`/teleweight/intake?patient_id=${patientId}`),
+  updateIntake: (patientId: string, data: Partial<TWWeightProfile>) =>
+    fetchAPI<{ profile: TWWeightProfile }>(`/teleweight/intake?patient_id=${patientId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  // Weight Log
+  logWeight: (data: { patient_id: string; weight_kg: number; waist_cm?: number; blood_glucose?: number; hba1c?: number; blood_pressure_systolic?: number; blood_pressure_diastolic?: number; notes?: string }) =>
+    fetchAPI<{ log: TWWeightLog }>('/teleweight/weight-log', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  weightHistory: (patientId: string) =>
+    fetchAPI<{ logs: TWWeightLog[]; trend: any }>(`/teleweight/weight-log?patient_id=${patientId}`),
+  weightChart: (patientId: string) =>
+    fetchAPI<{ data: any[] }>(`/teleweight/weight-log?patient_id=${patientId}&chart=1`),
+
+  // Consultations
+  consultations: (params?: { patient_id?: string; doctor_id?: string; status?: string }) => {
+    const qs = new URLSearchParams(params as Record<string, string>).toString()
+    return fetchAPI<{ consultations: TWConsultation[]; summary: any }>(`/teleweight/consultations${qs ? `?${qs}` : ''}`)
+  },
+  bookConsultation: (data: { patient_id: string; doctor_id: string; consultation_type: string; mode: string; scheduled_at: string; patient_consent_telemedicine: number; patient_consent_data_sharing: number; recording_consent?: number }) =>
+    fetchAPI<{ consultation: TWConsultation }>('/teleweight/consultations', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateConsultation: (id: string, data: Partial<TWConsultation>) =>
+    fetchAPI<{ consultation: TWConsultation }>(`/teleweight/consultations?id=${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  patientConsultations: (patientId: string) =>
+    fetchAPI<{ consultations: TWConsultation[] }>(`/teleweight/consultations/patient/${patientId}`),
+  doctorConsultations: (doctorId: string, params?: { status?: string; date_from?: string; date_to?: string }) => {
+    const qs = new URLSearchParams(params as Record<string, string>).toString()
+    return fetchAPI<{ consultations: TWConsultation[] }>(`/teleweight/consultations/doctor/${doctorId}${qs ? `?${qs}` : ''}`)
+  },
+
+  // Prescriptions
+  prescriptions: (params?: { patient_id?: string; doctor_id?: string; status?: string }) => {
+    const qs = new URLSearchParams(params as Record<string, string>).toString()
+    return fetchAPI<{ prescriptions: TWPrescription[] }>(`/teleweight/prescriptions${qs ? `?${qs}` : ''}`)
+  },
+  createPrescription: (data: { consultation_id: string; patient_id: string; doctor_id: string; diagnosis: string; medications: any[]; lifestyle_recommendations?: any; lab_tests_ordered?: string[]; follow_up_date?: string; special_instructions?: string }) =>
+    fetchAPI<{ prescription: TWPrescription }>('/teleweight/prescriptions', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  patientPrescriptions: (patientId: string) =>
+    fetchAPI<{ prescriptions: TWPrescription[] }>(`/teleweight/prescriptions/patient/${patientId}`),
+
+  // Pharmacy
+  pharmacyPartners: (params?: { city?: string; state?: string }) => {
+    const qs = new URLSearchParams(params as Record<string, string>).toString()
+    return fetchAPI<{ pharmacies: TWPharmacyPartner[] }>(`/teleweight/pharmacy-partners${qs ? `?${qs}` : ''}`)
+  },
+  pharmacyOrders: (params?: { patient_id?: string; order_status?: string }) => {
+    const qs = new URLSearchParams(params as Record<string, string>).toString()
+    return fetchAPI<{ orders: TWPharmacyOrder[] }>(`/teleweight/pharmacy-orders${qs ? `?${qs}` : ''}`)
+  },
+  createPharmacyOrder: (data: { prescription_id: string; patient_id: string; pharmacy_id: string; delivery_address: string; delivery_pincode: string; payment_method: string; total_amount?: number }) =>
+    fetchAPI<{ order: TWPharmacyOrder }>('/teleweight/pharmacy-orders', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updatePharmacyOrder: (id: string, data: Partial<TWPharmacyOrder>) =>
+    fetchAPI<{ order: TWPharmacyOrder }>(`/teleweight/pharmacy-orders?id=${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  pharmacyOrderDetail: (id: string) =>
+    fetchAPI<{ order: TWPharmacyOrder }>(`/teleweight/pharmacy-orders/${id}`),
+
+  // Subscription Plans
+  plans: () =>
+    fetchAPI<{ plans: TWSubscriptionPlan[] }>('/teleweight/plans'),
+  subscriptions: (params?: { patient_id?: string }) => {
+    const qs = new URLSearchParams(params as Record<string, string>).toString()
+    return fetchAPI<{ subscriptions: TWPatientSubscription[]; summary: any }>(`/teleweight/subscriptions${qs ? `?${qs}` : ''}`)
+  },
+  subscribe: (data: { patient_id: string; plan_id: string; payment_method: string }) =>
+    fetchAPI<{ subscription: TWPatientSubscription }>('/teleweight/subscriptions', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateSubscription: (id: string, data: { status: string; cancellation_reason?: string }) =>
+    fetchAPI<{ subscription: TWPatientSubscription }>(`/teleweight/subscriptions?id=${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  patientSubscription: (patientId: string) =>
+    fetchAPI<{ subscription: TWPatientSubscription | null }>(`/teleweight/subscriptions/${patientId}`),
+
+  // Consent
+  recordConsent: (data: { patient_id: string; consent_type: string; consent_given: number; consent_text: string }) =>
+    fetchAPI<{ consent: TWConsentEntry }>('/teleweight/consent', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  consentHistory: (patientId: string) =>
+    fetchAPI<{ consents: TWConsentEntry[] }>(`/teleweight/consent?patient_id=${patientId}`),
+
+  // Dashboard & Analytics
+  patientDashboard: (patientId: string) =>
+    fetchAPI<{
+      patient: any;
+      profile: TWWeightProfile | null;
+      weight_trend: TWWeightLog[];
+      weight_change: any;
+      target_progress: any;
+      upcoming_consultations: TWConsultation[];
+      consultation_stats: any;
+      active_prescriptions: TWPrescription[];
+      recent_pharmacy_orders: TWPharmacyOrder[];
+      subscription: any;
+    }>(`/teleweight/dashboard/${patientId}`),
+  adminAnalytics: () =>
+    fetchAPI<{
+      overview: any;
+      consultation_metrics: any;
+      doctor_utilization: any[];
+      subscription_metrics: any;
+      pharmacy_metrics: any;
+      patient_stats: any;
+      prescription_stats: any;
+      consent_compliance: any[];
+      monthly_trend: any[];
+      revenue_breakdown: any;
+    }>('/teleweight/admin/analytics'),
+}
