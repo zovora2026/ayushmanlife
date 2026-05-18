@@ -1,6 +1,6 @@
 # AyushmanLife Platform State — Honest Assessment
 
-> Last updated: 2026-04-05T18:00:00+05:30
+> Last updated: 2026-05-18T23:30:00+05:30
 > Git repository: [zovora2026/ayushmanlife](https://github.com/zovora2026/ayushmanlife) (main branch)
 > Live URL: https://ayushmanlife-516.pages.dev → https://ayushmanlife.in
 > Assessment criteria: APPLICATION_BUILD_LIST.md + HONEST_BUILD.md (replaces old benchmark)
@@ -13,6 +13,7 @@
 Frontend: React 19 + TypeScript 5.9 + Vite 8 + Tailwind CSS 4
 Backend:  Cloudflare Pages Functions (95+ API routes)
 Database: Cloudflare D1 (ayushmanlife-db) — 65 tables, ~5600 rows, APAC region
+          Supabase PostgreSQL — 2 tables, ~1.48M rows (doctor registries)
 Storage:  Cloudflare R2 (ayushmanlife-files) — patient docs, evidence, certificates
 Auth:     Cookie-based D1 sessions + SHA-256 password hashing
 AI:       Claude API integration in Claims analysis (ICD-10/CPT coding)
@@ -27,6 +28,32 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 - **Rows**: ~5,300 realistic Indian healthcare records
 - **Status**: ACTIVE — schema and seed applied to remote D1
 - **New tables (2026-04-05)**: uploaded_files, tpa_partners, provider_network, pre_auth_requests
+
+## Supabase Doctor Registries
+
+- **Project**: zhsgpgxbwbznhbyuyaab (AP Southeast 2 — Sydney)
+- **Status**: ACTIVE — populated from NMC Indian Medical Register API
+
+### nmc_registry — All India Doctors
+- **Rows**: 1,452,642 (99.55% of NMC's 1,459,132 total)
+- **Source**: NMC open REST API (`nmc.org.in/MCIRest/open/getPaginatedData`)
+- **Fields**: id, nmc_doctor_id, full_name, registration_number, council_name, father_name, year_of_passing, specialty, consultation_fee (default ₹500), is_active, is_removed
+- **Indexes**: registration_number, specialty, is_active, nmc_doctor_id
+- **Coverage gap**: ~800 records from NMC API dead zone (offsets 392100–392900), remainder is API-side duplicates
+- **Delhi subset**: 31,563 doctors (council_name = "Delhi Medical Council")
+
+### dmc_registry — Delhi Doctors (Detailed)
+- **Rows**: 31,555
+- **Source**: NMC API with detail fetch per doctor
+- **Fields**: id, nmc_doctor_id, full_name, registration_number, qualification, university, date_of_birth, address, specialty (normalized), experience_years, consultation_fee (default ₹500), is_active, is_removed
+- **Specialty normalization**: 27 raw degree strings → 7 categories (General Practice, Internal Medicine, Surgery, Anesthesiology, Neurology, Nephrology, Pathology)
+- **Age filter**: Excluded doctors born before 1946 or year_of_passing before 1970
+- **Indexes**: registration_number, specialty, is_active, nmc_doctor_id
+
+### Scraper Scripts (in `scripts/`)
+- `scrape-dmc-parallel.mjs` — 10-worker parallel Delhi scraper with detail fetch
+- `scrape-nmc-full.mjs` — Full NMC single-pass scraper (listing → Supabase direct)
+- `fill-gap.mjs` — Gap recovery for failed offsets with retry and small-batch fallback
 
 ## R2 File Storage
 
@@ -510,7 +537,7 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 
 ---
 
-## Progress: 15/15 apps complete + TeleWeight Session 1 (Schema + APIs) — ALL BUILDS DONE
+## Progress: 15/15 apps complete + TeleWeight (3 sessions) + Doctor Registry Migration — ALL BUILDS DONE
 
 ### Build 16: TeleWeight — Telemedicine Weight Management (APP 16+) — ALL 3 SESSIONS COMPLETE ✅
 
@@ -641,3 +668,35 @@ Deploy:   Cloudflare Pages (wrangler pages deploy)
 - Live at: https://ayushmanlife.in
 - Build: Zero TypeScript errors, 2540 modules
 - All new API endpoints verified via curl on production
+
+---
+
+## Session 2026-05-18: Doctor Registry Migration (NMC → Supabase)
+
+### What Was Done
+- Scraped entire NMC Indian Medical Register (1,459,132 records) into Supabase PostgreSQL
+- Scraped Delhi Medical Council doctors with full detail profiles (31,555 records)
+- Built 4 scraper scripts: single-threaded DMC, parallel 10-worker DMC, full NMC single-pass, gap-fill with retry
+- Handled NMC server outage at offsets ~388k–393k with exponential backoff retry and small-batch fallback (100 records vs 500)
+- Normalized 27 raw degree strings into 7 specialty categories via SQL
+- Cleaned garbage data: placeholder DOBs (01/01/1900), invalid year_of_passing values (<1950 or >2026)
+- Filtered out doctors over 80 years old (born before 1946 or year_of_passing before 1970) in DMC registry
+- Default consultation fee: ₹500
+
+### Final Counts
+| Table | Records | Coverage |
+|-------|---------|----------|
+| `nmc_registry` | 1,452,642 | 99.55% of NMC total |
+| `dmc_registry` | 31,555 | Delhi doctors with full profiles |
+| Delhi in NMC | 31,563 | Delhi Medical Council subset |
+
+### Infrastructure Added
+- **Supabase PostgreSQL**: New database for large-scale doctor registry (D1 not suitable for 1.4M+ rows)
+- **Environment**: Supabase credentials added to `.env` (gitignored)
+- **Migration SQL**: `migrations/022_dmc_registry.sql` (original D1 DDL, superseded by Supabase)
+- **Scripts**: `scripts/scrape-dmc.mjs`, `scripts/scrape-dmc-parallel.mjs`, `scripts/scrape-nmc-full.mjs`, `scripts/fill-gap.mjs`
+
+### Known Gaps
+- ~800 records from NMC API dead zone (offsets 392100–392900) — NMC server consistently times out for this range
+- ~5,690 difference is NMC API returning duplicate doctor IDs across paginated results (correctly deduplicated by upsert)
+- NMC data has basic listing fields only (no email/phone/address) — detail fetch available but not run for all-India due to scale
